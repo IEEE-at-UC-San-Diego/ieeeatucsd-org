@@ -19,7 +19,7 @@ function TermsOfServicePage() {
 				</Button>
 			</div>
 			<div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-				<h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
+				<h1 className="mb-2 text-2xl font-bold tracking-tight text-balance sm:text-3xl">
 					Terms of Service
 				</h1>
 				<p className="mb-8 text-sm text-muted-foreground sm:text-base">
@@ -34,7 +34,7 @@ function TermsOfServicePage() {
 						</h2>
 						<p className="text-muted-foreground leading-relaxed">
 							By accessing or using the IEEE at UC San Diego Dashboard
-							("Service"), you agree to be bound by these Terms of Service. If
+							(“Service”), you agree to be bound by these Terms of Service. If
 							you do not agree to these terms, please do not use the Service.
 						</p>
 					</section>
@@ -92,7 +92,7 @@ function TermsOfServicePage() {
 							6. Limitation of Liability
 						</h2>
 						<p className="text-muted-foreground leading-relaxed">
-							The Service is provided "as is" without warranties of any kind.
+							The Service is provided “as is” without warranties of any kind.
 							IEEE at UC San Diego shall not be liable for any indirect,
 							incidental, special, or consequential damages arising from your
 							use of the Service.

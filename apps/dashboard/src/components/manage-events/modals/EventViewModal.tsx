@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { format } from "date-fns";
 import {
 	Calendar,
 	Check,
@@ -26,6 +25,7 @@ import {
 	type ComponentType,
 	type ReactNode,
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState,
@@ -45,6 +45,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import {
+	formatCurrencyUSD,
+	formatDate,
+	formatDateTime,
+	formatTime,
+} from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
@@ -111,7 +117,7 @@ function getDisplayFileName(fileRef: string, fallback: string) {
 		return fromUrl || fallback;
 	} catch {
 		return fileRef.length > 48
-			? `${fileRef.slice(0, 24)}...${fileRef.slice(-12)}`
+			? `${fileRef.slice(0, 24)}…${fileRef.slice(-12)}`
 			: fileRef || fallback;
 	}
 }
@@ -185,6 +191,7 @@ export function EventViewModal({
 	onUpdateGraphics,
 	canManageStatus,
 }: EventViewModalProps) {
+	const formId = useId();
 	const getStorageUrl = useAuthedMutation(api.events.getStorageUrl);
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [activeTab, setActiveTab] = useState("details");
@@ -193,6 +200,7 @@ export function EventViewModal({
 	const [graphicsUploadNote, setGraphicsUploadNote] = useState("");
 	const [isSavingGraphics, setIsSavingGraphics] = useState(false);
 	const [isUploadingGraphics, setIsUploadingGraphics] = useState(false);
+	const [graphicsUploadError, setGraphicsUploadError] = useState("");
 	const [resolvedStorageUrls, setResolvedStorageUrls] = useState<
 		Record<string, string>
 	>({});
@@ -275,14 +283,6 @@ export function EventViewModal({
 
 	if (!event) return null;
 
-	const formatDate = (timestamp: number) => {
-		return format(new Date(timestamp), "MMMM d, yyyy");
-	};
-
-	const formatTime = (timestamp: number) => {
-		return format(new Date(timestamp), "h:mm a");
-	};
-
 	const resolveFileUrl = (fileRef: string) => {
 		if (!fileRef) return null;
 		if (!isResolvableStorageId(fileRef)) return fileRef;
@@ -347,8 +347,12 @@ export function EventViewModal({
 
 	const handleGraphicsFileUpload = async (file: File) => {
 		if (!file) return;
+		setGraphicsUploadError("");
 		const maxSize = 25 * 1024 * 1024;
 		if (file.size > maxSize) {
+			setGraphicsUploadError(
+				"File is larger than 25\u00A0MB. Choose a smaller file or paste a link instead.",
+			);
 			return;
 		}
 		setIsUploadingGraphics(true);
@@ -370,6 +374,9 @@ export function EventViewModal({
 			}
 		} catch (error) {
 			console.error("Graphics file upload failed:", error);
+			setGraphicsUploadError(
+				"Upload failed. Check your connection and try again.",
+			);
 		} finally {
 			setIsUploadingGraphics(false);
 		}
@@ -420,6 +427,7 @@ export function EventViewModal({
 							<Button
 								variant="ghost"
 								size="icon-sm"
+								aria-label={`Open ${getDisplayFileName(fileRef, `${sectionName} ${idx + 1}`)}`}
 								disabled={!fileUrl}
 								onClick={() => {
 									if (fileUrl)
@@ -456,7 +464,7 @@ export function EventViewModal({
 						onClick={() => onDelete(event)}
 					>
 						<Trash2 className="h-4 w-4" />
-						Delete
+						Delete Event
 					</Button>
 				)}
 			</div>
@@ -494,7 +502,7 @@ export function EventViewModal({
 					<div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 						<div className="flex items-center gap-2.5">
 							<Label
-								htmlFor="event-status"
+								htmlFor={`${formId}-event-status`}
 								className="text-xs font-medium whitespace-nowrap text-muted-foreground"
 							>
 								Status
@@ -507,7 +515,7 @@ export function EventViewModal({
 								}}
 							>
 								<SelectTrigger
-									id="event-status"
+									id={`${formId}-event-status`}
 									className="h-8 w-[148px] bg-background text-xs"
 								>
 									<SelectValue />
@@ -527,14 +535,14 @@ export function EventViewModal({
 						</div>
 						<div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2.5 sm:border-0 sm:pt-0">
 							<Label
-								htmlFor="can-publish"
+								htmlFor={`${formId}-can-publish`}
 								className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
 							>
 								<Globe className="size-3.5 shrink-0" />
 								Show on website
 							</Label>
 							<Switch
-								id="can-publish"
+								id={`${formId}-can-publish`}
 								size="sm"
 								checked={event.status === "published"}
 								onCheckedChange={(checked) => {
@@ -583,7 +591,7 @@ export function EventViewModal({
 							</MetaField>
 
 							<MetaField icon={MapPin} label="Location">
-								<p className="text-balance">{event.location}</p>
+								<p className="text-balance break-words">{event.location}</p>
 							</MetaField>
 
 							<MetaField icon={Users} label="Expected">
@@ -604,7 +612,10 @@ export function EventViewModal({
 
 						<div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-border/50 pt-5">
 							<MetaField icon={FileText} label="Event Code">
-								<p className="w-fit rounded-md bg-muted/60 px-2 py-0.5 font-mono text-xs tracking-wide">
+								<p
+									translate="no"
+									className="w-fit max-w-full break-all rounded-md bg-muted/60 px-2 py-0.5 font-mono text-xs tracking-wide"
+								>
 									{event.eventCode}
 								</p>
 							</MetaField>
@@ -646,7 +657,7 @@ export function EventViewModal({
 							<span className="mb-2.5 block text-xs font-medium text-muted-foreground">
 								Description
 							</span>
-							<div className="rounded-lg bg-muted/25 px-3.5 py-3 text-sm leading-relaxed text-pretty whitespace-pre-wrap text-foreground">
+							<div className="rounded-lg bg-muted/25 px-3.5 py-3 text-sm leading-relaxed text-pretty whitespace-pre-wrap break-words text-foreground">
 								{event.eventDescription || "No description provided."}
 							</div>
 						</div>
@@ -701,13 +712,20 @@ export function EventViewModal({
 							</div>
 
 							<div className="space-y-3">
-								<Label htmlFor="graphics-upload-note">Link or File URL</Label>
+								<Label htmlFor={`${formId}-graphics-upload-note`}>
+									Link or File URL
+								</Label>
 								<div className="flex gap-2">
 									<Input
-										id="graphics-upload-note"
+										id={`${formId}-graphics-upload-note`}
+										name="graphicsUploadNote"
+										type="url"
+										inputMode="url"
+										autoComplete="off"
+										spellCheck={false}
 										value={graphicsUploadNote}
 										onChange={(e) => setGraphicsUploadNote(e.target.value)}
-										placeholder="Paste a drive folder link, URL, or upload a file below"
+										placeholder="Paste a drive folder link, URL, or upload a file below…"
 										disabled={!onUpdateGraphics || event.status === "published"}
 										className="flex-1"
 									/>
@@ -724,6 +742,7 @@ export function EventViewModal({
 													)
 												}
 												title="Open link"
+												aria-label="Open link"
 											>
 												<ExternalLink className="h-4 w-4" />
 											</Button>
@@ -762,6 +781,8 @@ export function EventViewModal({
 										<label>
 											<Input
 												type="file"
+												name="graphicsFile"
+												aria-label="Upload graphics file"
 												className="hidden"
 												accept="image/*,application/pdf,.ai,.psd,.svg,.eps,.fig"
 												onChange={(e) => {
@@ -783,22 +804,28 @@ export function EventViewModal({
 														<Upload className="h-3.5 w-3.5 mr-1.5" />
 													)}
 													{isUploadingGraphics
-														? "Uploading..."
+														? "Uploading…"
 														: "Upload Graphics File"}
 												</span>
 											</Button>
 										</label>
 										<span className="text-xs text-muted-foreground">
-											Images, PDFs, SVGs, or design files (max 25MB)
+											Images, PDFs, SVGs, or design files (max 25&nbsp;MB)
 										</span>
 									</div>
 								)}
+								<output
+									aria-live="polite"
+									className="block text-xs text-destructive empty:hidden"
+								>
+									{graphicsUploadError}
+								</output>
 							</div>
 
 							<div className="flex items-center justify-between pt-2 border-t">
 								<div className="flex items-center gap-2">
 									<Checkbox
-										id="graphics-completed"
+										id={`${formId}-graphics-completed`}
 										checked={graphicsCompleted}
 										onCheckedChange={(checked) =>
 											setGraphicsCompleted(Boolean(checked))
@@ -806,7 +833,7 @@ export function EventViewModal({
 										disabled={!onUpdateGraphics || event.status === "published"}
 									/>
 									<Label
-										htmlFor="graphics-completed"
+										htmlFor={`${formId}-graphics-completed`}
 										className="cursor-pointer"
 									>
 										Mark graphics as completed
@@ -818,7 +845,7 @@ export function EventViewModal({
 										onClick={saveGraphicsUpdate}
 										disabled={isSavingGraphics || isUploadingGraphics}
 									>
-										{isSavingGraphics ? "Saving..." : "Save Graphics Update"}
+										{isSavingGraphics ? "Saving…" : "Save Graphics Update"}
 									</Button>
 								)}
 							</div>
@@ -868,7 +895,7 @@ export function EventViewModal({
 							<div>
 								<h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
 									<span>Invoices</span>
-									<span className="text-xs font-normal text-muted-foreground">
+									<span className="text-xs font-normal text-muted-foreground tabular-nums">
 										{event.invoices.length} items
 									</span>
 								</h4>
@@ -888,8 +915,8 @@ export function EventViewModal({
 													<span className="font-medium text-sm">
 														{invoice.vendor || `Invoice ${index + 1}`}
 													</span>
-													<span className="font-bold text-sm text-foreground">
-														${totalAmount.toFixed(2)}
+													<span className="font-bold text-sm text-foreground tabular-nums">
+														{formatCurrencyUSD(totalAmount)}
 													</span>
 												</div>
 												<div className="p-3 space-y-2">
@@ -903,12 +930,11 @@ export function EventViewModal({
 																	<span>
 																		{item.quantity || 1}x {item.description}
 																	</span>
-																	<span>
-																		$
-																		{(
+																	<span className="tabular-nums">
+																		{formatCurrencyUSD(
 																			item.unitPrice ||
-																			item.total / (item.quantity || 1)
-																		).toFixed(2)}
+																				item.total / (item.quantity || 1),
+																		)}
 																	</span>
 																</li>
 															))}
@@ -958,10 +984,14 @@ export function EventViewModal({
 													{(invoice.tax > 0 || invoice.tip > 0) && (
 														<div className="pt-2 mt-2 border-t border-dashed text-xs text-muted-foreground flex justify-end gap-3">
 															{invoice.tax > 0 && (
-																<span>Tax: ${invoice.tax.toFixed(2)}</span>
+																<span className="tabular-nums">
+																	Tax: {formatCurrencyUSD(invoice.tax)}
+																</span>
 															)}
 															{invoice.tip > 0 && (
-																<span>Tip: ${invoice.tip.toFixed(2)}</span>
+																<span className="tabular-nums">
+																	Tip: {formatCurrencyUSD(invoice.tip)}
+																</span>
 															)}
 														</div>
 													)}
@@ -972,8 +1002,8 @@ export function EventViewModal({
 								</div>
 								<div className="flex justify-between items-center mt-6 pt-4 border-t border-dashed">
 									<span className="font-medium text-lg">Total Invoiced</span>
-									<span className="text-2xl font-bold tracking-tight text-primary">
-										${totalInvoices.toFixed(2)}
+									<span className="text-2xl font-bold tracking-tight text-primary tabular-nums">
+										{formatCurrencyUSD(totalInvoices)}
 									</span>
 								</div>
 							</div>
@@ -983,7 +1013,7 @@ export function EventViewModal({
 					<TabsContent value="attendees" className="mt-0 h-full">
 						<div className="space-y-4">
 							<div className="flex flex-wrap items-center gap-2">
-								<span className="inline-flex items-center rounded-md bg-ds-blue-100 px-2.5 py-1 text-xs font-medium text-tone-info">
+								<span className="inline-flex items-center rounded-md bg-ds-blue-100 px-2.5 py-1 text-xs font-medium tabular-nums text-tone-info">
 									Estimated {event.estimatedAttendance}
 								</span>
 								<span className="inline-flex items-center rounded-md bg-ds-green-100 px-2.5 py-1 text-xs font-medium tabular-nums text-tone-success">
@@ -995,10 +1025,10 @@ export function EventViewModal({
 								<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/10 px-4 py-10 text-center">
 									<Users className="mb-3 size-10 text-muted-foreground/35" />
 									<h3 className="text-sm font-medium text-foreground">
-										No attendees yet
+										No Attendees Yet
 									</h3>
 									<p className="mt-1 text-sm text-muted-foreground">
-										They'll show up here after check-in.
+										They’ll show up here after check-in.
 									</p>
 								</div>
 							) : (
@@ -1013,7 +1043,7 @@ export function EventViewModal({
 										{attendees.map((attendee, idx) => (
 											<div
 												key={`${attendee.userId}-${attendee.timeCheckedIn}-${idx}`}
-												className="grid grid-cols-12 px-4 py-2.5 text-sm items-center"
+												className="grid grid-cols-12 px-4 py-2.5 text-sm items-center [content-visibility:auto] [contain-intrinsic-size:auto_52px]"
 											>
 												<div className="col-span-5 min-w-0">
 													<p className="font-medium truncate">
@@ -1026,10 +1056,7 @@ export function EventViewModal({
 													)}
 												</div>
 												<div className="col-span-3 text-xs text-muted-foreground">
-													{format(
-														new Date(attendee.timeCheckedIn),
-														"MMM d, yyyy h:mm a",
-													)}
+													{formatDateTime(attendee.timeCheckedIn)}
 												</div>
 												<div className="col-span-2 text-xs capitalize">
 													{attendee.food || "none"}

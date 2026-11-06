@@ -1,6 +1,5 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
-import { format, formatDistanceToNow } from "date-fns";
 import {
 	AlertCircle,
 	ArrowLeft,
@@ -21,8 +20,10 @@ import {
 	UploadCloud,
 	XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
 	DashboardPage,
 	PageHeader,
@@ -53,6 +54,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import {
+	formatCurrencyUSD,
+	formatDate,
+	formatDateTime,
+	formatNumber,
+	formatRelativeTime,
+	formatTime,
+} from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import {
 	computeMileageTotal,
@@ -124,7 +134,36 @@ function formatAuditAction(action: string): {
 	);
 }
 
+const REIMBURSEMENT_STATUSES = [
+	"submitted",
+	"approved",
+	"declined",
+	"paid",
+] as const;
+const SORT_FIELDS = [
+	"title",
+	"totalAmount",
+	"_creationTime",
+	"status",
+	"department",
+	"submittedBy",
+] as const;
+
+const searchSchema = z.object({
+	q: z.string().catch(""),
+	status: z
+		.array(z.enum(REIMBURSEMENT_STATUSES))
+		.catch(["submitted", "approved"]),
+	sort: z.enum(SORT_FIELDS).catch("_creationTime"),
+	dir: z.enum(["asc", "desc"]).catch("desc"),
+	page: z.number().int().min(1).catch(1),
+	id: z.string().optional().catch(undefined),
+});
+
+type ManageReimbursementsSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/manage-reimbursements")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.reimbursements.listAll, undefined, ctx),
 	component: ManageReimbursementsPage,
@@ -132,20 +171,8 @@ export const Route = createFileRoute("/_dashboard/manage-reimbursements")({
 
 const ITEMS_PER_PAGE = 10;
 
-type ReimbursementStatus = "submitted" | "approved" | "declined" | "paid";
-type SortField =
-	| "title"
-	| "totalAmount"
-	| "_creationTime"
-	| "status"
-	| "department"
-	| "submittedBy";
-type SortDirection = "asc" | "desc";
-
-interface SortConfig {
-	field: SortField;
-	direction: SortDirection;
-}
+type ReimbursementStatus = (typeof REIMBURSEMENT_STATUSES)[number];
+type SortField = (typeof SORT_FIELDS)[number];
 
 const statusColors: Record<ReimbursementStatus, string> = {
 	submitted: "bg-ds-amber-100 text-tone-warning",
@@ -177,6 +204,7 @@ const getStatusIcon = (status: ReimbursementStatus) => {
 };
 
 function ManageReimbursementsPage() {
+	const formId = useId();
 	const { hasAdminAccess, logtoId, user, getAuthHeaders, isLoading } =
 		usePermissions();
 	const isMobile = useIsMobile();
@@ -196,25 +224,37 @@ function ManageReimbursementsPage() {
 	const getStorageUrl = useAuthedMutation(api.reimbursements.getStorageUrl);
 
 	// Table state
-	type Reimbursement = typeof reimbursements extends infer R
-		? R extends Array<infer T>
-			? T
-			: never
-		: never;
-	const [selectedReimbursement, setSelectedReimbursement] =
-		useState<Reimbursement | null>(null);
-	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState<Set<ReimbursementStatus>>(
-		new Set(["submitted", "approved"]),
+	const {
+		q: search,
+		status: statusParam,
+		sort: sortField,
+		dir: sortDirection,
+		page,
+		id: selectedId,
+	} = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearchParams = useCallback(
+		(patch: Partial<ManageReimbursementsSearch>) =>
+			navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true }),
+		[navigate],
 	);
-	const [page, setPage] = useState(1);
-	const [sortConfig, setSortConfig] = useState<SortConfig>({
-		field: "_creationTime",
-		direction: "desc",
-	});
+	const statusFilter = useMemo(
+		() => new Set<ReimbursementStatus>(statusParam),
+		[statusParam],
+	);
+	const setPage = (nextPage: number) => setSearchParams({ page: nextPage });
+	const selectedReimbursement = useMemo(
+		() =>
+			selectedId
+				? (reimbursements?.find((r) => r._id === selectedId) ?? null)
+				: null,
+		[reimbursements, selectedId],
+	);
+	const viewMode = selectedReimbursement ? "detail" : "list";
 	const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-	const [viewMode, setViewMode] = useState<"list" | "detail">("list");
 	const [processingId, setProcessingId] = useState<string | null>(null);
+	const [declineTargetId, setDeclineTargetId] = useState<string | null>(null);
+	const [declineReason, setDeclineReason] = useState("");
 
 	// Paid confirmation modal state
 	const [isPaidModalOpen, setIsPaidModalOpen] = useState(false);
@@ -226,6 +266,9 @@ function ManageReimbursementsPage() {
 	const [paymentMemo, setPaymentMemo] = useState("");
 	const [uploadedProofUrl, setUploadedProofUrl] = useState("");
 	const [aiProcessing, setAiProcessing] = useState(false);
+	const confirmDiscardPayment = useUnsavedChangesGuard(
+		isPaidModalOpen && (paidProofFile !== null || paymentReviewData !== null),
+	);
 
 	// Receipt viewer state
 	const [activeReceiptIndex, setActiveReceiptIndex] = useState(0);
@@ -260,21 +303,21 @@ function ManageReimbursementsPage() {
 		return () => window.removeEventListener("paste", handlePaste);
 	}, [isPaidModalOpen, paymentReviewData]);
 
-	const handleSort = useCallback((field: SortField) => {
-		setSortConfig((prev) => ({
-			field,
-			direction:
-				prev.field === field
-					? prev.direction === "asc"
+	const handleSort = (field: SortField) => {
+		setSearchParams({
+			sort: field,
+			dir:
+				sortField === field
+					? sortDirection === "asc"
 						? "desc"
 						: "asc"
 					: "asc",
-		}));
-	}, []);
+		});
+	};
 
 	const getSortIcon = (field: SortField) => {
-		if (sortConfig.field === field) {
-			return sortConfig.direction === "asc" ? (
+		if (sortField === field) {
+			return sortDirection === "asc" ? (
 				<ChevronUp className="w-3.5 h-3.5" />
 			) : (
 				<ChevronDown className="w-3.5 h-3.5" />
@@ -345,7 +388,7 @@ function ManageReimbursementsPage() {
 				let aValue: any;
 				let bValue: any;
 
-				switch (sortConfig.field) {
+				switch (sortField) {
 					case "title":
 						aValue = a.title.toLowerCase();
 						bValue = b.title.toLowerCase();
@@ -374,11 +417,11 @@ function ManageReimbursementsPage() {
 						return 0;
 				}
 
-				if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-				if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+				if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+				if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
 				return 0;
 			});
-	}, [reimbursements, search, statusFilter, sortConfig]);
+	}, [reimbursements, search, statusFilter, sortField, sortDirection]);
 
 	const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 	const paginated = filtered.slice(
@@ -394,7 +437,7 @@ function ManageReimbursementsPage() {
 	) => {
 		const trimmedReason = reason?.trim();
 		if (status === "declined" && !trimmedReason) {
-			toast.error("Decline reason is required");
+			toast.error("Enter a reason to decline this reimbursement.");
 			return;
 		}
 
@@ -426,30 +469,31 @@ function ManageReimbursementsPage() {
 				});
 			}
 
-			if (selectedReimbursement && selectedReimbursement._id === id) {
-				setViewMode("list");
-				setSelectedReimbursement(null);
+			if (selectedId === id) {
+				handleBackToList();
 			}
 		} catch {
-			toast.error("Failed to update status");
+			toast.error(
+				"Failed to update status. Check your connection and try again.",
+			);
 		} finally {
 			setProcessingId(null);
 		}
 	};
 
-	const handleDecline = async (id: string) => {
-		const reasonInput = window.prompt(
-			"Please provide a reason for declining this reimbursement:",
-		);
-		if (reasonInput === null) return;
+	const handleDecline = (id: string) => {
+		setDeclineReason("");
+		setDeclineTargetId(id);
+	};
 
-		const reason = reasonInput.trim();
-		if (!reason) {
-			toast.error("Decline reason is required");
+	const handleConfirmDecline = async () => {
+		if (!declineTargetId) return;
+		if (!declineReason.trim()) {
+			toast.error("Enter a reason to decline this reimbursement.");
 			return;
 		}
-
-		await handleStatusChange(id, "declined", reason);
+		await handleStatusChange(declineTargetId, "declined", declineReason);
+		setDeclineTargetId(null);
 	};
 
 	const handleApproveFull = async () => {
@@ -476,7 +520,9 @@ function ManageReimbursementsPage() {
 				});
 			}
 		} catch {
-			toast.error("Failed to approve reimbursement");
+			toast.error(
+				"Failed to approve reimbursement. Check your connection and try again.",
+			);
 		} finally {
 			setProcessingId(null);
 		}
@@ -530,12 +576,15 @@ function ManageReimbursementsPage() {
 						},
 					});
 				}
-				setIsPaidModalOpen(false);
-				resetPaidModal();
-				setViewMode("list");
-				setSelectedReimbursement(null);
+				flushSync(() => {
+					setIsPaidModalOpen(false);
+					resetPaidModal();
+				});
+				handleBackToList();
 			} catch {
-				toast.error("Failed to mark as paid");
+				toast.error(
+					"Failed to mark as paid. Check your connection and try again.",
+				);
 			} finally {
 				setProcessingId(null);
 			}
@@ -653,28 +702,103 @@ function ManageReimbursementsPage() {
 	};
 
 	const handleViewDetails = (reimbursement: any) => {
-		setSelectedReimbursement(reimbursement);
 		setActiveReceiptIndex(0);
-		setViewMode("detail");
+		navigate({ search: (prev) => ({ ...prev, id: reimbursement._id }) });
 	};
 
 	const handleBackToList = () => {
-		setViewMode("list");
-		setSelectedReimbursement(null);
+		navigate({ search: (prev) => ({ ...prev, id: undefined }) });
 	};
+
+	const closePaidModal = async () => {
+		if (!(await confirmDiscardPayment())) return;
+		setIsPaidModalOpen(false);
+		setTimeout(resetPaidModal, 300);
+	};
+
+	const renderSortableHead = (field: SortField, label: string) => (
+		<TableHead
+			aria-sort={
+				sortField === field
+					? sortDirection === "asc"
+						? "ascending"
+						: "descending"
+					: "none"
+			}
+			className="p-0 hover:bg-muted transition-colors"
+		>
+			<button
+				type="button"
+				onClick={() => handleSort(field)}
+				className="group flex h-full w-full items-center gap-1 px-3 text-left"
+			>
+				{label} {getSortIcon(field)}
+			</button>
+		</TableHead>
+	);
+
+	const declineOverlay = (
+		<ResponsiveOverlay
+			open={declineTargetId !== null}
+			onOpenChange={(open) => {
+				if (!open) setDeclineTargetId(null);
+			}}
+			title="Decline Reimbursement?"
+			description="Provide a reason. It’s included in the notification sent to the submitter."
+			footer={
+				<div className="flex w-full gap-2">
+					<Button
+						variant="outline"
+						className="h-11 flex-1 sm:h-9 sm:flex-none"
+						onClick={() => setDeclineTargetId(null)}
+					>
+						Cancel
+					</Button>
+					<Button
+						variant="destructive"
+						className="h-11 flex-1 sm:h-9 sm:flex-none"
+						onClick={handleConfirmDecline}
+						disabled={
+							declineTargetId !== null && processingId === declineTargetId
+						}
+					>
+						{declineTargetId !== null && processingId === declineTargetId ? (
+							<Loader2 className="h-4 w-4 animate-spin mr-1" />
+						) : null}
+						Decline Reimbursement
+					</Button>
+				</div>
+			}
+		>
+			<div className="space-y-2">
+				<Label htmlFor={`${formId}-decline-reason`}>Reason for Declining</Label>
+				<Textarea
+					id={`${formId}-decline-reason`}
+					name="declineReason"
+					autoComplete="off"
+					placeholder="Explain why this request is being declined…"
+					value={declineReason}
+					onChange={(e) => setDeclineReason(e.target.value)}
+					rows={3}
+					className="text-base sm:text-sm"
+				/>
+			</div>
+		</ResponsiveOverlay>
+	);
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<output className="flex items-center justify-center min-h-[60vh]">
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
 	if (!hasAdminAccess) {
 		return (
 			<div className="p-6 text-center text-muted-foreground">
-				You don't have permission to access this page.
+				You don’t have permission to access this page.
 			</div>
 		);
 	}
@@ -684,7 +808,7 @@ function ManageReimbursementsPage() {
 	const currentIsMileage = currentReceipt?.expenseType === "mileage";
 
 	// Detail View - Split Pane Layout
-	if (viewMode === "detail" && selectedReimbursement) {
+	if (selectedReimbursement) {
 		return (
 			<div className="flex flex-col h-full bg-muted/50 absolute inset-0 z-10 overflow-hidden">
 				{/* Header */}
@@ -695,13 +819,14 @@ function ManageReimbursementsPage() {
 							size="icon"
 							onClick={handleBackToList}
 							className="-ml-2 shrink-0"
+							aria-label="Back to Reimbursements"
 						>
 							<ArrowLeft className="h-5 w-5" />
 						</Button>
 						<div className="min-w-0">
 							<div className="flex items-center gap-3">
 								<h2
-									className="text-lg font-bold truncate"
+									className="text-lg font-bold truncate text-balance"
 									title={selectedReimbursement.title}
 								>
 									{selectedReimbursement.title}
@@ -729,9 +854,7 @@ function ManageReimbursementsPage() {
 								<span className="text-muted-foreground/40">·</span>
 								<span>{selectedReimbursement.paymentMethod}</span>
 								<span className="text-muted-foreground/40">·</span>
-								<span>
-									{format(selectedReimbursement._creationTime, "MMM d, yyyy")}
-								</span>
+								<span>{formatDate(selectedReimbursement._creationTime)}</span>
 							</div>
 						</div>
 					</div>
@@ -740,7 +863,7 @@ function ManageReimbursementsPage() {
 							Total Amount
 						</p>
 						<p className="text-xl font-bold tabular-nums">
-							${calculateTotalAmount(selectedReimbursement).toFixed(2)}
+							{formatCurrencyUSD(calculateTotalAmount(selectedReimbursement))}
 						</p>
 					</div>
 				</div>
@@ -828,7 +951,9 @@ function ManageReimbursementsPage() {
 											Total Amount
 										</span>
 										<span className="col-span-2 text-foreground tabular-nums font-medium">
-											${calculateTotalAmount(selectedReimbursement).toFixed(2)}
+											{formatCurrencyUSD(
+												calculateTotalAmount(selectedReimbursement),
+											)}
 										</span>
 									</div>
 									<div className="grid grid-cols-3 gap-2">
@@ -876,10 +1001,12 @@ function ManageReimbursementsPage() {
 										<div className="space-y-3">
 											{selectedReimbursement.receipts.map(
 												(receipt: any, idx: number) => (
-													<div
+													<button
+														type="button"
 														key={idx}
 														onClick={() => setActiveReceiptIndex(idx)}
-														className={`p-3 rounded-md border cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
+														aria-pressed={activeReceiptIndex === idx}
+														className={`block w-full text-left p-3 rounded-md border cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
 															activeReceiptIndex === idx
 																? "border-ds-blue-700 bg-ds-blue-100 ring-1 ring-ds-blue-700/20"
 																: "border-border hover:border-border hover:bg-muted"
@@ -887,7 +1014,7 @@ function ManageReimbursementsPage() {
 													>
 														<div className="flex justify-between items-start mb-1 gap-2">
 															<div className="min-w-0 flex flex-wrap items-center gap-1.5">
-																<span className="font-semibold text-foreground">
+																<span className="font-semibold text-foreground break-words">
 																	{receipt.vendorName ||
 																		(receipt.expenseType === "mileage"
 																			? "Mileage"
@@ -903,7 +1030,7 @@ function ManageReimbursementsPage() {
 																)}
 															</div>
 															<span className="font-bold text-foreground tabular-nums shrink-0">
-																${(receipt.total || 0).toFixed(2)}
+																{formatCurrencyUSD(receipt.total || 0)}
 															</span>
 														</div>
 														<div className="text-xs text-muted-foreground flex justify-between gap-2">
@@ -912,18 +1039,16 @@ function ManageReimbursementsPage() {
 																	<>
 																		<span className="truncate">
 																			{receipt.dateOfPurchase
-																				? format(
-																						receipt.dateOfPurchase,
-																						"MMM d, yyyy",
-																					)
+																				? formatDate(receipt.dateOfPurchase)
 																				: "No date"}{" "}
 																			·{" "}
-																			{(receipt.miles ?? 0).toLocaleString(
-																				undefined,
-																				{ maximumFractionDigits: 2 },
-																			)}{" "}
-																			mi × ${MILEAGE_RATE_PER_MILE.toFixed(2)}
-																			/mi
+																			<span className="tabular-nums">
+																				{formatNumber(receipt.miles ?? 0)} mi ×{" "}
+																				{formatCurrencyUSD(
+																					MILEAGE_RATE_PER_MILE,
+																				)}
+																				/mi
+																			</span>
 																		</span>
 																		{(formatMileageRoute(
 																			receipt.mileageFrom,
@@ -941,7 +1066,7 @@ function ManageReimbursementsPage() {
 																		)}
 																	</>
 																) : receipt.dateOfPurchase ? (
-																	format(receipt.dateOfPurchase, "MMM d, yyyy")
+																	formatDate(receipt.dateOfPurchase)
 																) : (
 																	"No date"
 																)}
@@ -954,7 +1079,7 @@ function ManageReimbursementsPage() {
 																		: "No File"}
 															</span>
 														</div>
-													</div>
+													</button>
 												),
 											)}
 										</div>
@@ -981,7 +1106,10 @@ function ManageReimbursementsPage() {
 															className="relative flex gap-3 pb-6 last:pb-0"
 														>
 															{!isLast && (
-																<div className="absolute left-[11px] top-7 bottom-0 w-px bg-muted" />
+																<div
+																	className="absolute left-[11px] top-7 bottom-0 w-px bg-muted"
+																	aria-hidden="true"
+																/>
 															)}
 															<div
 																className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-background`}
@@ -994,9 +1122,7 @@ function ManageReimbursementsPage() {
 																		{info.label}
 																	</span>
 																	<span className="text-[11px] text-muted-foreground whitespace-nowrap">
-																		{formatDistanceToNow(log.timestamp, {
-																			addSuffix: true,
-																		})}
+																		{formatRelativeTime(log.timestamp)}
 																	</span>
 																</div>
 																{info.description && (
@@ -1005,10 +1131,7 @@ function ManageReimbursementsPage() {
 																	</p>
 																)}
 																<p className="text-[11px] text-muted-foreground mt-1">
-																	{format(
-																		log.timestamp,
-																		"MMM d, yyyy 'at' h:mm a",
-																	)}
+																	{formatDateTime(log.timestamp)}
 																	{log.createdBy && (
 																		<span className="ml-1.5 inline-flex items-center gap-1 bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
 																			{log.createdBy}
@@ -1049,9 +1172,8 @@ function ManageReimbursementsPage() {
 												Amount Paid
 											</p>
 											<p className="text-sm tabular-nums font-medium">
-												$
-												{selectedReimbursement.paymentDetails.amountPaid.toFixed(
-													2,
+												{formatCurrencyUSD(
+													selectedReimbursement.paymentDetails.amountPaid,
 												)}
 											</p>
 										</div>
@@ -1061,9 +1183,8 @@ function ManageReimbursementsPage() {
 													Payment Date
 												</p>
 												<p className="text-sm">
-													{format(
+													{formatDate(
 														selectedReimbursement.paymentDetails.paymentDate,
-														"MMM d, yyyy",
 													)}
 												</p>
 											</div>
@@ -1101,22 +1222,19 @@ function ManageReimbursementsPage() {
 										</h3>
 										<p className="mt-1 text-sm text-muted-foreground">
 											{currentReceipt.dateOfPurchase
-												? format(currentReceipt.dateOfPurchase, "MMM d, yyyy")
+												? formatDate(currentReceipt.dateOfPurchase)
 												: "No date"}
 										</p>
-										<p className="mt-3 text-sm text-muted-foreground">
-											{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
-												maximumFractionDigits: 2,
-											})}{" "}
-											mi × $
-											{(
+										<p className="mt-3 text-sm tabular-nums text-muted-foreground">
+											{formatNumber(currentReceipt.miles ?? 0)} mi ×{" "}
+											{formatCurrencyUSD(
 												currentReceipt.mileageRatePerMile ??
-												MILEAGE_RATE_PER_MILE
-											).toFixed(2)}
+													MILEAGE_RATE_PER_MILE,
+											)}
 											/mi
 										</p>
 										<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-foreground">
-											${calculateReceiptTotal(currentReceipt).toFixed(2)}
+											{formatCurrencyUSD(calculateReceiptTotal(currentReceipt))}
 										</p>
 										<p className="mt-4 max-w-md text-sm leading-snug text-foreground">
 											{formatMileageRoute(
@@ -1198,10 +1316,7 @@ function ManageReimbursementsPage() {
 															</h3>
 															<p className="text-sm text-muted-foreground mt-0.5">
 																{currentReceipt.dateOfPurchase
-																	? format(
-																			currentReceipt.dateOfPurchase,
-																			"MMM d, yyyy",
-																		)
+																	? formatDate(currentReceipt.dateOfPurchase)
 																	: "No date"}
 															</p>
 														</div>
@@ -1254,7 +1369,7 @@ function ManageReimbursementsPage() {
 																			{item.quantity || 1}
 																		</td>
 																		<td className="px-4 py-3 text-right text-sm font-mono font-medium text-foreground tabular-nums">
-																			${(item.amount || 0).toFixed(2)}
+																			{formatCurrencyUSD(item.amount || 0)}
 																		</td>
 																	</tr>
 																),
@@ -1287,7 +1402,9 @@ function ManageReimbursementsPage() {
 																Subtotal
 															</span>
 															<span className="font-mono tabular-nums text-foreground">
-																${(currentReceipt.subtotal || 0).toFixed(2)}
+																{formatCurrencyUSD(
+																	currentReceipt.subtotal || 0,
+																)}
 															</span>
 														</div>
 														{currentReceipt.tax && currentReceipt.tax > 0 && (
@@ -1296,7 +1413,7 @@ function ManageReimbursementsPage() {
 																	Tax
 																</span>
 																<span className="font-mono tabular-nums text-foreground">
-																	${currentReceipt.tax.toFixed(2)}
+																	{formatCurrencyUSD(currentReceipt.tax)}
 																</span>
 															</div>
 														)}
@@ -1306,7 +1423,7 @@ function ManageReimbursementsPage() {
 																	Tip
 																</span>
 																<span className="font-mono tabular-nums text-foreground">
-																	${currentReceipt.tip.toFixed(2)}
+																	{formatCurrencyUSD(currentReceipt.tip)}
 																</span>
 															</div>
 														)}
@@ -1317,7 +1434,7 @@ function ManageReimbursementsPage() {
 																		Shipping
 																	</span>
 																	<span className="font-mono tabular-nums text-foreground">
-																		${currentReceipt.shipping.toFixed(2)}
+																		{formatCurrencyUSD(currentReceipt.shipping)}
 																	</span>
 																</div>
 															)}
@@ -1327,10 +1444,9 @@ function ManageReimbursementsPage() {
 																	Total
 																</span>
 																<span className="text-base font-bold font-mono tabular-nums text-foreground">
-																	$
-																	{calculateReceiptTotal(
-																		currentReceipt,
-																	).toFixed(2)}
+																	{formatCurrencyUSD(
+																		calculateReceiptTotal(currentReceipt),
+																	)}
 																</span>
 															</div>
 														</div>
@@ -1357,7 +1473,8 @@ function ManageReimbursementsPage() {
 					open={isPaidModalOpen}
 					onOpenChange={(open) => {
 						if (!open) {
-							setTimeout(resetPaidModal, 300);
+							void closePaidModal();
+							return;
 						}
 						setIsPaidModalOpen(open);
 					}}
@@ -1371,10 +1488,7 @@ function ManageReimbursementsPage() {
 							<Button
 								variant="outline"
 								className="h-11 flex-1 sm:h-9 sm:flex-none"
-								onClick={() => {
-									setIsPaidModalOpen(false);
-									setTimeout(resetPaidModal, 300);
-								}}
+								onClick={() => void closePaidModal()}
 							>
 								Cancel
 							</Button>
@@ -1422,8 +1536,13 @@ function ManageReimbursementsPage() {
 
 								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 									<div className="space-y-2">
-										<Label>Payment Date</Label>
+										<Label htmlFor={`${formId}-payment-date`}>
+											Payment Date
+										</Label>
 										<Input
+											id={`${formId}-payment-date`}
+											name="paymentDate"
+											autoComplete="off"
 											type="date"
 											value={paymentDate}
 											onChange={(e) => setPaymentDate(e.target.value)}
@@ -1431,26 +1550,41 @@ function ManageReimbursementsPage() {
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label>Amount Paid</Label>
+										<Label htmlFor={`${formId}-payment-amount`}>
+											Amount Paid
+										</Label>
 										<div className="relative">
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+											<span
+												className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+												aria-hidden="true"
+											>
 												$
 											</span>
 											<Input
+												id={`${formId}-payment-amount`}
+												name="paymentAmount"
+												autoComplete="off"
 												type="number"
+												inputMode="decimal"
 												step="0.01"
 												value={paymentAmount}
 												onChange={(e) => setPaymentAmount(e.target.value)}
-												className="h-11 pl-7 text-base sm:h-9 sm:text-sm"
+												className="h-11 pl-7 text-base tabular-nums sm:h-9 sm:text-sm"
 											/>
 										</div>
 									</div>
 								</div>
 
 								<div className="space-y-2">
-									<Label>Confirmation Number</Label>
+									<Label htmlFor={`${formId}-payment-confirmation`}>
+										Confirmation Number
+									</Label>
 									<Input
-										placeholder="Transaction ID"
+										id={`${formId}-payment-confirmation`}
+										name="confirmationNumber"
+										autoComplete="off"
+										spellCheck={false}
+										placeholder="Transaction ID…"
 										value={paidConfirmationNumber}
 										onChange={(e) => setPaidConfirmationNumber(e.target.value)}
 										className="h-11 text-base sm:h-9 sm:text-sm"
@@ -1458,9 +1592,12 @@ function ManageReimbursementsPage() {
 								</div>
 
 								<div className="space-y-2">
-									<Label>Memo / Notes</Label>
+									<Label htmlFor={`${formId}-payment-memo`}>Memo / Notes</Label>
 									<Textarea
-										placeholder="Any additional notes"
+										id={`${formId}-payment-memo`}
+										name="paymentMemo"
+										autoComplete="off"
+										placeholder="Any additional notes…"
 										value={paymentMemo}
 										onChange={(e) => setPaymentMemo(e.target.value)}
 										rows={2}
@@ -1478,8 +1615,10 @@ function ManageReimbursementsPage() {
 									{uploadedProofUrl ? (
 										<img
 											src={uploadedProofUrl}
+											width={320}
+											height={256}
 											className="w-full h-full object-contain"
-											alt="Proof"
+											alt="Uploaded proof of payment"
 										/>
 									) : (
 										<FileText className="text-muted-foreground w-12 h-12" />
@@ -1491,7 +1630,7 @@ function ManageReimbursementsPage() {
 											rel="noreferrer"
 											className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-medium opacity-100 md:opacity-0 md:hover:opacity-100 transition-opacity"
 										>
-											View Full
+											View Full Image
 										</a>
 									)}
 								</div>
@@ -1508,7 +1647,8 @@ function ManageReimbursementsPage() {
 							>
 								<Input
 									type="file"
-									id="payment-proof-upload"
+									id={`${formId}-payment-proof-upload`}
+									name="paymentProof"
 									accept="image/*,application/pdf"
 									onChange={(e) =>
 										setPaidProofFile(e.target.files ? e.target.files[0] : null)
@@ -1517,28 +1657,20 @@ function ManageReimbursementsPage() {
 								/>
 
 								<label
-									htmlFor="payment-proof-upload"
+									htmlFor={`${formId}-payment-proof-upload`}
 									className="cursor-pointer space-y-3 block min-h-11"
 								>
 									{paidProofFile ? (
 										<>
 											<CheckCircle className="w-12 h-12 text-tone-info mx-auto" />
-											<div>
-												<p className="font-bold">{paidProofFile.name}</p>
+											<output className="block">
+												<p className="font-bold break-words">
+													{paidProofFile.name}
+												</p>
 												<p className="text-sm text-muted-foreground">
 													Ready to process
 												</p>
-											</div>
-											<Button
-												className="h-11 sm:h-9"
-												variant="outline"
-												onClick={(e) => {
-													e.preventDefault();
-													setPaidProofFile(null);
-												}}
-											>
-												Remove
-											</Button>
+											</output>
 										</>
 									) : (
 										<>
@@ -1554,11 +1686,20 @@ function ManageReimbursementsPage() {
 												</p>
 											</div>
 											<Badge variant="secondary" className="mt-4">
-												Use "Paste" for quick screenshots
+												Use “Paste” for quick screenshots
 											</Badge>
 										</>
 									)}
 								</label>
+								{paidProofFile && (
+									<Button
+										className="mt-3 h-11 sm:h-9"
+										variant="outline"
+										onClick={() => setPaidProofFile(null)}
+									>
+										Remove File
+									</Button>
+								)}
 							</div>
 
 							{/* Info about AI */}
@@ -1578,6 +1719,7 @@ function ManageReimbursementsPage() {
 						</div>
 					)}
 				</ResponsiveOverlay>
+				{declineOverlay}
 			</div>
 		);
 	}
@@ -1595,9 +1737,13 @@ function ManageReimbursementsPage() {
 				<div className="relative flex-1 max-w-sm">
 					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 					<Input
-						placeholder="Search title, business purpose, submitter name, Zelle info..."
+						type="search"
+						name="q"
+						aria-label="Search reimbursements"
+						autoComplete="off"
+						placeholder="Search title, business purpose, submitter name, Zelle info…"
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) => setSearchParams({ q: e.target.value, page: 1 })}
 						className="pl-9"
 					/>
 				</div>
@@ -1608,6 +1754,7 @@ function ManageReimbursementsPage() {
 								key={status}
 								variant={statusFilter.has(status) ? "default" : "outline"}
 								size="sm"
+								aria-pressed={statusFilter.has(status)}
 								onClick={() => {
 									const newFilter = new Set(statusFilter);
 									if (newFilter.has(status)) {
@@ -1615,8 +1762,12 @@ function ManageReimbursementsPage() {
 									} else {
 										newFilter.add(status);
 									}
-									setStatusFilter(newFilter);
-									setPage(1);
+									setSearchParams({
+										status: REIMBURSEMENT_STATUSES.filter((s) =>
+											newFilter.has(s),
+										),
+										page: 1,
+									});
 								}}
 								className="gap-1.5"
 							>
@@ -1633,27 +1784,26 @@ function ManageReimbursementsPage() {
 
 			{/* Reimbursements Table / Mobile queue */}
 			{!reimbursements ? (
-				<div className="space-y-3">
+				<output className="block space-y-3" aria-busy="true">
+					<span className="sr-only">Loading reimbursements…</span>
 					{[1, 2, 3].map((i) => (
 						<Skeleton key={i} className="h-16 w-full rounded-md" />
 					))}
-				</div>
+				</output>
 			) : paginated.length > 0 ? (
 				isMobile ? (
 					<div className="space-y-3">
 						<MobileDataList>
 							{paginated.map((r) => {
 								const totalAmt = calculateTotalAmount(r);
-								const age = formatDistanceToNow(r._creationTime, {
-									addSuffix: true,
-								});
+								const age = formatRelativeTime(r._creationTime);
 								return (
 									<MobileDataListItem
 										key={r._id}
 										title={r.title}
 										subtitle={r.submittedByName || r.submittedBy}
 										meta={`${r.department} · ${age}`}
-										trailing={`$${totalAmt.toFixed(2)}`}
+										trailing={formatCurrencyUSD(totalAmt)}
 										status={
 											<Badge
 												className={statusColors[r.status]}
@@ -1700,46 +1850,11 @@ function ManageReimbursementsPage() {
 							<Table>
 								<TableHeader>
 									<TableRow className="bg-muted/50 hover:bg-muted/50">
-										<TableHead
-											className="cursor-pointer hover:bg-muted transition-colors"
-											onClick={() => handleSort("title")}
-										>
-											<span className="flex items-center gap-1 group">
-												Title {getSortIcon("title")}
-											</span>
-										</TableHead>
-										<TableHead
-											className="cursor-pointer hover:bg-muted transition-colors"
-											onClick={() => handleSort("totalAmount")}
-										>
-											<span className="flex items-center gap-1 group">
-												Amount {getSortIcon("totalAmount")}
-											</span>
-										</TableHead>
-										<TableHead
-											className="cursor-pointer hover:bg-muted transition-colors"
-											onClick={() => handleSort("_creationTime")}
-										>
-											<span className="flex items-center gap-1 group">
-												Date {getSortIcon("_creationTime")}
-											</span>
-										</TableHead>
-										<TableHead
-											className="cursor-pointer hover:bg-muted transition-colors"
-											onClick={() => handleSort("status")}
-										>
-											<span className="flex items-center gap-1 group">
-												Status {getSortIcon("status")}
-											</span>
-										</TableHead>
-										<TableHead
-											className="cursor-pointer hover:bg-muted transition-colors"
-											onClick={() => handleSort("department")}
-										>
-											<span className="flex items-center gap-1 group">
-												Department {getSortIcon("department")}
-											</span>
-										</TableHead>
+										{renderSortableHead("title", "Title")}
+										{renderSortableHead("totalAmount", "Amount")}
+										{renderSortableHead("_creationTime", "Date")}
+										{renderSortableHead("status", "Status")}
+										{renderSortableHead("department", "Department")}
 										<TableHead className="text-right">Actions</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -1757,29 +1872,36 @@ function ManageReimbursementsPage() {
 												onClick={() => handleViewDetails(r)}
 											>
 												<TableCell className="min-w-[200px]">
-													<div className="font-medium text-foreground truncate max-w-[250px]">
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleViewDetails(r);
+														}}
+														className="block font-medium text-foreground text-left truncate max-w-[250px] hover:underline"
+													>
 														{r.title}
-													</div>
+													</button>
 													<div className="text-xs text-muted-foreground">
 														{r.submittedByName || r.submittedBy}
 													</div>
 													{r.submittedByZelle && (
-														<div className="text-xs text-tone-info mt-0.5">
+														<div className="text-xs text-tone-info mt-0.5 truncate max-w-[250px]">
 															Zelle: {r.submittedByZelle}
 														</div>
 													)}
 												</TableCell>
 												<TableCell>
-													<span className="font-mono font-semibold">
-														${totalAmt.toFixed(2)}
+													<span className="font-mono font-semibold tabular-nums">
+														{formatCurrencyUSD(totalAmt)}
 													</span>
 												</TableCell>
 												<TableCell>
 													<div className="text-sm">
-														{format(r._creationTime, "MMM d, yyyy")}
+														{formatDate(r._creationTime)}
 													</div>
 													<div className="text-xs text-muted-foreground">
-														{format(r._creationTime, "h:mm a")}
+														{formatTime(r._creationTime)}
 													</div>
 												</TableCell>
 												<TableCell>
@@ -1800,10 +1922,9 @@ function ManageReimbursementsPage() {
 												</TableCell>
 												<TableCell className="text-right">
 													<div
-														className={`flex items-center justify-end gap-1 transition-opacity duration-200 ${
+														className={`flex items-center justify-end gap-1 transition-opacity duration-200 focus-within:opacity-100 ${
 															isHovered ? "opacity-100" : "opacity-0"
 														}`}
-														onClick={(e) => e.stopPropagation()}
 													>
 														{r.status === "submitted" && (
 															<>
@@ -1811,11 +1932,13 @@ function ManageReimbursementsPage() {
 																	variant="ghost"
 																	size="sm"
 																	className="h-8 w-8 p-0 text-tone-success hover:text-tone-success hover:bg-ds-green-100"
-																	onClick={() =>
-																		handleStatusChange(r._id, "approved")
-																	}
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		handleStatusChange(r._id, "approved");
+																	}}
 																	disabled={processingId === r._id}
 																	title="Approve"
+																	aria-label={`Approve ${r.title}`}
 																>
 																	{processingId === r._id ? (
 																		<Loader2 className="h-4 w-4 animate-spin" />
@@ -1827,9 +1950,13 @@ function ManageReimbursementsPage() {
 																	variant="ghost"
 																	size="sm"
 																	className="h-8 w-8 p-0 text-tone-danger hover:text-tone-danger hover:bg-ds-red-100"
-																	onClick={() => handleDecline(r._id)}
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		handleDecline(r._id);
+																	}}
 																	disabled={processingId === r._id}
 																	title="Decline"
+																	aria-label={`Decline ${r.title}`}
 																>
 																	<XCircle className="h-4 w-4" />
 																</Button>
@@ -1840,8 +1967,12 @@ function ManageReimbursementsPage() {
 																variant="ghost"
 																size="sm"
 																className="h-8 w-8 p-0 text-tone-purple hover:text-tone-info hover:bg-ds-purple-100"
-																onClick={() => handleViewDetails(r)}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleViewDetails(r);
+																}}
 																title="Mark as Paid"
+																aria-label={`Mark ${r.title} as paid`}
 															>
 																<DollarSign className="h-4 w-4" />
 															</Button>
@@ -1850,8 +1981,12 @@ function ManageReimbursementsPage() {
 															variant="ghost"
 															size="sm"
 															className="h-8 w-8 p-0"
-															onClick={() => handleViewDetails(r)}
+															onClick={(e) => {
+																e.stopPropagation();
+																handleViewDetails(r);
+															}}
 															title="View Details"
+															aria-label={`View details for ${r.title}`}
 														>
 															<Eye className="h-4 w-4" />
 														</Button>
@@ -1875,7 +2010,7 @@ function ManageReimbursementsPage() {
 			) : (
 				<div className="text-center py-12 text-muted-foreground">
 					<CreditCard className="mx-auto h-12 w-12 mb-4 opacity-50" />
-					<p className="text-lg font-medium">No reimbursement requests</p>
+					<p className="text-lg font-medium">No Reimbursement Requests</p>
 					<p className="text-sm">
 						{search || statusFilter.size > 0
 							? "Try adjusting your filters."
@@ -1883,6 +2018,7 @@ function ManageReimbursementsPage() {
 					</p>
 				</div>
 			)}
+			{declineOverlay}
 		</DashboardPage>
 	);
 }

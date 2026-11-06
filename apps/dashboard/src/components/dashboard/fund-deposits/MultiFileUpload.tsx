@@ -1,7 +1,8 @@
 import { AlertCircle, File, FileText, Image, Upload, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatFileSize } from "@/lib/formatters";
 
 interface MultiFileUploadProps {
 	files: File[];
@@ -33,6 +34,7 @@ export function MultiFileUpload({
 	const [isDragOver, setIsDragOver] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const inputId = useId();
 
 	const getFileIcon = (fileName: string) => {
 		const ext = fileName.split(".").pop()?.toLowerCase();
@@ -44,14 +46,6 @@ export function MultiFileUpload({
 		return <File className="w-5 h-5" />;
 	};
 
-	const formatFileSize = (bytes: number): string => {
-		if (bytes === 0) return "0 Bytes";
-		const k = 1024;
-		const sizes = ["Bytes", "KB", "MB", "GB"];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return Math.round((bytes / k ** i) * 100) / 100 + " " + sizes[i];
-	};
-
 	const validateFile = (file: File): string | null => {
 		const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB hard limit
 		const effectiveMaxSize = Math.min(
@@ -61,9 +55,9 @@ export function MultiFileUpload({
 
 		if (file.size > effectiveMaxSize) {
 			if (file.size > MAX_SAFE_FILE_SIZE) {
-				return `File "${file.name}" is too large (${formatFileSize(file.size)}). Maximum file size is 100MB. Please compress or split the file.`;
+				return `File "${file.name}" is too large (${formatFileSize(file.size)}). Maximum file size is 100\u00A0MB. Compress or split the file and try again.`;
 			}
-			return `File "${file.name}" exceeds ${maxSizeInMB}MB limit`;
+			return `File "${file.name}" exceeds the ${maxSizeInMB}\u00A0MB limit`;
 		}
 
 		const acceptedTypes = accept.split(",").map((t) => t.trim());
@@ -164,28 +158,31 @@ export function MultiFileUpload({
 
 	return (
 		<div className="space-y-3">
-			<label className="block text-sm font-medium">
+			<label htmlFor={inputId} className="block text-sm font-medium">
 				{label}
 				{required && <span className="text-destructive ml-1">*</span>}
 			</label>
 
-			{errorMessage && (
-				<div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-					<AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-					<div className="flex-1">
-						<p className="text-sm text-destructive">{errorMessage}</p>
+			<output aria-live="polite" className="block">
+				{errorMessage && (
+					<div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+						<AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+						<div className="flex-1">
+							<p className="text-sm text-destructive">{errorMessage}</p>
+						</div>
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon"
+							className="h-5 w-5 text-muted-foreground hover:text-tone-danger"
+							onClick={() => setErrorMessage("")}
+							aria-label="Dismiss error"
+						>
+							<X className="w-4 h-4" />
+						</Button>
 					</div>
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon"
-						className="h-5 w-5 text-muted-foreground hover:text-tone-danger"
-						onClick={() => setErrorMessage("")}
-					>
-						<X className="w-4 h-4" />
-					</Button>
-				</div>
-			)}
+				)}
+			</output>
 
 			{existingFiles.length > 0 && (
 				<div className="space-y-2">
@@ -227,6 +224,7 @@ export function MultiFileUpload({
 											variant="ghost"
 											size="icon"
 											onClick={() => handlePreview(fileUrl)}
+											aria-label={`Preview ${decodedName}`}
 										>
 											<FileText className="w-4 h-4" />
 										</Button>
@@ -236,6 +234,7 @@ export function MultiFileUpload({
 												variant="ghost"
 												size="icon"
 												onClick={() => onRemoveExistingFile(fileUrl)}
+												aria-label={`Remove ${decodedName}`}
 											>
 												<X className="w-4 h-4" />
 											</Button>
@@ -276,6 +275,7 @@ export function MultiFileUpload({
 									size="icon"
 									onClick={() => removeFile(index)}
 									disabled={disabled}
+									aria-label={`Remove ${file.name}`}
 								>
 									<X className="w-4 h-4" />
 								</Button>
@@ -301,7 +301,7 @@ export function MultiFileUpload({
 					role="button"
 					aria-label="Upload files by clicking or using drag and drop"
 					className={`
-            relative border-2 border-dashed rounded-md p-6 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+            relative border-2 border-dashed rounded-md p-6 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
             ${
 							isDragOver
 								? "border-primary bg-primary/5"
@@ -312,6 +312,8 @@ export function MultiFileUpload({
 				>
 					<Input
 						ref={fileInputRef}
+						id={inputId}
+						name="files"
 						type="file"
 						multiple
 						accept={accept}
@@ -329,12 +331,12 @@ export function MultiFileUpload({
 					<p className="text-sm font-medium mb-1">{description}</p>
 
 					<p className="text-xs text-muted-foreground">
-						{`${accept.split(",").join(", ").toUpperCase()} • up to ${Math.min(maxSizeInMB, 100)}MB`}
+						{`${accept.split(",").join(", ").toUpperCase()} • up to ${Math.min(maxSizeInMB, 100)}\u00A0MB`}
 					</p>
 
 					{totalFileCount > 0 && (
 						<div className="mt-3">
-							<span className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded-full">
+							<span className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded-full tabular-nums">
 								{totalFileCount} / {maxFiles} files
 							</span>
 						</div>

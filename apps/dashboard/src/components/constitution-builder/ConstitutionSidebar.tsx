@@ -7,7 +7,7 @@ import {
 	Plus,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import type { ConstitutionSection } from "./types";
 import { getSectionDisplayTitle } from "./utils/constitutionUtils";
 
@@ -49,7 +50,9 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 	onAddSection,
 	updateSection,
 }) => {
+	const formId = useId();
 	const [showAddSection, setShowAddSection] = useState(false);
+	const prefersReducedMotion = usePrefersReducedMotion();
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const selectedSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -65,12 +68,12 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 			const selectedElement = selectedSectionRefs.current.get(selectedSection);
 			if (selectedElement) {
 				selectedElement.scrollIntoView({
-					behavior: "smooth",
+					behavior: prefersReducedMotion ? "auto" : "smooth",
 					block: "center",
 				});
 			}
 		}
-	}, [selectedSection]);
+	}, [selectedSection, prefersReducedMotion]);
 
 	const moveSection = async (sectionId: string, direction: "up" | "down") => {
 		const currentSection = sections.find((s) => s.id === sectionId);
@@ -179,7 +182,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 				<div className="flex flex-col gap-3 p-3 md:p-4 border-b border-border flex-shrink-0">
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
 						<div className="min-w-0 flex-1">
-							<h2 className="font-semibold text-foreground text-sm md:text-base">
+							<h2 className="font-semibold text-foreground text-sm md:text-base text-balance">
 								Document Structure
 							</h2>
 							<p className="text-xs text-muted-foreground hidden md:block">
@@ -192,7 +195,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 						>
 							<Plus className="h-4 w-4 mr-1" />
 							<span className="hidden sm:inline">Add Section</span>
-							<span className="sm:hidden">Add</span>
+							<span className="sm:hidden">Add Section</span>
 						</Button>
 					</div>
 
@@ -214,8 +217,8 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					{sections.length === 0 ? (
 						<div className="text-center py-6 md:py-8">
 							<FileText className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
-							<h3 className="text-sm font-medium text-foreground mb-2">
-								No sections yet
+							<h3 className="text-sm font-medium text-foreground mb-2 text-balance">
+								No Sections Yet
 							</h3>
 							<p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
 								Start building your constitution by adding a preamble or first
@@ -260,7 +263,10 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 			>
 				<div className="space-y-4 pb-2">
 					<div>
-						<label className="block text-sm font-medium text-foreground mb-2">
+						<label
+							htmlFor={`${formId}-sidebar-add-section-type`}
+							className="block text-sm font-medium text-foreground mb-2"
+						>
 							Section Type
 						</label>
 						<Select
@@ -270,7 +276,10 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 								setAddSectionParent("");
 							}}
 						>
-							<SelectTrigger className="h-11 w-full sm:h-9">
+							<SelectTrigger
+								id={`${formId}-sidebar-add-section-type`}
+								className="h-11 w-full sm:h-9"
+							>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -295,15 +304,21 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 
 					{parentOptions.length > 0 && (
 						<div>
-							<label className="block text-sm font-medium text-foreground mb-2">
+							<label
+								htmlFor={`${formId}-sidebar-add-section-parent`}
+								className="block text-sm font-medium text-foreground mb-2"
+							>
 								Parent Section
 							</label>
 							<Select
 								value={addSectionParent}
 								onValueChange={setAddSectionParent}
 							>
-								<SelectTrigger className="h-11 w-full sm:h-9">
-									<SelectValue placeholder="Select parent..." />
+								<SelectTrigger
+									id={`${formId}-sidebar-add-section-parent`}
+									className="h-11 w-full sm:h-9"
+								>
+									<SelectValue placeholder="Select parent…" />
 								</SelectTrigger>
 								<SelectContent>
 									{parentOptions.map((section) => (
@@ -318,15 +333,21 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 
 					{addSectionType !== "preamble" && (
 						<div>
-							<label className="block text-sm font-medium text-foreground mb-2">
+							<label
+								htmlFor={`${formId}-sidebar-add-section-title`}
+								className="block text-sm font-medium text-foreground mb-2"
+							>
 								Title{" "}
 								{addSectionType === "article" ? "(required)" : "(optional)"}
 							</label>
 							<Input
+								id={`${formId}-sidebar-add-section-title`}
+								name="section-title"
 								type="text"
+								autoComplete="off"
 								value={addSectionTitle}
 								onChange={(e) => setAddSectionTitle(e.target.value)}
-								placeholder="Enter section title..."
+								placeholder="Enter section title…"
 								required={addSectionType === "article"}
 								className="h-11 text-base sm:h-9 sm:text-sm"
 							/>
@@ -334,19 +355,25 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					)}
 
 					<div>
-						<label className="block text-sm font-medium text-foreground mb-2">
+						<label
+							htmlFor={`${formId}-sidebar-add-section-content`}
+							className="block text-sm font-medium text-foreground mb-2"
+						>
 							Content{" "}
 							{addSectionType === "preamble" ? "(required)" : "(optional)"}
 						</label>
 						<Textarea
+							id={`${formId}-sidebar-add-section-content`}
+							name="section-content"
+							autoComplete="off"
 							value={addSectionContent}
 							onChange={(e) => setAddSectionContent(e.target.value)}
 							placeholder={
 								addSectionType === "preamble"
-									? "Enter preamble content..."
+									? "Enter preamble content…"
 									: addSectionType === "article"
-										? "Optional introductory text before the first section..."
-										: "Enter section content..."
+										? "Optional introductory text before the first section…"
+										: "Enter section content…"
 							}
 							rows={4}
 							className="text-base sm:text-sm"
@@ -395,10 +422,9 @@ const SectionNavigationItem: React.FC<{
 					sectionRefs.current.delete(section.id);
 				}
 			}}
-			className={`flex items-center gap-1 md:gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+			className={`flex items-center gap-1 md:gap-2 p-2 rounded-md transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_56px] ${
 				isSelected ? "bg-ds-blue-100 text-tone-info" : "hover:bg-muted"
 			}`}
-			onClick={() => onSelect(section.id)}
 		>
 			<div className="flex flex-col">
 				<Button
@@ -411,6 +437,7 @@ const SectionNavigationItem: React.FC<{
 					disabled={!canMoveUp}
 					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
 					title="Move up"
+					aria-label="Move section up"
 				>
 					<ArrowUp className="h-3 w-3 text-muted-foreground" />
 				</Button>
@@ -424,6 +451,7 @@ const SectionNavigationItem: React.FC<{
 					disabled={!canMoveDown}
 					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
 					title="Move down"
+					aria-label="Move section down"
 				>
 					<ArrowDown className="h-3 w-3 text-muted-foreground" />
 				</Button>
@@ -437,6 +465,8 @@ const SectionNavigationItem: React.FC<{
 						e.stopPropagation();
 						onToggleExpand(section.id);
 					}}
+					aria-label={isExpanded ? "Collapse section" : "Expand section"}
+					aria-expanded={isExpanded}
 					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded min-h-[24px] min-w-[24px] flex items-center justify-center"
 				>
 					{isExpanded ? (
@@ -447,14 +477,19 @@ const SectionNavigationItem: React.FC<{
 				</Button>
 			)}
 
-			<div className="flex-1 min-w-0">
+			<button
+				type="button"
+				onClick={() => onSelect(section.id)}
+				aria-current={isSelected ? "true" : undefined}
+				className="flex-1 min-w-0 cursor-pointer rounded-sm text-left"
+			>
 				<div className="text-xs md:text-sm font-medium truncate">
 					{getSectionDisplayTitle(section, allSections)}
 				</div>
 				<div className="text-xs text-muted-foreground capitalize">
 					{section.type}
 				</div>
-			</div>
+			</button>
 		</div>
 	);
 };

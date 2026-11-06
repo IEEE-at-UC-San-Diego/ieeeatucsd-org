@@ -42,11 +42,14 @@ export class ErrorBoundary extends Component<
 							<div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
 								<AlertTriangle className="w-7 h-7 text-destructive" />
 							</div>
-							<h2 className="text-xl font-semibold mb-2">
-								Something went wrong
+							<h2 className="text-xl font-semibold mb-2 text-balance">
+								Something Went Wrong
 							</h2>
-							<p className="text-sm text-muted-foreground mb-4">
+							<p className="text-sm text-muted-foreground mb-1 break-words">
 								{this.state.error?.message || "An unexpected error occurred."}
+							</p>
+							<p className="text-sm text-muted-foreground mb-4">
+								Try again, or reload the page if the problem continues.
 							</p>
 							<Button
 								variant="outline"

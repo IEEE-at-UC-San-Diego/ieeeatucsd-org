@@ -16,6 +16,7 @@ import {
 	X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -294,10 +295,15 @@ function MarkdownRenderer({ content }: { content: string }) {
 						? "text-sm font-semibold"
 						: "text-sm font-medium";
 
+			const HeadingTag = level === 1 ? "h3" : level === 2 ? "h4" : "h5";
+
 			rendered.push(
-				<p key={`heading-${i}`} className={cn("mb-1", headingClass)}>
+				<HeadingTag
+					key={`heading-${i}`}
+					className={cn("mb-1 text-pretty", headingClass)}
+				>
 					{renderInlineMarkdown(text, `h-${i}`)}
-				</p>,
+				</HeadingTag>,
 			);
 			i += 1;
 			continue;
@@ -486,20 +492,21 @@ function ReasoningBlock({
 				variant="ghost"
 				type="button"
 				onClick={handleToggle}
+				aria-expanded={isExpanded}
 				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-tone-info hover:bg-ds-blue-100/50 transition-colors"
 			>
 				<Brain className="w-3 h-3 flex-shrink-0" />
 				<span className="font-medium flex-shrink-0">
-					{isStreaming ? "AI is thinking..." : "Thought process"}
+					{isStreaming ? "AI is thinking…" : "Thought Process"}
 				</span>
 				{isStreaming && (
-					<span className="flex-shrink-0">
+					<span aria-hidden="true" className="flex-shrink-0">
 						<span className="inline-block w-1.5 h-1.5 rounded-full bg-ds-purple-1000 animate-pulse" />
 					</span>
 				)}
 				{!isExpanded && (
 					<span className="text-muted-foreground truncate text-left">
-						{preview}...
+						{preview}…
 					</span>
 				)}
 				<ChevronDown
@@ -513,7 +520,10 @@ function ReasoningBlock({
 				<div className="px-3 pb-2 text-xs text-muted-foreground leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
 					{content}
 					{isStreaming && (
-						<span className="inline-block w-1 h-3 bg-ds-purple-600 animate-pulse ml-0.5 align-text-bottom" />
+						<span
+							aria-hidden="true"
+							className="inline-block w-1 h-3 bg-ds-purple-600 animate-pulse ml-0.5 align-text-bottom"
+						/>
 					)}
 				</div>
 			)}
@@ -585,7 +595,7 @@ function ToolCallCards({
 										<span className="text-muted-foreground truncate">
 											{result.summary}
 										</span>
-										<span className="text-muted-foreground ml-auto flex-shrink-0">
+										<span className="text-muted-foreground ml-auto flex-shrink-0 tabular-nums">
 											{result.durationMs}ms
 										</span>
 									</>
@@ -631,6 +641,7 @@ const INITIAL_MESSAGE: Message = {
 
 export function OfficerAiChat() {
 	const { logtoId, userRole, getAuthHeaders } = useAuth();
+	const confirm = useConfirm();
 	const [isOpen, setIsOpen] = useState(false);
 	const [messages, setMessages] = useState<Message[]>(() => {
 		return loadSessionMessages() || [INITIAL_MESSAGE];
@@ -684,7 +695,16 @@ export function OfficerAiChat() {
 		setLoadingStep("Stopped");
 	}, []);
 
-	const handleClearChat = useCallback(() => {
+	const handleClearChat = useCallback(async () => {
+		if (
+			!(await confirm({
+				title: "Clear Chat?",
+				description: "This removes the whole conversation and can’t be undone.",
+				confirmLabel: "Clear Chat",
+				destructive: true,
+			}))
+		)
+			return;
 		setMessages([INITIAL_MESSAGE]);
 		setLastMeta(null);
 		setLoadingStep("Ready");
@@ -694,7 +714,7 @@ export function OfficerAiChat() {
 		} catch {
 			/* ignore */
 		}
-	}, []);
+	}, [confirm]);
 
 	const handleRetry = useCallback(
 		(messageId: string) => {
@@ -751,7 +771,7 @@ export function OfficerAiChat() {
 		]);
 
 		setIsLoading(true);
-		setLoadingStep("Submitting query...");
+		setLoadingStep("Submitting query…");
 		userIsNearBottom.current = true;
 
 		try {
@@ -780,7 +800,7 @@ export function OfficerAiChat() {
 				throw new Error(
 					parts.length > 0
 						? parts.join(": ")
-						: `Failed to get response (${response.status})`,
+						: `Failed to get a response (${response.status}). Try again in a moment.`,
 				);
 			}
 
@@ -848,7 +868,7 @@ export function OfficerAiChat() {
 					}
 
 					if (event.type === "reasoning") {
-						setLoadingStep("AI is thinking...");
+						setLoadingStep("AI is thinking…");
 						updateAssistantMessage(assistantId, (msg) => ({
 							...msg,
 							reasoning: (msg.reasoning || "") + event.content,
@@ -891,7 +911,7 @@ export function OfficerAiChat() {
 					if (event.type === "token") {
 						if (!sawFirstToken) {
 							sawFirstToken = true;
-							setLoadingStep("Streaming response...");
+							setLoadingStep("Streaming response…");
 							updateAssistantMessage(assistantId, (msg) => ({
 								...msg,
 								content: event.content,
@@ -1002,6 +1022,7 @@ export function OfficerAiChat() {
 									size="icon"
 									className="h-7 w-7"
 									onClick={() => setIsOpen(false)}
+									aria-label="Close AI Assistant"
 								>
 									<X className="w-4 h-4" />
 								</Button>
@@ -1024,6 +1045,7 @@ export function OfficerAiChat() {
 								className="h-7 w-7"
 								onClick={handleClearChat}
 								title="Clear chat"
+								aria-label="Clear Chat"
 							>
 								<Trash2 className="w-3.5 h-3.5" />
 							</Button>
@@ -1040,14 +1062,17 @@ export function OfficerAiChat() {
 
 						{/* Status bar */}
 						<div className="px-4 py-1.5 border-b text-[11px] text-muted-foreground flex items-center justify-between">
-							<span className="inline-flex items-center gap-1.5">
+							<output
+								aria-live="polite"
+								className="inline-flex min-w-0 items-center gap-1.5"
+							>
 								{isLoading ? (
 									<Loader2 className="w-3 h-3 animate-spin" />
 								) : (
 									<Bot className="w-3 h-3" />
 								)}
 								{isLoading ? loadingStep : "Ready"}
-							</span>
+							</output>
 							<span className="text-muted-foreground/60">
 								{lastMeta?.currentDateTime || formatPacificNow()}
 							</span>
@@ -1058,9 +1083,15 @@ export function OfficerAiChat() {
 							className="flex-1 overflow-y-auto p-4 space-y-4"
 							ref={scrollRef}
 							onScroll={handleScroll}
+							role="log"
+							aria-label="Conversation"
+							aria-busy={isLoading}
 						>
 							{messages.map((msg) => (
-								<div key={msg.id} className="flex flex-col gap-1">
+								<div
+									key={msg.id}
+									className="flex flex-col gap-1 [content-visibility:auto] [contain-intrinsic-size:auto_80px]"
+								>
 									<div
 										className={cn(
 											"flex w-full gap-3",
@@ -1182,7 +1213,10 @@ export function OfficerAiChat() {
 									value={input}
 									onChange={handleTextareaInput}
 									onKeyDown={handleKeyDown}
-									placeholder="Ask about events, budgets, users..."
+									name="message"
+									aria-label="Message the Officer Assistant"
+									autoComplete="off"
+									placeholder="Ask about events, budgets, users…"
 									className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[38px] max-h-[120px]"
 									rows={1}
 									disabled={isLoading}
@@ -1194,6 +1228,7 @@ export function OfficerAiChat() {
 										variant="destructive"
 										onClick={handleStop}
 										title="Stop generation"
+										aria-label="Stop Generation"
 										className="flex-shrink-0 h-[38px] w-[38px]"
 									>
 										<Square className="w-4 h-4" />
@@ -1203,6 +1238,7 @@ export function OfficerAiChat() {
 										type="submit"
 										size="icon"
 										disabled={!input.trim()}
+										aria-label="Send Message"
 										className="flex-shrink-0 h-[38px] w-[38px]"
 									>
 										<Send className="w-4 h-4" />

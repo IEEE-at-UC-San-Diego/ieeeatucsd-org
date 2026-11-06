@@ -1,6 +1,7 @@
 import { EventPoints } from "@convex/eventPoints";
 import { AlertTriangle, FileText, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,9 @@ export function LogisticsSection({
 	const [dateError, setDateError] = useState("");
 	const [startTimeError, setStartTimeError] = useState("");
 	const [endTimeError, setEndTimeError] = useState("");
+	const confirm = useConfirm();
+	const foodQuestionId = useId();
+	const formId = useId();
 	const timeRangeError =
 		Number.isFinite(data.startDate) &&
 		Number.isFinite(data.endDate) &&
@@ -106,7 +110,16 @@ export function LogisticsSection({
 		e.target.value = "";
 	};
 
-	const removeRoomBookingFile = (index: number) => {
+	const removeRoomBookingFile = async (index: number) => {
+		if (
+			!(await confirm({
+				title: "Remove File?",
+				description: "This removes the room booking file from this request.",
+				confirmLabel: "Remove File",
+				destructive: true,
+			}))
+		)
+			return;
 		const updated = data.roomBookingFiles.filter((_, i) => i !== index);
 		onChange({ roomBookingFiles: updated });
 	};
@@ -115,11 +128,13 @@ export function LogisticsSection({
 		<div className="space-y-6">
 			<div className="grid gap-6">
 				<div className="space-y-2">
-					<Label htmlFor="location">
+					<Label htmlFor={`${formId}-location`}>
 						Location <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
-						id="location"
+						id={`${formId}-location`}
+						name="location"
+						autoComplete="off"
 						value={data.location}
 						onChange={(e) => onChange({ location: e.target.value })}
 						placeholder="e.g., Price Center East Ballroom"
@@ -128,17 +143,26 @@ export function LogisticsSection({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="eventDate">
+					<Label htmlFor={`${formId}-eventDate`}>
 						Event Date <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
-						id="eventDate"
+						id={`${formId}-eventDate`}
+						name="eventDate"
+						autoComplete="off"
+						inputMode="numeric"
 						value={dateText}
 						onChange={(e) => setDateText(e.target.value)}
 						onBlur={handleDateBlur}
 						placeholder="mm/dd/yy"
+						aria-invalid={dateError ? true : undefined}
 					/>
-					{dateError && <p className="text-xs text-tone-danger">{dateError}</p>}
+					<output
+						aria-live="polite"
+						className="block text-xs text-tone-danger empty:hidden"
+					>
+						{dateError}
+					</output>
 					<p className="text-xs text-muted-foreground">
 						Type in mm/dd/yy format (e.g., 02/14/26)
 					</p>
@@ -146,47 +170,65 @@ export function LogisticsSection({
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="startTime">
+						<Label htmlFor={`${formId}-startTime`}>
 							Start Time <span className="text-tone-danger">*</span>
 						</Label>
 						<Input
-							id="startTime"
+							id={`${formId}-startTime`}
+							name="startTime"
+							autoComplete="off"
 							value={startTimeText}
 							onChange={(e) => setStartTimeText(e.target.value)}
 							onBlur={handleStartTimeBlur}
 							placeholder="e.g., 9am, 9:00 AM, 14:00"
+							aria-invalid={startTimeError ? true : undefined}
 						/>
-						{startTimeError && (
-							<p className="text-xs text-tone-danger">{startTimeError}</p>
-						)}
+						<output
+							aria-live="polite"
+							className="block text-xs text-tone-danger empty:hidden"
+						>
+							{startTimeError}
+						</output>
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="endTime">
+						<Label htmlFor={`${formId}-endTime`}>
 							End Time <span className="text-tone-danger">*</span>
 						</Label>
 						<Input
-							id="endTime"
+							id={`${formId}-endTime`}
+							name="endTime"
+							autoComplete="off"
 							value={endTimeText}
 							onChange={(e) => setEndTimeText(e.target.value)}
 							onBlur={handleEndTimeBlur}
 							placeholder="e.g., 2pm, 2:00 PM, 17:00"
+							aria-invalid={endTimeError || timeRangeError ? true : undefined}
 						/>
-						{endTimeError && (
-							<p className="text-xs text-tone-danger">{endTimeError}</p>
-						)}
+						<output
+							aria-live="polite"
+							className="block text-xs text-tone-danger empty:hidden"
+						>
+							{endTimeError}
+						</output>
 					</div>
 				</div>
-				{timeRangeError && (
-					<p className="text-xs text-tone-danger">{timeRangeError}</p>
-				)}
+				<output
+					aria-live="polite"
+					className="block text-xs text-tone-danger empty:hidden"
+				>
+					{timeRangeError}
+				</output>
 
 				<div className="space-y-2">
-					<Label htmlFor="eventCode">
+					<Label htmlFor={`${formId}-eventCode`}>
 						Event Code <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
-						id="eventCode"
+						id={`${formId}-eventCode`}
+						name="eventCode"
+						autoComplete="off"
+						spellCheck={false}
 						value={data.eventCode}
 						onChange={(e) => onChange({ eventCode: e.target.value })}
 						placeholder="e.g., TECH-WORKSHOP-2024"
@@ -198,10 +240,13 @@ export function LogisticsSection({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="pointsToReward">Points to Reward</Label>
+					<Label htmlFor={`${formId}-pointsToReward`}>Points to Reward</Label>
 					<Input
-						id="pointsToReward"
+						id={`${formId}-pointsToReward`}
+						name="pointsToReward"
+						autoComplete="off"
 						type="number"
+						inputMode="numeric"
 						min={0}
 						step={1}
 						value={
@@ -221,14 +266,17 @@ export function LogisticsSection({
 				<div className="space-y-4 pt-4 border-t">
 					<div className="flex items-start space-x-3">
 						<Checkbox
-							id="willOrHaveRoomBooking"
+							id={`${formId}-willOrHaveRoomBooking`}
 							checked={data.willOrHaveRoomBooking}
 							onCheckedChange={(checked) =>
 								onChange({ willOrHaveRoomBooking: checked as boolean })
 							}
 						/>
 						<div className="space-y-1">
-							<Label htmlFor="willOrHaveRoomBooking" className="cursor-pointer">
+							<Label
+								htmlFor={`${formId}-willOrHaveRoomBooking`}
+								className="cursor-pointer"
+							>
 								Room booking secured or in progress
 							</Label>
 							<p className="text-xs text-muted-foreground">
@@ -251,8 +299,8 @@ export function LogisticsSection({
 												key={idx}
 												className="flex items-center justify-between p-2 border rounded-lg text-sm"
 											>
-												<div className="flex items-center gap-2">
-													<FileText className="h-4 w-4 text-muted-foreground" />
+												<div className="flex min-w-0 items-center gap-2">
+													<FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
 													<span className="truncate max-w-50">{fileName}</span>
 												</div>
 												<Button
@@ -261,6 +309,7 @@ export function LogisticsSection({
 													size="sm"
 													className="h-7 w-7 p-0"
 													onClick={() => removeRoomBookingFile(idx)}
+													aria-label={`Remove ${fileName}`}
 												>
 													<X className="h-3.5 w-3.5" />
 												</Button>
@@ -276,6 +325,7 @@ export function LogisticsSection({
 								</span>
 								<Input
 									type="file"
+									name="roomBookingFiles"
 									accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
 									multiple
 									className="hidden"
@@ -286,11 +336,13 @@ export function LogisticsSection({
 					)}
 
 					<div className="space-y-3 pt-2">
-						<Label className="text-sm font-medium">
+						<Label id={foodQuestionId} className="text-sm font-medium">
 							Will you be serving food or drinks at this event?{" "}
 							<span className="text-tone-danger">*</span>
 						</Label>
 						<RadioGroup
+							name="foodDrinksBeingServed"
+							aria-labelledby={foodQuestionId}
 							value={data.foodDrinksBeingServed ? "yes" : "no"}
 							onValueChange={(val) => {
 								const isYes = val === "yes";
@@ -299,14 +351,20 @@ export function LogisticsSection({
 							className="space-y-2"
 						>
 							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
-								<RadioGroupItem value="yes" id="food-yes" />
-								<Label htmlFor="food-yes" className="cursor-pointer flex-1">
+								<RadioGroupItem value="yes" id={`${formId}-food-yes`} />
+								<Label
+									htmlFor={`${formId}-food-yes`}
+									className="cursor-pointer flex-1"
+								>
 									Yes, we will serve food or drinks
 								</Label>
 							</div>
 							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
-								<RadioGroupItem value="no" id="food-no" />
-								<Label htmlFor="food-no" className="cursor-pointer flex-1">
+								<RadioGroupItem value="no" id={`${formId}-food-no`} />
+								<Label
+									htmlFor={`${formId}-food-no`}
+									className="cursor-pointer flex-1"
+								>
 									No food or drinks will be served
 								</Label>
 							</div>

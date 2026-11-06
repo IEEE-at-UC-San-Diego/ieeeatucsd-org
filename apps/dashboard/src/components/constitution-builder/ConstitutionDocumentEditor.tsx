@@ -33,6 +33,7 @@ import {
 	forwardRef,
 	useCallback,
 	useEffect,
+	useId,
 	useImperativeHandle,
 	useMemo,
 	useRef,
@@ -43,6 +44,8 @@ import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useVisualViewportBottom } from "@/hooks/useVisualViewportBottom";
 import { cn } from "@/lib/utils";
 import type {
@@ -405,11 +408,14 @@ const ConstitutionDocumentEditor = forwardRef<
 ) {
 	const isMobile = useIsMobile();
 	const keyboardInset = useVisualViewportBottom();
+	const prefersReducedMotion = usePrefersReducedMotion();
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const confirmDiscard = useUnsavedChangesGuard(hasUnsavedChanges);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isSavingVersion, setIsSavingVersion] = useState(false);
 	const [saveVersionDialogOpen, setSaveVersionDialogOpen] = useState(false);
 	const [versionNote, setVersionNote] = useState("");
+	const versionNoteBaseId = useId();
 	const [saveMessage, setSaveMessage] = useState("");
 	const [sectionNavOpen, setSectionNavOpen] = useState(false);
 	const [sectionNavQuery, setSectionNavQuery] = useState("");
@@ -452,7 +458,7 @@ const ConstitutionDocumentEditor = forwardRef<
 				types: ["heading", "paragraph"],
 			}),
 			Placeholder.configure({
-				placeholder: "Start editing the constitution...",
+				placeholder: "Start editing the constitution…",
 			}),
 		],
 		content: initialHtml,
@@ -542,7 +548,9 @@ const ConstitutionDocumentEditor = forwardRef<
 			return true;
 		} catch (error) {
 			console.error("Failed to save:", error);
-			setSaveMessage("Failed to save changes");
+			setSaveMessage(
+				"Failed to save changes. Check your connection and try again.",
+			);
 			onSaveStatusChange?.("error");
 			return false;
 		} finally {
@@ -567,14 +575,16 @@ const ConstitutionDocumentEditor = forwardRef<
 			if (hasUnsavedChanges) {
 				const saved = await handleSave();
 				if (!saved) {
-					toast.error("Could not save current edits before versioning");
+					toast.error(
+						"Couldn’t save current edits before versioning. Fix the save error and try again.",
+					);
 					return;
 				}
 			}
 
 			const result = await onSaveVersion(versionNote);
 			if (!result) {
-				toast.error("Failed to create version");
+				toast.error("Failed to create version. Please try again.");
 				return;
 			}
 
@@ -584,7 +594,9 @@ const ConstitutionDocumentEditor = forwardRef<
 			toast.success(`Saved version ${result.label}`);
 		} catch (error) {
 			console.error("Failed to save version:", error);
-			toast.error("Failed to save version");
+			toast.error(
+				"Failed to save version. Check your connection and try again.",
+			);
 		} finally {
 			setIsSavingVersion(false);
 		}
@@ -604,8 +616,9 @@ const ConstitutionDocumentEditor = forwardRef<
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [handleSave, hasUnsavedChanges, isSaving, isSavingVersion]);
 
-	const handleReset = useCallback(() => {
+	const handleReset = useCallback(async () => {
 		if (!editor) return;
+		if (!(await confirmDiscard())) return;
 		const freshHtml = sectionsToHtml(sectionsRef.current, sectionsRef.current);
 		suppressOnUpdateRef.current = true;
 		editor.commands.setContent(freshHtml);
@@ -613,7 +626,7 @@ const ConstitutionDocumentEditor = forwardRef<
 		initialHtmlRef.current = freshHtml;
 		setHasUnsavedChanges(false);
 		setSaveMessage("");
-	}, [editor]);
+	}, [editor, confirmDiscard]);
 
 	const sortedSections = useMemo(
 		() => [...sections].sort((a, b) => a.order - b.order),
@@ -629,28 +642,38 @@ const ConstitutionDocumentEditor = forwardRef<
 		);
 	}, [sortedSections, sectionNavQuery]);
 
-	const scrollToSection = useCallback((sectionId: string) => {
-		const root = editorScrollRef.current;
-		if (!root) return;
-		const target = root.querySelector(
-			`[data-section-id="${CSS.escape(sectionId)}"]`,
-		);
-		if (target instanceof HTMLElement) {
-			target.scrollIntoView({ behavior: "smooth", block: "start" });
-			target.focus({ preventScroll: true });
-		}
-		setSectionNavOpen(false);
-		setSectionNavQuery("");
-	}, []);
+	const scrollToSection = useCallback(
+		(sectionId: string) => {
+			const root = editorScrollRef.current;
+			if (!root) return;
+			const target = root.querySelector(
+				`[data-section-id="${CSS.escape(sectionId)}"]`,
+			);
+			if (target instanceof HTMLElement) {
+				target.scrollIntoView({
+					behavior: prefersReducedMotion ? "auto" : "smooth",
+					block: "start",
+				});
+				target.focus({ preventScroll: true });
+			}
+			setSectionNavOpen(false);
+			setSectionNavQuery("");
+		},
+		[prefersReducedMotion],
+	);
 
 	if (!editor) {
 		return (
-			<div className="bg-background rounded-lg border border-border p-8 text-center">
+			<output
+				aria-live="polite"
+				className="block bg-background rounded-lg border border-border p-8 text-center"
+			>
+				<span className="sr-only">Loading editor…</span>
 				<div className="animate-pulse space-y-4">
 					<div className="h-10 bg-muted rounded" />
 					<div className="h-64 bg-muted rounded" />
 				</div>
-			</div>
+			</output>
 		);
 	}
 
@@ -805,17 +828,19 @@ const ConstitutionDocumentEditor = forwardRef<
 
 	const saveControls = (
 		<div className="flex min-w-0 flex-wrap items-center gap-2">
-			{saveMessage && (
-				<span
-					className={`text-xs font-medium px-2 py-1 rounded ${
-						saveMessage.includes("Failed")
-							? "text-tone-danger bg-ds-red-100"
-							: "text-tone-success bg-ds-green-100"
-					}`}
-				>
-					{saveMessage}
-				</span>
-			)}
+			<output aria-live="polite" className="contents">
+				{saveMessage && (
+					<span
+						className={`text-xs font-medium px-2 py-1 rounded break-words ${
+							saveMessage.includes("Failed")
+								? "text-tone-danger bg-ds-red-100"
+								: "text-tone-success bg-ds-green-100"
+						}`}
+					>
+						{saveMessage}
+					</span>
+				)}
+			</output>
 			{hasUnsavedChanges && (
 				<span className="text-xs text-tone-warning font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
 					Unsaved
@@ -826,6 +851,7 @@ const ConstitutionDocumentEditor = forwardRef<
 				variant="outline"
 				size="sm"
 				disabled={!hasUnsavedChanges}
+				aria-label="Reset Unsaved Changes"
 				className="h-11 min-w-11 text-xs md:h-9"
 			>
 				<RotateCcw className="h-3.5 w-3.5 md:mr-1" />
@@ -836,11 +862,12 @@ const ConstitutionDocumentEditor = forwardRef<
 				size="sm"
 				variant="outline"
 				disabled={isSaving || isSavingVersion}
+				aria-label="Save Version"
 				className="h-11 min-w-11 text-xs md:h-9"
 			>
 				<History className="h-3.5 w-3.5 md:mr-1" />
 				<span className="hidden sm:inline">
-					{isSavingVersion ? "Saving…" : "Version"}
+					{isSavingVersion ? "Saving…" : "Save Version"}
 				</span>
 			</Button>
 			<Button
@@ -919,12 +946,14 @@ const ConstitutionDocumentEditor = forwardRef<
 			<ResponsiveOverlay
 				open={sectionNavOpen}
 				onOpenChange={setSectionNavOpen}
-				title="Jump to section"
+				title="Jump to Section"
 				description="Search and select a section to scroll into the editor."
 				variant="sheet"
 			>
 				<div className="space-y-3 pb-4">
 					<Input
+						name="section-search"
+						aria-label="Search sections"
 						value={sectionNavQuery}
 						onChange={(e) => setSectionNavQuery(e.target.value)}
 						placeholder="Search sections…"
@@ -940,13 +969,16 @@ const ConstitutionDocumentEditor = forwardRef<
 							</li>
 						) : (
 							filteredNavSections.map((section) => (
-								<li key={section.id}>
+								<li
+									key={section.id}
+									className="[content-visibility:auto] [contain-intrinsic-size:auto_64px]"
+								>
 									<button
 										type="button"
-										className="flex min-h-12 w-full flex-col items-start gap-0.5 px-4 py-3 text-left active:bg-muted/60"
+										className="flex min-h-12 w-full flex-col items-start gap-0.5 px-4 py-3 text-left hover:bg-muted/60 active:bg-muted/60"
 										onClick={() => scrollToSection(section.id)}
 									>
-										<span className="text-sm font-medium text-foreground">
+										<span className="w-full text-sm font-medium text-foreground break-words">
 											{section.title || "Untitled"}
 										</span>
 										<span className="text-xs capitalize text-muted-foreground">
@@ -986,23 +1018,25 @@ const ConstitutionDocumentEditor = forwardRef<
 							onClick={handleSaveVersion}
 							disabled={isSavingVersion}
 						>
-							{isSavingVersion ? "Saving..." : "Save Version"}
+							{isSavingVersion ? "Saving…" : "Save Version"}
 						</Button>
 					</div>
 				}
 			>
 				<div className="space-y-2 pb-2">
 					<label
-						htmlFor="version-note"
+						htmlFor={`${versionNoteBaseId}-version-note`}
 						className="text-sm font-medium text-foreground"
 					>
 						Note (optional)
 					</label>
 					<Input
-						id="version-note"
+						id={`${versionNoteBaseId}-version-note`}
+						name="version-note"
+						autoComplete="off"
 						value={versionNote}
 						onChange={(e) => setVersionNote(e.target.value)}
-						placeholder="Example: Board-approved edits before publication"
+						placeholder="Board-approved edits before publication…"
 						maxLength={120}
 						className="h-11 text-base md:h-9 md:text-sm"
 					/>

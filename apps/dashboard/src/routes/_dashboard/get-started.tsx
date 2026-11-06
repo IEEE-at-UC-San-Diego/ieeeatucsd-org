@@ -1,5 +1,5 @@
 import { api } from "@convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import {
 	ArrowLeft,
 	ArrowRight,
@@ -13,7 +13,7 @@ import {
 	Upload,
 	User,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { MobileTaskStepper } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { LEGAL_VERSIONS } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/get-started")({
@@ -40,6 +41,7 @@ interface Question {
 	accept?: string;
 	autoComplete?: string;
 	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+	spellCheck?: boolean;
 }
 
 const questions: Question[] = [
@@ -61,6 +63,7 @@ const questions: Question[] = [
 		placeholder: "123456789",
 		autoComplete: "off",
 		inputMode: "text",
+		spellCheck: false,
 	},
 	{
 		id: "major",
@@ -87,12 +90,14 @@ const questions: Question[] = [
 	{
 		id: "memberId",
 		title: "IEEE Member ID",
-		description: "If you're already an IEEE member, enter your ID (optional)",
+		description: "If you’re already an IEEE member, enter your ID (optional)",
 		icon: User,
 		required: false,
 		type: "text",
 		placeholder: "12345678",
+		autoComplete: "off",
 		inputMode: "numeric",
+		spellCheck: false,
 	},
 	{
 		id: "zelle",
@@ -102,8 +107,9 @@ const questions: Question[] = [
 		icon: CreditCard,
 		required: false,
 		type: "text",
-		placeholder: "Phone number or email",
+		placeholder: "Phone number or email…",
 		autoComplete: "email",
+		spellCheck: false,
 	},
 	{
 		id: "resume",
@@ -117,6 +123,7 @@ const questions: Question[] = [
 ];
 
 function GetStartedPage() {
+	const formId = useId();
 	const { user, logtoId } = useAuth();
 	const completeOnboarding = useAuthedMutation(api.users.completeOnboarding);
 	const generateResumeUploadUrl = useAuthedMutation(
@@ -126,13 +133,18 @@ function GetStartedPage() {
 	const [answers, setAnswers] = useState<Record<string, unknown>>({});
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const navigate = useNavigate();
+	useUnsavedChangesGuard(
+		Object.keys(answers).length > 0 &&
+			!loading &&
+			currentStep < questions.length,
+	);
 
 	const currentQuestion = questions[currentStep];
 	const isLastStep = currentStep === questions.length - 1;
 
 	if (user?.signedUp) {
-		window.location.href = "/overview";
-		return null;
+		return <Navigate to="/overview" replace />;
 	}
 
 	const handleNext = () => {
@@ -147,7 +159,7 @@ function GetStartedPage() {
 				return;
 			}
 		} else if (currentQuestion.required && !answers[currentQuestion.id]) {
-			setError("This field is required");
+			setError(`Enter your ${currentQuestion.title} to continue.`);
 			return;
 		}
 
@@ -207,10 +219,14 @@ function GetStartedPage() {
 			});
 			setCurrentStep(questions.length);
 			setTimeout(() => {
-				window.location.href = "/overview";
+				navigate({ to: "/overview", replace: true });
 			}, 2000);
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "Something went wrong");
+			setError(
+				err instanceof Error
+					? err.message
+					: "Couldn’t complete setup. Check your connection and try again.",
+			);
 			setLoading(false);
 		}
 	};
@@ -222,15 +238,15 @@ function GetStartedPage() {
 					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-ds-green-700 sm:h-24 sm:w-24">
 						<CheckCircle className="h-10 w-10 text-on-accent sm:h-12 sm:w-12" />
 					</div>
-					<h1 className="mb-3 text-2xl font-bold sm:text-3xl">
+					<h1 className="mb-3 text-balance text-2xl font-bold sm:text-3xl">
 						Welcome to IEEE UCSD!
 					</h1>
 					<p className="text-muted-foreground">
 						Your profile has been set up successfully.
 					</p>
-					<p className="mt-2 text-sm text-muted-foreground">
-						Redirecting to your dashboard...
-					</p>
+					<output className="mt-2 block text-sm text-muted-foreground">
+						Redirecting to your dashboard…
+					</output>
 				</div>
 			</div>
 		);
@@ -239,26 +255,38 @@ function GetStartedPage() {
 	const renderInput = () => {
 		const question = currentQuestion;
 		const value = answers[question.id];
+		const fieldProps = {
+			id: question.id,
+			name: question.id,
+			"aria-labelledby": `${question.id}-title`,
+			"aria-describedby": error
+				? `${question.id}-description ${formId}-get-started-error`
+				: `${question.id}-description`,
+			"aria-invalid": error ? true : undefined,
+			"aria-required": question.required || undefined,
+		};
 
 		switch (question.type) {
 			case "text":
 				return (
 					<Input
+						{...fieldProps}
 						type="text"
 						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
 						onKeyDown={handleKeyPress}
 						placeholder={question.placeholder}
 						className="h-12 text-base"
-						autoFocus
 						autoComplete={question.autoComplete}
 						inputMode={question.inputMode}
+						spellCheck={question.spellCheck}
 						enterKeyHint="next"
 					/>
 				);
 			case "number":
 				return (
 					<Input
+						{...fieldProps}
 						type="number"
 						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
@@ -267,7 +295,7 @@ function GetStartedPage() {
 						min={question.min}
 						max={question.max}
 						className="h-12 text-base"
-						autoFocus
+						autoComplete="off"
 						inputMode="numeric"
 						enterKeyHint="next"
 					/>
@@ -278,8 +306,11 @@ function GetStartedPage() {
 						<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
 							<Upload className="size-8 text-muted-foreground" />
 							<span className="text-sm font-medium">Tap to choose PDF</span>
-							<span className="text-xs text-muted-foreground">Maximum 5MB</span>
+							<span className="text-xs text-muted-foreground">
+								Maximum 5&nbsp;MB
+							</span>
 							<input
+								{...fieldProps}
 								type="file"
 								accept={question.accept}
 								className="sr-only"
@@ -298,10 +329,12 @@ function GetStartedPage() {
 							/>
 						</label>
 						{value instanceof File && (
-							<p className="flex items-center gap-2 font-medium text-tone-success">
-								<CheckCircle className="w-4 h-4" />
-								{value.name} selected
-							</p>
+							<output className="flex min-w-0 items-center gap-2 font-medium text-tone-success">
+								<CheckCircle className="w-4 h-4 shrink-0" />
+								<span className="min-w-0 break-words">
+									{value.name} selected
+								</span>
+							</output>
 						)}
 						<p className="text-xs text-muted-foreground">
 							Your resume will be visible to IEEE sponsors and officers.
@@ -395,9 +428,11 @@ function GetStartedPage() {
 						<img
 							src="/logos/blue_logo_only.svg"
 							alt=""
+							width={48}
+							height={48}
 							className="size-10 sm:size-12"
 						/>
-						<h1 className="text-xl font-bold sm:text-3xl">
+						<h1 className="text-balance text-xl font-bold sm:text-3xl">
 							IEEE at UC San Diego
 						</h1>
 					</div>
@@ -420,22 +455,37 @@ function GetStartedPage() {
 							<div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary sm:size-16">
 								<currentQuestion.icon className="size-7 text-primary-foreground sm:size-8" />
 							</div>
-							<h2 className="mb-2 text-xl font-bold sm:text-2xl">
+							<h2
+								id={`${currentQuestion.id}-title`}
+								className="mb-2 text-balance text-xl font-bold sm:text-2xl"
+							>
 								{currentQuestion.title}
 								{currentQuestion.required && (
-									<span className="ml-1 text-tone-danger">*</span>
+									<span className="ml-1 text-tone-danger" aria-hidden="true">
+										*
+									</span>
 								)}
 							</h2>
-							<p className="text-sm text-muted-foreground sm:text-base">
+							<p
+								id={`${currentQuestion.id}-description`}
+								className="text-pretty text-sm text-muted-foreground sm:text-base"
+							>
 								{currentQuestion.description}
 							</p>
 						</div>
 
-						{error && (
-							<div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-								<p className="text-sm text-destructive">{error}</p>
-							</div>
-						)}
+						<output aria-live="polite" className="block">
+							{error && (
+								<div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+									<p
+										id={`${formId}-get-started-error`}
+										className="text-sm text-destructive"
+									>
+										{error}
+									</p>
+								</div>
+							)}
+						</output>
 
 						{renderInput()}
 					</div>
@@ -459,7 +509,7 @@ function GetStartedPage() {
 								{loading ? (
 									<>
 										<Loader2 className="mr-2 size-4 animate-spin" />
-										Finishing...
+										Finishing…
 									</>
 								) : isLastStep ? (
 									<>
@@ -480,7 +530,7 @@ function GetStartedPage() {
 								onClick={handleNext}
 								className="h-10 w-full text-muted-foreground"
 							>
-								Skip this question
+								Skip This Question
 							</Button>
 						)}
 					</div>

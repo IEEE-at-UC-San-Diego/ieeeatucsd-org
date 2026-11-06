@@ -9,8 +9,10 @@ import {
 	MoreHorizontal,
 	Plus,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	PageHeader,
@@ -43,6 +45,14 @@ import {
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -51,18 +61,51 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { sendNotification } from "@/lib/send-notification";
 
+const searchSchema = z.object({
+	view: z.enum(["list", "calendar", "vco"]).catch("list"),
+	q: z.string().catch(""),
+	statuses: z
+		.array(
+			z.enum([
+				"draft",
+				"submitted",
+				"pending",
+				"needs_review",
+				"approved",
+				"declined",
+				"published",
+			]),
+		)
+		.catch([]),
+	team: z
+		.enum(["for_events", "for_internal", "for_operations"])
+		.optional()
+		.catch(undefined),
+	sort: z.enum(["eventName", "status", "startDate"]).catch("startDate"),
+	dir: z.enum(["asc", "desc"]).catch("desc"),
+	page: z.number().int().min(1).catch(1),
+	vq: z.string().catch(""),
+	flagged: z.boolean().catch(false),
+	quarter: z.boolean().catch(false),
+});
+
+type ManageEventsSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/manage-events")({
+	validateSearch: searchSchema,
 	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
 	component: ManageEventsPage,
 });
 
 function ManageEventsPage() {
+	const formId = useId();
 	const {
 		hasOfficerAccess,
 		hasAdminAccess,
@@ -75,6 +118,11 @@ function ManageEventsPage() {
 	const isMobile = useIsMobile();
 	const { setHideTabBar } = useMobileShell();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
+	const confirmAction = useConfirm();
+	const search = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearch = (patch: Partial<ManageEventsSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
 	// Single unified query — events and eventRequests are now one table
 	const eventsData = useAuthedQuery(
@@ -115,24 +163,16 @@ function ManageEventsPage() {
 		logtoId ? { logtoId } : "skip",
 	);
 
-	// View mode state
-	const [viewMode, setViewMode] = useState<"list" | "calendar" | "vco">("list");
-
-	// Filters state
-	const [filters, setFilters] = useState<EventFilters>({
-		search: "",
-		statuses: [],
-		teamPreset: undefined,
-	});
-
-	// Sort state
-	const [sortConfig, setSortConfig] = useState<SortConfig>({
-		field: "startDate",
-		direction: "desc",
-	});
-
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
+	const viewMode = search.view;
+	const filters: EventFilters = useMemo(
+		() => ({
+			search: search.q,
+			statuses: search.statuses,
+			teamPreset: search.team,
+		}),
+		[search.q, search.statuses, search.team],
+	);
+	const sortConfig: SortConfig = { field: search.sort, direction: search.dir };
 	const itemsPerPage = 10;
 
 	// Modal states
@@ -158,6 +198,13 @@ function ManageEventsPage() {
 
 	// Loading state
 	const [isProcessing, setIsProcessing] = useState(false);
+
+	const [decliningEvent, setDecliningEvent] = useState<EventRequest | null>(
+		null,
+	);
+	const [declineReason, setDeclineReason] = useState("");
+	const [declineError, setDeclineError] = useState("");
+	const [isDeclining, setIsDeclining] = useState(false);
 
 	useEffect(() => {
 		const immersive =
@@ -262,26 +309,26 @@ function ManageEventsPage() {
 			const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
 			return sortConfig.direction === "asc" ? comparison : -comparison;
 		});
-	}, [filteredEvents, sortConfig]);
+	}, [filteredEvents, sortConfig.field, sortConfig.direction]);
 
 	// Pagination
 	const totalPages = Math.ceil(sortedEvents.length / itemsPerPage);
+	const currentPage = Math.min(search.page, Math.max(totalPages, 1));
 	const paginatedEvents = useMemo(() => {
 		const startIndex = (currentPage - 1) * itemsPerPage;
 		return sortedEvents.slice(startIndex, startIndex + itemsPerPage);
 	}, [sortedEvents, currentPage]);
 
-	// Reset page on filter/sort change
-	useMemo(() => {
-		setCurrentPage(1);
-	}, []);
-
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<output
+				aria-live="polite"
+				className="flex items-center justify-center min-h-[60vh]"
+			>
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
@@ -289,18 +336,19 @@ function ManageEventsPage() {
 	if (!hasOfficerAccess) {
 		return (
 			<div className="p-6 text-center text-muted-foreground">
-				You don't have permission to access this page.
+				You don’t have permission to access this page. Ask an administrator for
+				officer access.
 			</div>
 		);
 	}
 
 	// Sort handler
 	const handleSort = (field: string) => {
-		setSortConfig((prev) => ({
-			field,
-			direction:
-				prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-		}));
+		const nextField = searchSchema.shape.sort.parse(field);
+		setSearch({
+			sort: nextField,
+			dir: search.sort === nextField && search.dir === "asc" ? "desc" : "asc",
+		});
 	};
 
 	// Create event handler
@@ -331,7 +379,10 @@ function ManageEventsPage() {
 				});
 			}
 		} catch (error: any) {
-			toast.error(error.message || "Failed to submit event request");
+			toast.error(
+				error.message ||
+					"Failed to submit event request. Check your connection and try again.",
+			);
 			throw error;
 		} finally {
 			setIsProcessing(false);
@@ -347,7 +398,10 @@ function ManageEventsPage() {
 			);
 			toast.success("Event saved successfully!");
 		} catch (error: any) {
-			toast.error(error.message || "Failed to save event");
+			toast.error(
+				error.message ||
+					"Failed to save event. Check your connection and try again.",
+			);
 			throw error;
 		} finally {
 			setIsProcessing(false);
@@ -394,7 +448,10 @@ function ManageEventsPage() {
 				toast.success("Event updated successfully!");
 			}
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update event");
+			toast.error(
+				error.message ||
+					"Failed to update event. Check your connection and try again.",
+			);
 			throw error;
 		} finally {
 			setIsProcessing(false);
@@ -404,7 +461,15 @@ function ManageEventsPage() {
 	// Delete handler
 	const handleDelete = async (event: EventRequest) => {
 		if (!logtoId) return;
-		if (!confirm("Are you sure you want to delete this event?")) return;
+		if (
+			!(await confirmAction({
+				title: "Delete Event?",
+				description: `“${event.eventName}” will be permanently deleted. This can’t be undone.`,
+				confirmLabel: "Delete Event",
+				destructive: true,
+			}))
+		)
+			return;
 		setIsProcessing(true);
 		try {
 			await removeEvent({
@@ -415,7 +480,10 @@ function ManageEventsPage() {
 			setIsViewModalOpen(false);
 			setSelectedRequest(null);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to delete event");
+			toast.error(
+				error.message ||
+					"Failed to delete event. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -433,18 +501,38 @@ function ManageEventsPage() {
 			});
 			toast.success("Event converted to draft!");
 		} catch (error: any) {
-			toast.error(error.message || "Failed to convert to draft");
+			toast.error(
+				error.message ||
+					"Failed to convert to draft. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
 	};
 
 	// Decline handler
-	const handleDecline = async (event: EventRequest) => {
+	const handleDecline = (event: EventRequest) => {
 		if (!logtoId) return;
-		const reason = prompt("Enter reason for declining:");
-		if (!reason) return;
-		setIsProcessing(true);
+		setDeclineReason("");
+		setDeclineError("");
+		setDecliningEvent(event);
+	};
+
+	const closeDeclineDialog = () => {
+		if (isDeclining) return;
+		setDecliningEvent(null);
+	};
+
+	const submitDecline = async () => {
+		const event = decliningEvent;
+		if (!logtoId || !event) return;
+		const reason = declineReason;
+		if (!reason) {
+			setDeclineError("Enter a reason so the requester knows what to change.");
+			return;
+		}
+		setDeclineError("");
+		setIsDeclining(true);
 		try {
 			await updateEventStatus({
 				logtoId,
@@ -466,11 +554,15 @@ function ManageEventsPage() {
 				requestedUser: event.requestedUser,
 			});
 
+			setDecliningEvent(null);
 			setIsViewModalOpen(false);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to decline event");
+			toast.error(
+				error.message ||
+					"Failed to decline event. Check your connection and try again.",
+			);
 		} finally {
-			setIsProcessing(false);
+			setIsDeclining(false);
 		}
 	};
 
@@ -533,7 +625,10 @@ function ManageEventsPage() {
 				prev && prev._id === event._id ? { ...prev, status: newStatus } : prev,
 			);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update status");
+			toast.error(
+				error.message ||
+					"Failed to update status. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -573,7 +668,10 @@ function ManageEventsPage() {
 					: prev,
 			);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to toggle publish");
+			toast.error(
+				error.message ||
+					"Failed to toggle publish. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -597,7 +695,10 @@ function ManageEventsPage() {
 			);
 			toast.success("Graphics status updated");
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update graphics status");
+			toast.error(
+				error.message ||
+					"Failed to update graphics status. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -612,7 +713,10 @@ function ManageEventsPage() {
 			toast.success("Draft event created!");
 			setIsDraftModalOpen(false);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to create draft");
+			toast.error(
+				error.message ||
+					"Failed to create draft. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -665,7 +769,10 @@ function ManageEventsPage() {
 			setIsDraftModalOpen(false);
 			setEditingDraft(null);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update draft");
+			toast.error(
+				error.message ||
+					"Failed to update draft. Check your connection and try again.",
+			);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -684,17 +791,24 @@ function ManageEventsPage() {
 				...patch,
 			});
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update pipeline fields");
+			toast.error(
+				error.message ||
+					"Failed to update pipeline fields. Check your connection and try again.",
+			);
 		}
 	};
 
-	const handleClearFilters = () => {
-		setFilters({
-			search: "",
-			statuses: [],
-			teamPreset: undefined,
+	const handleFiltersChange = (next: EventFilters) => {
+		setSearch({
+			q: next.search,
+			statuses: next.statuses ?? [],
+			team: next.teamPreset,
+			page: 1,
 		});
-		setCurrentPage(1);
+	};
+
+	const handleClearFilters = () => {
+		setSearch({ q: "", statuses: [], team: undefined, page: 1 });
 	};
 
 	const updateWeekLabelSetting = (
@@ -723,7 +837,7 @@ function ManageEventsPage() {
 						{isMobile ? (
 							<Button onClick={() => setIsCreateSheetOpen(true)}>
 								<Plus className="h-4 w-4 mr-2" />
-								Create
+								Create Event
 							</Button>
 						) : (
 							<>
@@ -751,7 +865,7 @@ function ManageEventsPage() {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								<DropdownMenuItem onSelect={() => setIsWeekSettingsOpen(true)}>
-									Week label settings
+									Week Label Settings
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
@@ -777,12 +891,17 @@ function ManageEventsPage() {
 							</p>
 							<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
 								<div className="space-y-1.5">
-									<Label htmlFor="fall-week0-start" className="text-xs">
+									<Label
+										htmlFor={`${formId}-fall-week0-start`}
+										className="text-xs"
+									>
 										Fall Week 0 Start
 									</Label>
 									<Input
-										id="fall-week0-start"
+										id={`${formId}-fall-week0-start`}
+										name="fallWeek0Start"
 										type="date"
+										autoComplete="off"
 										className="h-11 text-base sm:h-9 sm:text-sm"
 										value={weekLabelSettings.fallWeek0Start}
 										onChange={(e) =>
@@ -791,12 +910,17 @@ function ManageEventsPage() {
 									/>
 								</div>
 								<div className="space-y-1.5">
-									<Label htmlFor="winter-week1-start" className="text-xs">
+									<Label
+										htmlFor={`${formId}-winter-week1-start`}
+										className="text-xs"
+									>
 										Winter Week 1 Start
 									</Label>
 									<Input
-										id="winter-week1-start"
+										id={`${formId}-winter-week1-start`}
+										name="winterWeek1Start"
 										type="date"
+										autoComplete="off"
 										className="h-11 text-base sm:h-9 sm:text-sm"
 										value={weekLabelSettings.winterWeek1Start}
 										onChange={(e) =>
@@ -805,12 +929,17 @@ function ManageEventsPage() {
 									/>
 								</div>
 								<div className="space-y-1.5">
-									<Label htmlFor="spring-week1-start" className="text-xs">
+									<Label
+										htmlFor={`${formId}-spring-week1-start`}
+										className="text-xs"
+									>
 										Spring Week 1 Start
 									</Label>
 									<Input
-										id="spring-week1-start"
+										id={`${formId}-spring-week1-start`}
+										name="springWeek1Start"
 										type="date"
+										autoComplete="off"
 										className="h-11 text-base sm:h-9 sm:text-sm"
 										value={weekLabelSettings.springWeek1Start}
 										onChange={(e) =>
@@ -828,7 +957,7 @@ function ManageEventsPage() {
 			<ResponsiveOverlay
 				open={isCreateSheetOpen}
 				onOpenChange={setIsCreateSheetOpen}
-				title="Create"
+				title="Create Event"
 				variant="sheet"
 			>
 				<div className="space-y-2 pb-2">
@@ -862,7 +991,7 @@ function ManageEventsPage() {
 			<Tabs
 				value={viewMode}
 				onValueChange={(value) =>
-					setViewMode(value as "list" | "calendar" | "vco")
+					setSearch({ view: value as ManageEventsSearch["view"] })
 				}
 			>
 				<TabsList>
@@ -887,17 +1016,18 @@ function ManageEventsPage() {
 			{viewMode !== "vco" && (
 				<EventsFilters
 					filters={filters}
-					onFiltersChange={setFilters}
+					onFiltersChange={handleFiltersChange}
 					onClearFilters={handleClearFilters}
 				/>
 			)}
 
 			{/* Loading State */}
 			{!stableEventsData && (
-				<div className="space-y-4">
+				<output aria-live="polite" className="block space-y-4">
+					<span className="sr-only">Loading events…</span>
 					<div className="h-8 w-48 bg-muted rounded animate-pulse" />
 					<div className="h-64 bg-muted rounded animate-pulse" />
-				</div>
+				</output>
 			)}
 
 			{/* Content */}
@@ -929,7 +1059,8 @@ function ManageEventsPage() {
 						pagination={{
 							currentPage,
 							totalPages,
-							onPageChange: setCurrentPage,
+							totalItems: sortedEvents.length,
+							onPageChange: (page) => setSearch({ page }),
 						}}
 					/>
 				) : viewMode === "vco" && canViewVcoPipeline ? (
@@ -1056,13 +1187,91 @@ function ManageEventsPage() {
 				/>
 			)}
 
+			<Dialog
+				open={!!decliningEvent}
+				onOpenChange={(open) => {
+					if (!open) closeDeclineDialog();
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							void submitDecline();
+						}}
+						className="space-y-4"
+					>
+						<DialogHeader>
+							<DialogTitle className="text-balance">Decline Event?</DialogTitle>
+							<DialogDescription>
+								{decliningEvent
+									? `“${decliningEvent.eventName}” will be declined and the requester will be notified with your reason.`
+									: null}
+							</DialogDescription>
+						</DialogHeader>
+						<div className="space-y-2">
+							<Label htmlFor={`${formId}-decline-reason`}>
+								Reason for Declining
+							</Label>
+							<Textarea
+								id={`${formId}-decline-reason`}
+								name="declineReason"
+								autoComplete="off"
+								rows={4}
+								value={declineReason}
+								onChange={(e) => {
+									setDeclineReason(e.target.value);
+									if (declineError) setDeclineError("");
+								}}
+								placeholder="Explain why this event is being declined…"
+								aria-invalid={!!declineError}
+								aria-describedby={
+									declineError ? `${formId}-decline-reason-error` : undefined
+								}
+								disabled={isDeclining}
+							/>
+							<output
+								id={`${formId}-decline-reason-error`}
+								aria-live="polite"
+								className="block text-xs text-destructive empty:hidden"
+							>
+								{declineError}
+							</output>
+						</div>
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={closeDeclineDialog}
+								disabled={isDeclining}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								variant="destructive"
+								disabled={isDeclining}
+							>
+								{isDeclining ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : null}
+								{isDeclining ? "Declining…" : "Decline Event"}
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
 			{/* Processing Overlay */}
 			{isProcessing && (
 				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-					<div className="bg-background rounded-lg p-6 flex items-center gap-3">
+					<output
+						aria-live="polite"
+						className="bg-background rounded-lg p-6 flex items-center gap-3"
+					>
 						<Loader2 className="h-5 w-5 animate-spin" />
-						<span>Processing...</span>
-					</div>
+						<span>Processing…</span>
+					</output>
 				</div>
 			)}
 		</DashboardPage>
