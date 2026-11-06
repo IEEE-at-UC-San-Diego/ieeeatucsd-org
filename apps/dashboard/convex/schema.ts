@@ -303,6 +303,19 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_requestedUser", ["requestedUser"]),
 
+  // Checksums the caller registered before uploading a file they may later attach.
+  storageUploadGrants: defineTable({
+    ownerId: v.string(),
+    sha256: v.string(),
+    createdAt: v.number(),
+  }).index("by_ownerId_and_sha256", ["ownerId", "sha256"]),
+
+  // Storage ids this caller uploaded. Foreign ids never get a row.
+  storageFileOwners: defineTable({
+    storageId: v.string(),
+    ownerId: v.string(),
+  }).index("by_storageId", ["storageId"]),
+
   // Internal events for officer calendar (meetings, tabling, etc.)
   internalEvents: defineTable({
     name: v.string(),

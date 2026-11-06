@@ -25,7 +25,7 @@ interface FundingSectionProps {
 		invoices: Invoice[];
 	};
 	onChange: (data: Partial<FundingSectionProps["data"]>) => void;
-	generateUploadUrl?: () => Promise<string>;
+	uploadStorageFile?: (file: File) => Promise<string>;
 	aiEnabled?: boolean;
 }
 
@@ -36,7 +36,7 @@ export function shouldParseInvoiceWithAI(aiEnabled: boolean) {
 export function FundingSection({
 	data,
 	onChange,
-	generateUploadUrl,
+	uploadStorageFile,
 	aiEnabled = true,
 }: FundingSectionProps) {
 	const { getAuthHeaders } = useAuth();
@@ -71,19 +71,10 @@ export function FundingSection({
 			reader.readAsDataURL(file);
 		});
 
-		// Upload to Convex if available
-		if (generateUploadUrl) {
+		// Upload to Convex if available. The id is claimed before the event is saved.
+		if (uploadStorageFile) {
 			try {
-				const uploadUrl = await generateUploadUrl();
-				const res = await fetch(uploadUrl, {
-					method: "POST",
-					headers: { "Content-Type": file.type },
-					body: file,
-				});
-				if (res.ok) {
-					const { storageId } = await res.json();
-					fileUrl = storageId;
-				}
+				fileUrl = await uploadStorageFile(file);
 			} catch (err) {
 				console.error("Upload failed:", err);
 			}
