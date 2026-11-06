@@ -30,6 +30,7 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { formatCurrencyUSD } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MultiFileUpload } from "./MultiFileUpload";
+import { fileSha256Hex } from "./receiptChecksum";
 import type { DepositMethod, IeeeDepositSource } from "./types";
 
 interface FundDepositWizardProps {
@@ -287,7 +288,8 @@ export function FundDepositWizard({
 				}
 
 				const { storageId } = await result.json();
-				const fileUrl = await getStorageUrl({ storageId });
+				const sha256 = await fileSha256Hex(file);
+				const fileUrl = await getStorageUrl({ storageId, sha256 });
 				if (!fileUrl) {
 					throw new Error(
 						`Failed to resolve uploaded file URL for ${file.name}`,
