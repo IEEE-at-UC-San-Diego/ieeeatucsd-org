@@ -1,4 +1,5 @@
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { assertAccountCanAct } from "./accountStatusTransition";
 
 export type UserRole =
   | "Member"
@@ -157,6 +158,7 @@ export async function requireCurrentUser(
   if (!user) {
     throw new Error("User not found in database");
   }
+  assertAccountCanAct(user.status);
   return user;
 }
 
