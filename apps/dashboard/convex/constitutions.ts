@@ -6,6 +6,21 @@ import {
   resolveAuditActor,
 } from "./constitutionAudit";
 import { requireAdminAccess, requireOfficerAccess } from "./permissions";
+import { constitutionsToArchive } from "./constitutionPublication";
+import type { MutationCtx } from "./_generated/server";
+
+async function archiveOtherPublished(
+  ctx: MutationCtx,
+  publishingId: string,
+) {
+  const published = await ctx.db
+    .query("constitutions")
+    .withIndex("by_status", (q) => q.eq("status", "published"))
+    .collect();
+  for (const row of constitutionsToArchive(published, publishingId)) {
+    await ctx.db.patch(row._id, { status: "archived" });
+  }
+}
 
 const constitutionSectionType = v.union(
   v.literal("preamble"),
@@ -129,6 +144,9 @@ export const update = mutation({
       if (value !== undefined) {
         cleanUpdates[key] = value;
       }
+    }
+    if (cleanUpdates.status === "published") {
+      await archiveOtherPublished(ctx, id);
     }
     await ctx.db.patch(id, cleanUpdates);
     return id;
@@ -785,6 +803,9 @@ export const restoreVersion = mutation({
       lastModifiedBy: userId,
       lastModified: Date.now(),
     });
+    if (targetVersion.snapshotStatus === "published") {
+      await archiveOtherPublished(ctx, args.constitutionId);
+    }
 
     await createAuditEntryInternal(ctx, {
       constitutionId: args.constitutionId,
