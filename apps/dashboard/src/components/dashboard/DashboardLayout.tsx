@@ -197,7 +197,7 @@ export function DashboardLayout() {
 					id={MAIN_CONTENT_ID}
 					tabIndex={-1}
 					data-dashboard-scroll
-					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain outline-none"
+					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
 				>
 					<ErrorBoundary>
 						<Outlet />
