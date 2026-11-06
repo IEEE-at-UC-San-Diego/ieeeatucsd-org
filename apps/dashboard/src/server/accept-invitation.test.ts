@@ -196,6 +196,7 @@ describe("AcceptInvitationApi.handlePost", () => {
 				body: {
 					inviteId: "invite_1",
 					action: "accept",
+					email: "alex@ucsd.edu",
 					selectedPosition: "Project Lead",
 				},
 				claims: { sub: "logto|alex", email: "alex@ucsd.edu" },
