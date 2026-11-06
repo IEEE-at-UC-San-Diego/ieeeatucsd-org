@@ -15,7 +15,7 @@ import {
 type PublicInvitation = {
 	_id: string;
 	name: string;
-	email: string;
+	email?: string;
 	role: string;
 	position: string;
 	offeredPositions?: string[];
@@ -62,7 +62,7 @@ function invitationUnavailableResponse(invitation: PublicInvitation | null) {
 	if (!invitation) {
 		return json({ error: "Invitation not found" }, 404);
 	}
-	if (invitation.status === "expired" || Date.now() > invitation.expiresAt) {
+	if (invitation.status === "expired") {
 		return json({ error: "This invitation has expired" }, 410);
 	}
 	if (invitation.status === "accepted") {
@@ -110,7 +110,11 @@ async function recordAcceptanceSideEffects(
 ) {
 	const recordFn =
 		"officerInvitations:recordAcceptanceSideEffects" as unknown as FunctionReference<"mutation">;
-	await convex.mutation(recordFn, { id: inviteId, ...data });
+	await convex.mutation(recordFn, {
+		id: inviteId,
+		serverSecret: process.env.CONVEX_SESSION_SECRET ?? "",
+		...data,
+	});
 }
 
 async function handleGet({ request }: { request: Request }) {
@@ -146,6 +150,7 @@ async function handlePost({ request }: { request: Request }) {
 			typeof body.selectedPosition === "string"
 				? body.selectedPosition
 				: undefined;
+		const email = typeof body.email === "string" ? body.email : "";
 
 		if (!inviteId) {
 			return json({ error: "Missing inviteId" }, 400);
@@ -158,6 +163,16 @@ async function handlePost({ request }: { request: Request }) {
 		const invitation = await readInvitation(convex, inviteId);
 		const unavailable = invitationUnavailableResponse(invitation);
 		if (unavailable) return unavailable;
+
+		if (action === "accept" && !email.trim()) {
+			return json(
+				{
+					error:
+						"Enter the email address that received this invitation",
+				},
+				400,
+			);
+		}
 
 		if (action === "decline") {
 			const declineFn =
@@ -172,8 +187,10 @@ async function handlePost({ request }: { request: Request }) {
 			"officerInvitations:acceptPublic" as unknown as FunctionReference<"mutation">;
 		const acceptedInvitation = (await convex.mutation(acceptFn, {
 			id: inviteId,
+			email,
 			selectedPosition,
 		})) as PublicInvitation & {
+			email: string;
 			roleGranted?: boolean;
 			userCreatedOrUpdated?: boolean;
 		};
@@ -248,6 +265,11 @@ async function handlePost({ request }: { request: Request }) {
 		});
 	} catch (error) {
 		console.error("Error accepting invitation:", error);
+		const message =
+			error instanceof Error ? error.message : "Internal server error";
+		if (message.includes("Invitation has expired")) {
+			return json({ error: "This invitation has expired" }, 410);
+		}
 		return json(
 			{
 				error: error instanceof Error ? error.message : "Internal server error",

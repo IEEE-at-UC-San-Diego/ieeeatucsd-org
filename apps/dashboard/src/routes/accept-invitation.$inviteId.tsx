@@ -12,6 +12,7 @@ import {
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/accept-invitation/$inviteId")({
 	component: AcceptInvitationPage,
@@ -43,6 +44,7 @@ function AcceptInvitationPage() {
 	const [success, setSuccess] = useState(false);
 	const [declined, setDeclined] = useState(false);
 	const [selectedPosition, setSelectedPosition] = useState("");
+	const [confirmEmail, setConfirmEmail] = useState("");
 	const confirm = useConfirm();
 
 	const offeredPositions =
@@ -128,6 +130,7 @@ function AcceptInvitationPage() {
 				body: JSON.stringify({
 					inviteId,
 					action: "accept",
+					email: confirmEmail.trim(),
 					selectedPosition: hasMultiplePositions
 						? selectedPosition
 						: invitation?.position,
@@ -178,7 +181,9 @@ function AcceptInvitationPage() {
 	};
 
 	const canAccept =
-		!processing && (!hasMultiplePositions || Boolean(selectedPosition));
+		!processing &&
+		Boolean(confirmEmail.trim()) &&
+		(!hasMultiplePositions || Boolean(selectedPosition));
 
 	const handleDecline = async () => {
 		if (
@@ -386,6 +391,23 @@ function AcceptInvitationPage() {
 
 						<InvitationDetails invitation={invitation} />
 
+						<div className="space-y-2">
+							<label
+								htmlFor={`${formId}-email`}
+								className="text-sm font-medium"
+							>
+								Email address
+							</label>
+							<Input
+								id={`${formId}-email`}
+								type="email"
+								autoComplete="email"
+								value={confirmEmail}
+								onChange={(event) => setConfirmEmail(event.target.value)}
+								placeholder="The address that received this invitation"
+							/>
+						</div>
+
 						{invitation?.message && (
 							<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5">
 								<p className="mb-2 text-sm font-medium text-ds-blue-1000">
@@ -500,11 +522,13 @@ function InvitationDetails({ invitation }: { invitation: Invitation | null }) {
 				label="Full Name"
 				value={invitation?.name}
 			/>
-			<DetailItem
-				icon={<Mail className="h-5 w-5 text-primary" />}
-				label="Email Address"
-				value={invitation?.email}
-			/>
+			{invitation?.email ? (
+				<DetailItem
+					icon={<Mail className="h-5 w-5 text-primary" />}
+					label="Email Address"
+					value={invitation.email}
+				/>
+			) : null}
 			{invitation?.acceptanceDeadline ? (
 				<DetailItem
 					icon={<Calendar className="h-5 w-5 text-primary" />}
