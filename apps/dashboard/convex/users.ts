@@ -163,6 +163,7 @@ export const completeOnboarding = mutation({
         ctx,
         args.resumeStorageId,
         args.resumeFileName ?? "resume.pdf",
+        user._id,
       );
     }
 
@@ -337,6 +338,7 @@ export const setResume = mutation({
       ctx,
       args.storageId,
       args.fileName,
+      user._id,
     );
 
     if (user.resume?.storageId) {
