@@ -580,32 +580,16 @@ function ManageEventsPage() {
 		try {
 			const eventId = event._id as any;
 
-			if (newStatus === "published") {
-				await updateEvent({
-					logtoId,
-					id: eventId,
-					published: true,
-				});
-				await updateEventStatus({
-					logtoId,
-					id: eventId,
-					status: "completed",
-				});
-			} else {
-				await updateEventStatus({
-					logtoId,
-					id: eventId,
-					status:
-						newStatus === "needs_review" ? "needs_review" : (newStatus as any),
-				});
-				if (newStatus === "approved" || newStatus === "draft") {
-					await updateEvent({
-						logtoId,
-						id: eventId,
-						published: false,
-					});
-				}
-			}
+			await updateEventStatus({
+				logtoId,
+				id: eventId,
+				status:
+					newStatus === "published"
+						? "completed"
+						: newStatus === "needs_review"
+							? "needs_review"
+							: (newStatus as any),
+			});
 
 			toast.success(`Status updated to ${newStatus.replace("_", " ")}`);
 
@@ -642,25 +626,11 @@ function ManageEventsPage() {
 		if (!logtoId) return;
 		setIsProcessing(true);
 		try {
-			const eventId = event._id as any;
-			await updateEvent({
+			await updateEventStatus({
 				logtoId,
-				id: eventId,
-				published: shouldPublish,
+				id: event._id as any,
+				status: shouldPublish ? "completed" : "approved",
 			});
-			if (shouldPublish) {
-				await updateEventStatus({
-					logtoId,
-					id: eventId,
-					status: "completed",
-				});
-			} else {
-				await updateEventStatus({
-					logtoId,
-					id: eventId,
-					status: "approved",
-				});
-			}
 			toast.success(shouldPublish ? "Event published!" : "Event unpublished");
 			setSelectedRequest((prev) =>
 				prev && prev._id === event._id
