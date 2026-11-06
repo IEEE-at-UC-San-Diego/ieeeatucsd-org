@@ -178,8 +178,7 @@ async function handlePost({ request }: { request: Request }) {
 		if (action === "accept" && !email.trim()) {
 			return json(
 				{
-					error:
-						"Enter the email address that received this invitation",
+					error: "Enter the email address that received this invitation",
 				},
 				400,
 			);

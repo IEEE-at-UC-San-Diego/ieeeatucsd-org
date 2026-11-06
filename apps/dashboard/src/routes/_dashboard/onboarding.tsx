@@ -1853,7 +1853,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 											: `Expires ${formatDateTimeDisplay(inv.expiresAt)}`}
 									</span>
 								}
-									actions={
+								actions={
 									inv.status === "pending" && !expired ? (
 										<Button
 											size="icon"
