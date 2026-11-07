@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const syncGoogleGroupsForRoleMock = vi.fn();
 
@@ -35,6 +35,11 @@ vi.mock("@/server/google-groups", () => ({
 describe("syncGoogleGroupsForRoleWithAudit", () => {
 	beforeEach(() => {
 		syncGoogleGroupsForRoleMock.mockReset();
+		vi.stubEnv("CONVEX_SESSION_SECRET", "server-secret");
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
 	});
 
 	it("normalizes email, audits each Google Groups result, and returns success metadata", async () => {
@@ -59,6 +64,7 @@ describe("syncGoogleGroupsForRoleWithAudit", () => {
 		);
 		expect(mutation).toHaveBeenCalledTimes(2);
 		expect(mutation).toHaveBeenCalledWith("googleGroupAssignments:create", {
+			serverSecret: "server-secret",
 			email: "person@ucsd.edu",
 			googleGroup: "generalofficers@ieeeatucsd.org",
 			role: "General Officer",
