@@ -1,7 +1,9 @@
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
+import type { TableNames } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { requireOfficerAccess } from "./permissions";
+import { AiAccess } from "./aiAccess";
 import { countsAsSpentFundRequest } from "./fundRequestTransition";
+import { requireOfficerAccess, type UserRole } from "./permissions";
 
 const ALL_TABLES = [
   "users",
@@ -28,6 +30,55 @@ const ALL_TABLES = [
 ] as const;
 
 type TableName = (typeof ALL_TABLES)[number];
+
+function aiTableAccessError(role: UserRole, table: string): string | null {
+  return AiAccess.namedSearchAccessError(role, table, ALL_TABLES);
+}
+
+async function loadVisibleDocs(
+  ctx: QueryCtx,
+  tableName: TableName,
+  role: UserRole,
+  actorId: string,
+  limit: number,
+): Promise<any[]> {
+  // Same row scope as fundDeposits.listAll. Query the owner's index so a
+  // capped scan cannot mix in other officers' deposits.
+  if (
+    tableName === "fundDeposits" &&
+    !AiAccess.readsFullFundDepositTable(role)
+  ) {
+    return await ctx.db
+      .query("fundDeposits")
+      .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId))
+      .take(limit);
+  }
+
+  return await ctx.db.query(tableName).take(limit);
+}
+
+async function loadBudgetDeposits(
+  ctx: QueryCtx,
+  role: UserRole,
+  actorId: string,
+) {
+  // Same owner index as fundDeposits.listAll and getStats. Filter to
+  // verified before the cap so pending and rejected rows do not crowd out
+  // a later verified deposit.
+  if (!AiAccess.readsFullFundDepositTable(role)) {
+    return await ctx.db
+      .query("fundDeposits")
+      .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId))
+      .filter((q) => q.eq(q.field("status"), "verified"))
+      .take(500);
+  }
+
+  return await ctx.db
+    .query("fundDeposits")
+    .withIndex("by_status", (q) => q.eq("status", "verified"))
+    .take(500);
+}
+
 type OfficerUser = {
   _id: string | { toString(): string };
   logtoId?: string;
@@ -176,14 +227,6 @@ const TABLES_WITH_STATUS = [
   "invites",
 ] as const;
 
-const TABLES_WITH_AMOUNT = [
-  "reimbursements",
-  "fundRequests",
-  "fundDeposits",
-  "budgetConfigs",
-  "budgetAdjustments",
-] as const;
-
 export const getRecordById = query({
   args: {
     logtoId: v.string(),
@@ -192,19 +235,33 @@ export const getRecordById = query({
     recordId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError, record: null };
 
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}`, record: null };
-    }
+    const tableName = args.table as TableName;
+    // The id itself names the table. Ignore ids that do not belong to the
+    // requested table so an officer cannot read a user or reimbursement by
+    // labeling it as an officer-readable table.
+    const recordId = ctx.db.normalizeId(tableName as TableNames, args.recordId);
+    if (!recordId) return { error: "Invalid record ID", record: null };
 
-    try {
-      const doc = await ctx.db.get(args.recordId as any);
-      if (!doc) return { error: "Record not found", record: null };
-      return { error: null, record: sanitizeValue(doc) };
-    } catch {
-      return { error: "Invalid record ID", record: null };
+    const doc = await ctx.db.get(recordId);
+    if (!doc) return { error: "Record not found", record: null };
+    if (
+      !AiAccess.canReadRecord(
+        tableName,
+        user.role,
+        AiAccess.actorId(user),
+        doc,
+      )
+    ) {
+      return { error: "Insufficient permissions", record: null };
     }
+    return {
+      error: null,
+      record: sanitizeValue(AiAccess.projectAiRecord(tableName, user.role, doc)),
+    };
   },
 });
 
@@ -219,17 +276,28 @@ export const listRecords = query({
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
-
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}`, records: [], total: 0 };
-    }
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError, records: [], total: 0 };
 
     const limit = clamp(args.limit ?? 25, 1, 100);
     const tableName = args.table as TableName;
+    const actorId = AiAccess.actorId(user);
 
     let docs: any[];
     if (
+      tableName === "fundDeposits" &&
+      !AiAccess.readsFullFundDepositTable(user.role)
+    ) {
+      const owned = ctx.db
+        .query("fundDeposits")
+        .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId));
+      docs = args.status
+        ? await owned
+            .filter((q) => q.eq(q.field("status"), args.status))
+            .take(limit)
+        : await owned.order("desc").take(limit);
+    } else if (
       args.status &&
       (TABLES_WITH_STATUS as readonly string[]).includes(tableName)
     ) {
@@ -240,10 +308,19 @@ export const listRecords = query({
       docs = await ctx.db.query(tableName).order("desc").take(limit);
     }
 
+    const visible = AiAccess.scopeRecords(
+      tableName,
+      user.role,
+      actorId,
+      docs,
+    );
+
     return {
       error: null,
-      records: docs.map((doc: any) => sanitizeValue(doc)),
-      total: docs.length,
+      records: visible.map((doc) =>
+        sanitizeValue(AiAccess.projectAiRecord(tableName, user.role, doc)),
+      ),
+      total: visible.length,
     };
   },
 });
@@ -255,47 +332,25 @@ export const getStatistics = query({
     table: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
-
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}` };
-    }
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError };
 
     const tableName = args.table as TableName;
-    const docs = await ctx.db.query(tableName).take(MAX_DOCS_PER_TABLE);
-    const totalCount = docs.length;
-
-    const statusCounts: Record<string, number> = {};
-    let totalAmount = 0;
-    let hasAmount = false;
-
-    for (const doc of docs) {
-      const record = doc as Record<string, unknown>;
-      if (typeof record.status === "string") {
-        statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
-      }
-      if (
-        (TABLES_WITH_AMOUNT as readonly string[]).includes(tableName) &&
-        typeof record.amount === "number"
-      ) {
-        totalAmount += record.amount;
-        hasAmount = true;
-      }
-      if (
-        tableName === "reimbursements" &&
-        typeof record.totalAmount === "number"
-      ) {
-        totalAmount += record.totalAmount;
-        hasAmount = true;
-      }
-    }
+    const actorId = AiAccess.actorId(user);
+    const docs = await loadVisibleDocs(
+      ctx,
+      tableName,
+      user.role,
+      actorId,
+      MAX_DOCS_PER_TABLE,
+    );
+    const summary = AiAccess.summarize(tableName, user.role, actorId, docs);
 
     return {
       error: null,
       table: tableName,
-      totalCount,
-      statusCounts: Object.keys(statusCounts).length > 0 ? statusCounts : undefined,
-      totalAmount: hasAmount ? totalAmount : undefined,
+      ...summary,
     };
   },
 });
@@ -307,7 +362,7 @@ export const getUserByNameOrEmail = query({
     searchTerm: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
 
     const term = args.searchTerm.toLowerCase().trim();
     if (!term) return { error: "Empty search term", users: [] };
@@ -325,7 +380,9 @@ export const getUserByNameOrEmail = query({
 
     return {
       error: null,
-      users: matches.slice(0, 20).map((u) => sanitizeValue(u)),
+      users: matches.slice(0, 20).map((u) =>
+        sanitizeValue(AiAccess.projectAiRecord("users", user.role, u)),
+      ),
     };
   },
 });
@@ -337,7 +394,11 @@ export const getBudgetOverview = query({
     department: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const actorId = AiAccess.actorId(user);
+    const includeReimbursements = AiAccess.includeReimbursementTotals(
+      user.role,
+    );
 
     const configs = await ctx.db.query("budgetConfigs").take(100);
     const adjustments = await ctx.db.query("budgetAdjustments").take(500);
@@ -350,13 +411,14 @@ export const getBudgetOverview = query({
       .withIndex("by_status", (q) => q.eq("status", "completed"))
       .take(500);
     const fundRequests = [...approvedFundRequests, ...completedFundRequests];
-    const deposits = await ctx.db
-      .query("fundDeposits")
-      .withIndex("by_status", (q) => q.eq("status", "verified"))
-      .take(500);
-    const reimbursements = await ctx.db
-      .query("reimbursements")
-      .take(500);
+    const deposits = AiAccess.visibleVerifiedDeposits(
+      user.role,
+      actorId,
+      await loadBudgetDeposits(ctx, user.role, actorId),
+    );
+    const reimbursements = includeReimbursements
+      ? await ctx.db.query("reimbursements").take(500)
+      : [];
 
     const departments = ["events", "projects", "internal", "other"] as const;
     const overview = departments.map((dept) => {
@@ -376,20 +438,14 @@ export const getBudgetOverview = query({
         .filter((r) => r.department === dept && (r.status === "approved" || r.status === "paid"))
         .reduce((sum, r) => sum + r.totalAmount, 0);
 
-      return {
+      return AiAccess.budgetDepartment(user.role, {
         department: dept,
         totalBudget: config?.totalBudget ?? 0,
         adjustments: deptAdjustments,
         approvedFundRequests: deptApproved,
         verifiedDeposits: deptDeposits,
         approvedReimbursements: deptReimbursements,
-        remaining:
-          (config?.totalBudget ?? 0) +
-          deptAdjustments +
-          deptDeposits -
-          deptApproved -
-          deptReimbursements,
-      };
+      });
     });
 
     if (args.department) {
@@ -411,20 +467,33 @@ export const searchEverything = query({
   },
   handler: async (ctx, args) => {
     const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const actorId = AiAccess.actorId(user);
     const currentUser = toCurrentUserContext(user);
     const currentServerTimeMs = Date.now();
     const normalizedQuery = normalize(args.query);
     const tokens = tokenize(args.query);
     const limit = clamp(args.limit ?? 25, 1, 60);
+    const selection = AiAccess.searchTables(user.role, args.table, ALL_TABLES);
 
-    const selectedTables: TableName[] = args.table
-      ? ALL_TABLES.includes(args.table as TableName)
-        ? [args.table as TableName]
-        : []
-      : [...ALL_TABLES];
+    if (selection.error) {
+      return {
+        error: selection.error,
+        currentServerTimeMs,
+        currentUser,
+        userRole: user.role,
+        query: args.query,
+        scannedTables: [],
+        scannedCountByTable: {},
+        totalMatches: 0,
+        results: [],
+      };
+    }
+
+    const selectedTables = selection.tables as TableName[];
 
     if (!normalizedQuery || selectedTables.length === 0) {
       return {
+        error: null,
         currentServerTimeMs,
         currentUser,
         userRole: user.role,
@@ -447,11 +516,27 @@ export const searchEverything = query({
     }> = [];
 
     for (const tableName of selectedTables) {
-      const docs = await ctx.db.query(tableName).take(MAX_DOCS_PER_TABLE);
+      const docs = AiAccess.scopeRecords(
+        tableName,
+        user.role,
+        actorId,
+        await loadVisibleDocs(
+          ctx,
+          tableName,
+          user.role,
+          actorId,
+          MAX_DOCS_PER_TABLE,
+        ),
+      );
       scannedCountByTable[tableName] = docs.length;
 
       for (const doc of docs) {
-        const searchText = `${tableName} ${asSearchText(doc)}`;
+        const visible = AiAccess.projectAiRecord(
+          tableName,
+          user.role,
+          doc as Record<string, unknown>,
+        );
+        const searchText = `${tableName} ${asSearchText(visible)}`;
         const score = scoreDocument(searchText, normalizedQuery, tokens);
         if (score <= 0) continue;
 
@@ -461,7 +546,7 @@ export const searchEverything = query({
           id: String((doc as { _id: string })._id),
           createdAt: (doc as { _creationTime: number })._creationTime ?? 0,
           snippet: buildSnippet(searchText, normalizedQuery),
-          record: sanitizeValue(doc),
+          record: sanitizeValue(visible),
         });
       }
     }
@@ -472,6 +557,7 @@ export const searchEverything = query({
     });
 
     return {
+      error: null,
       currentServerTimeMs,
       currentUser,
       userRole: user.role,
