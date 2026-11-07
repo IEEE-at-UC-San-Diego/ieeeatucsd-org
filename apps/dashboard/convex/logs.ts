@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdminAccess, getCurrentUser } from "./permissions";
+import { requireAdminAccess } from "./permissions";
 
 const logType = v.union(
   v.literal("info"),
@@ -35,25 +35,37 @@ export const list = query({
   },
 });
 
+type LogAuthor = {
+  logtoId?: string | null;
+  authUserId?: string | null;
+};
+
+/**
+ * Audit rows are attributed to the authenticated admin record.
+ * Callers cannot choose the stored user id, and anonymous writes
+ * cannot fall back to a "system" actor.
+ */
+export function logAuthorId(user: LogAuthor): string {
+  const userId =
+    (user.logtoId ?? "").trim() || (user.authUserId ?? "").trim();
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+  return userId;
+}
+
 export const create = mutation({
   args: {
-    logtoId: v.optional(v.string()),
+    logtoId: v.string(),
     authToken: v.string(),
-    userId: v.optional(v.string()),
     type: logType,
     part: v.string(),
     message: v.string(),
   },
   handler: async (ctx, args) => {
-    let userId = args.userId;
-
-    if (!userId && args.logtoId && args.authToken) {
-      const user = await getCurrentUser(ctx, args.logtoId, args.authToken);
-      userId = user?.logtoId ?? user?.authUserId ?? args.logtoId;
-    }
-
+    const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db.insert("logs", {
-      userId: userId ?? "system",
+      userId: logAuthorId(admin),
       type: args.type,
       part: args.part,
       message: args.message,
