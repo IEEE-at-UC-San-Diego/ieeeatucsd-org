@@ -62,12 +62,14 @@ async function loadBudgetDeposits(
   role: UserRole,
   actorId: string,
 ) {
-  // Same row scope as fundDeposits.listAll and getStats. The owner's index
-  // keeps another officer's verified amount out of the overview total.
+  // Same owner index as fundDeposits.listAll and getStats. Filter to
+  // verified before the cap so pending and rejected rows do not crowd out
+  // a later verified deposit.
   if (!AiAccess.readsFullFundDepositTable(role)) {
     return await ctx.db
       .query("fundDeposits")
       .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId))
+      .filter((q) => q.eq(q.field("status"), "verified"))
       .take(500);
   }
 
