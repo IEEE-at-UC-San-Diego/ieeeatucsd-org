@@ -57,6 +57,26 @@ async function loadVisibleDocs(
   return await ctx.db.query(tableName).take(limit);
 }
 
+async function loadBudgetDeposits(
+  ctx: QueryCtx,
+  role: UserRole,
+  actorId: string,
+) {
+  // Same row scope as fundDeposits.listAll and getStats. The owner's index
+  // keeps another officer's verified amount out of the overview total.
+  if (!AiAccess.readsFullFundDepositTable(role)) {
+    return await ctx.db
+      .query("fundDeposits")
+      .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId))
+      .take(500);
+  }
+
+  return await ctx.db
+    .query("fundDeposits")
+    .withIndex("by_status", (q) => q.eq("status", "verified"))
+    .take(500);
+}
+
 type OfficerUser = {
   _id: string | { toString(): string };
   logtoId?: string;
@@ -373,6 +393,7 @@ export const getBudgetOverview = query({
   },
   handler: async (ctx, args) => {
     const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const actorId = AiAccess.actorId(user);
     const includeReimbursements = AiAccess.includeReimbursementTotals(
       user.role,
     );
@@ -388,10 +409,11 @@ export const getBudgetOverview = query({
       .withIndex("by_status", (q) => q.eq("status", "completed"))
       .take(500);
     const fundRequests = [...approvedFundRequests, ...completedFundRequests];
-    const deposits = await ctx.db
-      .query("fundDeposits")
-      .withIndex("by_status", (q) => q.eq("status", "verified"))
-      .take(500);
+    const deposits = AiAccess.visibleVerifiedDeposits(
+      user.role,
+      actorId,
+      await loadBudgetDeposits(ctx, user.role, actorId),
+    );
     const reimbursements = includeReimbursements
       ? await ctx.db.query("reimbursements").take(500)
       : [];

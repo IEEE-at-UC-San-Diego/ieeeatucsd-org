@@ -28,6 +28,9 @@ const deposits = [
 
 describe("canOfficerReadAiTable", () => {
   it("blocks general officers from admin-only tables", () => {
+    expect(
+      AiAccess.canOfficerReadAiTable("General Officer", "constitutionAuditLogs"),
+    ).toBe(false);
     expect(AiAccess.canOfficerReadAiTable("General Officer", "reimbursements")).toBe(
       false,
     );
@@ -48,6 +51,9 @@ describe("canOfficerReadAiTable", () => {
   it("lets administrators and executive officers read those tables", () => {
     for (const role of ["Administrator", "Executive Officer"] as const) {
       expect(AiAccess.canOfficerReadAiTable(role, "reimbursements")).toBe(true);
+      expect(AiAccess.canOfficerReadAiTable(role, "constitutionAuditLogs")).toBe(
+        true,
+      );
       expect(AiAccess.canOfficerReadAiTable(role, "officerInvitations")).toBe(
         true,
       );
@@ -180,6 +186,58 @@ describe("fund deposit row scope", () => {
     ).toBe(5);
   });
 
+  it.each(["General Officer", "Executive Officer"] as const)(
+    "keeps other officers' deposits out of the budget total for %s",
+    (role: UserRole) => {
+      const rows = [
+        {
+          depositedBy: "officer-me",
+          amount: 25,
+          status: "verified",
+          department: "events",
+        },
+        {
+          depositedBy: "officer-other",
+          amount: 400,
+          status: "verified",
+          department: "events",
+        },
+        {
+          depositedBy: "officer-me",
+          amount: 10,
+          status: "pending",
+          department: "events",
+        },
+      ];
+      const visible = AiAccess.visibleVerifiedDeposits(role, "officer-me", rows);
+      expect(visible).toEqual([rows[0]]);
+
+      const verifiedDeposits = visible.reduce((sum, row) => sum + row.amount, 0);
+      const overview = AiAccess.budgetDepartment(role, {
+        department: "events",
+        totalBudget: 1000,
+        adjustments: 0,
+        approvedFundRequests: 0,
+        verifiedDeposits,
+        approvedReimbursements: 0,
+      });
+      expect(overview.verifiedDeposits).toBe(25);
+      expect(overview.remaining).toBe(1025);
+      expect(JSON.stringify(overview)).not.toContain("400");
+    },
+  );
+
+  it("counts every verified deposit in an administrator budget total", () => {
+    const rows = [
+      { depositedBy: "officer-me", amount: 25, status: "verified" },
+      { depositedBy: "officer-other", amount: 400, status: "verified" },
+      { depositedBy: "officer-me", amount: 10, status: "pending" },
+    ];
+    expect(
+      AiAccess.visibleVerifiedDeposits("Administrator", "admin", rows),
+    ).toEqual([rows[0], rows[1]]);
+  });
+
   it("does not row-scope other officer-readable tables", () => {
     const events = [
       { status: "published", depositedBy: "someone-else" },
@@ -239,6 +297,13 @@ describe("named table search", () => {
       AiAccess.searchTables("General Officer", "reimbursements", knownTables),
     ).toEqual({ error: "Insufficient permissions", tables: [] });
     expect(
+      AiAccess.searchTables(
+        "General Officer",
+        "constitutionAuditLogs",
+        knownTables,
+      ),
+    ).toEqual({ error: "Insufficient permissions", tables: [] });
+    expect(
       AiAccess.namedSearchAccessError("General Officer", "logs", knownTables),
     ).toBe("Insufficient permissions");
   });
@@ -260,6 +325,7 @@ describe("named table search", () => {
     expect(selection.tables).toContain("fundRequests");
     expect(selection.tables).toContain("fundDeposits");
     expect(selection.tables).not.toContain("reimbursements");
+    expect(selection.tables).not.toContain("constitutionAuditLogs");
     expect(selection.tables).not.toContain("invites");
     expect(selection.tables).not.toContain("logs");
   });

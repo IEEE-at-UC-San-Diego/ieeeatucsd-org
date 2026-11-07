@@ -6,11 +6,13 @@ import { UserAuth } from "./userAuth";
  * Officer AI table access.
  *
  * Tables that are not listed are denied. Admin-only tables follow
- * `hasAdminAccess`. `fundDeposits` stays readable to every officer, but only
- * Administrators see the full table — every other officer, including
- * Executive Officers, sees rows whose `depositedBy` is `logtoId ?? authUserId`,
- * matching `fundDeposits.listAll`. `users` stays officer-readable through
- * `projectAiRecord`, which drops payment and identity fields.
+ * `hasAdminAccess`, including `constitutionAuditLogs` (`constitutions.getAuditLog`).
+ * `fundDeposits` stays readable to every officer, but only Administrators see
+ * the full table — every other officer, including Executive Officers, sees
+ * rows whose `depositedBy` is `logtoId ?? authUserId`, matching
+ * `fundDeposits.listAll` and `getStats`. Budget totals use that same row set.
+ * `users` stays officer-readable through `projectAiRecord`, which drops
+ * payment and identity fields.
  */
 const ADMIN_ONLY_AI_TABLES = [
   "reimbursements",
@@ -18,6 +20,7 @@ const ADMIN_ONLY_AI_TABLES = [
   "sponsorDomains",
   "logs",
   "organizationSettings",
+  "constitutionAuditLogs",
   "googleGroupAssignments",
   "directOnboardings",
   "notifications",
@@ -31,7 +34,6 @@ const OFFICER_READABLE_AI_TABLES = [
   "attendees",
   "links",
   "constitutions",
-  "constitutionAuditLogs",
   "fundRequests",
   "fundDeposits",
   "emailTemplates",
@@ -112,9 +114,28 @@ export class AiAccess {
     };
   }
 
-  /** Full `fundDeposits` table, matching `fundDeposits.listAll`. */
+  /** Full `fundDeposits` table, matching `fundDeposits.listAll` and `getStats`. */
   static readsFullFundDepositTable(role: UserRole): boolean {
     return isAdmin(role);
+  }
+
+  /**
+   * Verified deposits that may be summed into a budget overview.
+   * Administrators see every verified deposit. Every other officer sees only
+   * their own, so another officer's amount cannot appear in `verifiedDeposits`
+   * or `remaining`.
+   */
+  static visibleVerifiedDeposits<T extends object>(
+    role: UserRole,
+    actorId: string,
+    deposits: readonly T[],
+  ): T[] {
+    return AiAccess.scopeRecords(
+      "fundDeposits",
+      role,
+      actorId,
+      deposits,
+    ).filter((deposit) => (deposit as ScopedRow).status === "verified");
   }
 
   static actorId(user: {
