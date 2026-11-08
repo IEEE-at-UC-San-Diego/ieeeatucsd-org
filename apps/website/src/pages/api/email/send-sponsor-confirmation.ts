@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { Resend } from "resend";
-import { sponsorContactMessages } from "./sponsor-contact-html";
+import { sponsorContactMessage } from "./sponsor-contact-html";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -24,22 +24,16 @@ export const POST: APIRoute = async ({ request }) => {
 
     const toEmail = import.meta.env.CONTACT_TO || "president@ieeeatucsd.org";
 
-    const replyToEmail =
-      import.meta.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
+    await resend.emails.send(
+      sponsorContactMessage({
+        email,
+        phone,
+        message,
+        from: fromEmail,
+        contactTo: toEmail,
+      }),
+    );
 
-    const messages = sponsorContactMessages({
-      email,
-      phone,
-      message,
-      from: fromEmail,
-      contactTo: toEmail,
-      replyTo: replyToEmail,
-    });
-    for (const mail of messages) {
-      await resend.emails.send(mail);
-    }
-
-    // return back to contact page
     return new Response(null, {
       status: 303,
       headers: { Location: "/sponsors?sent=1" },

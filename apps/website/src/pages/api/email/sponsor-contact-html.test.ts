@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   officerContactHtml,
-  senderConfirmationHtml,
-  sponsorContactMessages,
+  sponsorContactMessage,
 } from "./sponsor-contact-html";
 
 describe("officerContactHtml", () => {
@@ -33,27 +32,19 @@ describe("officerContactHtml", () => {
   });
 });
 
-describe("sponsorContactMessages", () => {
+describe("sponsorContactMessage", () => {
   it("sends the org mail only to the org inbox", () => {
-    const messages = sponsorContactMessages({
+    const message = sponsorContactMessage({
       email: "attacker@evil.test",
       phone: "555",
       message: "wire the funds",
       from: "IEEE UCSD <onboarding@resend.dev>",
       contactTo: "president@ieeeatucsd.org",
-      replyTo: "president@ieeeatucsd.org",
     });
 
-    expect(messages.flatMap((message) => message.to)).toEqual([
-      "president@ieeeatucsd.org",
-    ]);
-  });
-});
-
-describe("senderConfirmationHtml", () => {
-  it("escapes the copy of the message sent back to the sender", () => {
-    const html = senderConfirmationHtml("<b>hi</b>");
-    expect(html).toContain("&lt;b&gt;hi&lt;/b&gt;");
-    expect(html).not.toContain("<b>");
+    expect(message.to).toEqual(["president@ieeeatucsd.org"]);
+    expect(message.replyTo).toBe("attacker@evil.test");
+    expect(message.html).toContain("wire the funds");
+    expect(message.html).toContain("attacker@evil.test");
   });
 });
