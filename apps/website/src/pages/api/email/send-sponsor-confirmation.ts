@@ -1,9 +1,6 @@
 import type { APIRoute } from "astro";
 import { Resend } from "resend";
-import {
-  officerContactHtml,
-  senderConfirmationHtml,
-} from "./sponsor-contact-html";
+import { sponsorContactMessage } from "./sponsor-contact-html";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -27,28 +24,16 @@ export const POST: APIRoute = async ({ request }) => {
 
     const toEmail = import.meta.env.CONTACT_TO || "president@ieeeatucsd.org";
 
-    const replyToEmail =
-      import.meta.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
+    await resend.emails.send(
+      sponsorContactMessage({
+        email,
+        phone,
+        message,
+        from: fromEmail,
+        contactTo: toEmail,
+      }),
+    );
 
-    // Send to IEEE includes user's email + message
-    await resend.emails.send({
-      from: fromEmail,
-      to: [toEmail],
-      replyTo: email,
-      subject: "New Contact Form Submission",
-      html: officerContactHtml({ email, phone, message }),
-    });
-
-    // User confirmation
-    await resend.emails.send({
-      from: fromEmail,
-      to: [email],
-      replyTo: replyToEmail,
-      subject: "IEEE UCSD — We received your message",
-      html: senderConfirmationHtml(message),
-    });
-
-    // return back to contact page
     return new Response(null, {
       status: 303,
       headers: { Location: "/sponsors?sent=1" },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   officerContactHtml,
-  senderConfirmationHtml,
+  sponsorContactMessage,
 } from "./sponsor-contact-html";
 
 describe("officerContactHtml", () => {
@@ -32,10 +32,19 @@ describe("officerContactHtml", () => {
   });
 });
 
-describe("senderConfirmationHtml", () => {
-  it("escapes the copy of the message sent back to the sender", () => {
-    const html = senderConfirmationHtml("<b>hi</b>");
-    expect(html).toContain("&lt;b&gt;hi&lt;/b&gt;");
-    expect(html).not.toContain("<b>");
+describe("sponsorContactMessage", () => {
+  it("sends the org mail only to the org inbox", () => {
+    const message = sponsorContactMessage({
+      email: "attacker@evil.test",
+      phone: "555",
+      message: "wire the funds",
+      from: "IEEE UCSD <onboarding@resend.dev>",
+      contactTo: "president@ieeeatucsd.org",
+    });
+
+    expect(message.to).toEqual(["president@ieeeatucsd.org"]);
+    expect(message.replyTo).toBe("attacker@evil.test");
+    expect(message.html).toContain("wire the funds");
+    expect(message.html).toContain("attacker@evil.test");
   });
 });

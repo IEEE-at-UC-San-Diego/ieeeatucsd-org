@@ -12,15 +12,24 @@ export function officerContactHtml(input: {
       `;
 }
 
-export function senderConfirmationHtml(message: string) {
-  return `
-        <p>Hi!</p>
-        <p>Thanks for reaching out to IEEE UCSD. We received your message and will get back to you soon.</p>
-        <hr/>
-        <p><strong>Your message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-        <p>— IEEE UCSD</p>
-      `;
+export function sponsorContactMessage(input: {
+  email: string;
+  phone: string;
+  message: string;
+  from: string;
+  contactTo: string;
+}) {
+  return {
+    from: input.from,
+    to: [input.contactTo],
+    replyTo: input.email,
+    subject: "New Contact Form Submission",
+    html: officerContactHtml({
+      email: input.email,
+      phone: input.phone,
+      message: input.message,
+    }),
+  };
 }
 
 function escapeHtml(s: string) {
