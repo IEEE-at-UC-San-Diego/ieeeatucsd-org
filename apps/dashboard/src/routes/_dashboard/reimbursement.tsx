@@ -23,7 +23,15 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
@@ -72,6 +80,29 @@ import {
 	formatRelativeTime,
 } from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
+import {
+	deriveMileagePhase,
+	describeCalculatedRoute,
+	type MileageCalculationResult,
+	resolveMileagePrerequisite,
+} from "@/lib/reimbursement/mileageCalculation";
+import {
+	getReceiptOperation,
+	isCurrentReceiptRequest,
+	type ReceiptOperationAction,
+	type ReceiptOperations,
+	receiptOperationsReducer,
+} from "@/lib/reimbursement/receiptOperations";
+import {
+	findFirstInvalidStep,
+	findReachableStep,
+	initialWizardState,
+	maxJumpableStep,
+	parseWizardStep,
+	validateExpenses,
+	validateReportDetails,
+	wizardReducer,
+} from "@/lib/reimbursement/reimbursementWizard";
 import {
 	computeMileageTotal,
 	formatMileageRoute,
@@ -254,18 +285,6 @@ interface ReceiptEntry {
 	mileageStops?: string[];
 }
 
-interface ReceiptParseResult {
-	success: boolean;
-	message: string;
-}
-
-type MileageCalculationState = {
-	receiptId: string | null;
-	routeKey: string;
-	status: "idle" | "waiting" | "calculating" | "calculated" | "error";
-	message: string;
-};
-
 type RoutesLibraryLike = {
 	Route?: {
 		computeRoutes: (
@@ -444,11 +463,11 @@ async function calculateDrivingMiles({
 // Step Progress Indicator Component
 function StepIndicator({
 	currentStep,
-	maxVisitedStep,
+	maxJumpableStep,
 	onStepClick,
 }: {
 	currentStep: number;
-	maxVisitedStep: number;
+	maxJumpableStep: number;
 	onStepClick: (step: number) => void;
 }) {
 	const current = STEPS.find((s) => s.id === currentStep);
@@ -460,7 +479,7 @@ function StepIndicator({
 				currentStep={currentStep}
 				totalSteps={STEPS.length}
 				stepTitle={current?.name ?? `Step ${currentStep}`}
-				maxVisitedStep={maxVisitedStep}
+				maxVisitedStep={maxJumpableStep}
 				onStepClick={onStepClick}
 				className="mb-6"
 			/>
@@ -474,7 +493,7 @@ function StepIndicator({
 					{STEPS.map((step, index) => {
 						const isActive = step.id === currentStep;
 						const isCompleted = step.id < currentStep;
-						const isClickable = step.id <= maxVisitedStep;
+						const isClickable = step.id <= maxJumpableStep;
 						const isLast = index === STEPS.length - 1;
 
 						return (
@@ -1247,8 +1266,7 @@ function BasicInfoStep({
 	onNext: () => void;
 }) {
 	const formId = useId();
-	const canProceed =
-		formData.title && formData.department && formData.paymentMethod;
+	const canProceed = validateReportDetails(formData) === null;
 
 	return (
 		<div className="flex flex-col items-center justify-center flex-1 p-6">
@@ -1345,7 +1363,7 @@ function BasicInfoStep({
 						currentStep={2}
 						onBack={onBack}
 						onNext={onNext}
-						canGoNext={!!canProceed}
+						canGoNext={canProceed}
 						nextLabel="Next: Expenses"
 					/>
 				</CardContent>
@@ -1380,21 +1398,13 @@ function ReceiptsStep({
 	const [activeReceiptId, setActiveReceiptId] = useState<string | null>(
 		receipts[0]?.id ?? null,
 	);
-	const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-	const [parsingReceipts, setParsingReceipts] = useState<Set<string>>(
-		new Set(),
+	const receiptOperationsRef = useRef<ReceiptOperations>({});
+	const [receiptOperations, setReceiptOperations] = useState<ReceiptOperations>(
+		{},
 	);
-	const [parseResults, setParseResults] = useState<
-		Record<string, ReceiptParseResult>
-	>({});
-	const mileageRequestIdRef = useRef(0);
-	const [mileageCalculation, setMileageCalculation] =
-		useState<MileageCalculationState>({
-			receiptId: null,
-			routeKey: "",
-			status: "idle",
-			message: "",
-		});
+	const receiptOperationTokenRef = useRef(0);
+	const [mileageResult, setMileageResult] =
+		useState<MileageCalculationResult | null>(null);
 	const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
 		| string
 		| undefined;
@@ -1432,127 +1442,72 @@ function ReceiptsStep({
 		[setReceipts],
 	);
 
+	const hasGoogleMapsApiKey = !!googleMapsApiKey?.trim();
+	const mileagePrerequisite = useMemo(
+		() =>
+			resolveMileagePrerequisite(
+				{
+					isMileage: activeMileageExpenseType === "mileage",
+					from: activeMileageFrom,
+					to: activeMileageTo,
+					stops: JSON.parse(activeMileageStopsKey) as string[],
+				},
+				{ hasApiKey: hasGoogleMapsApiKey, maps },
+			),
+		[
+			activeMileageExpenseType,
+			activeMileageFrom,
+			activeMileageStopsKey,
+			activeMileageTo,
+			hasGoogleMapsApiKey,
+			maps,
+		],
+	);
+
 	useEffect(() => {
-		if (!activeMileageReceiptId || activeMileageExpenseType !== "mileage") {
-			setMileageCalculation({
-				receiptId: null,
-				routeKey: "",
-				status: "idle",
-				message: "",
-			});
+		if (!activeMileageReceiptId) return;
+		if (mileagePrerequisite.status !== "ready") {
+			if (
+				mileagePrerequisite.status === "incomplete" ||
+				mileagePrerequisite.status === "unavailable"
+			) {
+				setReceiptMileageMiles(activeMileageReceiptId, 0);
+			}
 			return;
 		}
 
-		const from = activeMileageFrom.trim();
-		const to = activeMileageTo.trim();
-		const rawStops = JSON.parse(activeMileageStopsKey) as string[];
-		const hasEmptyStops = rawStops.some((stop) => stop.trim().length === 0);
-		const stops = rawStops.map((stop) => stop.trim()).filter(Boolean);
-		const routeKey = [from, ...stops, to].join("\u001f");
-		const requestId = mileageRequestIdRef.current + 1;
-		mileageRequestIdRef.current = requestId;
-
-		if (!from || !to) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "waiting",
-				message: "Enter From and To addresses to calculate mileage.",
-			});
-			return;
-		}
-
-		if (hasEmptyStops) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "waiting",
-				message: "Fill every stop address to calculate the full route.",
-			});
-			return;
-		}
-
-		if (!googleMapsApiKey?.trim()) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "error",
-				message:
-					"Automatic mileage calculation needs VITE_GOOGLE_MAPS_API_KEY.",
-			});
-			return;
-		}
-
-		if (maps.error) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "error",
-				message: maps.error,
-			});
-			return;
-		}
-
-		if (maps.loading || !maps.ready) {
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "calculating",
-				message: "Loading route calculation…",
-			});
-			return;
-		}
-
-		setMileageCalculation({
-			receiptId: activeMileageReceiptId,
-			routeKey,
-			status: "calculating",
-			message: "Calculating driving distance…",
-		});
-
+		const { route } = mileagePrerequisite;
+		setMileageResult(null);
+		let cancelled = false;
 		const timeout = window.setTimeout(() => {
-			calculateDrivingMiles({ from, to, stops })
+			calculateDrivingMiles(route)
 				.then((miles) => {
-					if (mileageRequestIdRef.current !== requestId) return;
+					if (cancelled) return;
 					setReceiptMileageMiles(activeMileageReceiptId, miles);
-					setMileageCalculation({
+					setMileageResult({
 						receiptId: activeMileageReceiptId,
-						routeKey,
+						routeKey: route.key,
 						status: "calculated",
-						message:
-							stops.length > 0
-								? "Calculated from From through every stop to To."
-								: "Calculated from From to To.",
+						message: describeCalculatedRoute(route),
 					});
 				})
 				.catch((error) => {
-					if (mileageRequestIdRef.current !== requestId) return;
+					if (cancelled) return;
 					setReceiptMileageMiles(activeMileageReceiptId, 0);
-					setMileageCalculation({
+					setMileageResult({
 						receiptId: activeMileageReceiptId,
-						routeKey,
+						routeKey: route.key,
 						status: "error",
 						message: getRouteCalculationErrorMessage(error),
 					});
 				});
 		}, 450);
 
-		return () => window.clearTimeout(timeout);
-	}, [
-		activeMileageExpenseType,
-		activeMileageFrom,
-		activeMileageReceiptId,
-		activeMileageStopsKey,
-		activeMileageTo,
-		maps.error,
-		maps.loading,
-		maps.ready,
-		setReceiptMileageMiles,
-	]);
+		return () => {
+			cancelled = true;
+			window.clearTimeout(timeout);
+		};
+	}, [activeMileageReceiptId, mileagePrerequisite, setReceiptMileageMiles]);
 
 	const updateReceipt = (id: string, updates: Partial<ReceiptEntry>) => {
 		setReceipts((prev) =>
@@ -1698,38 +1653,25 @@ function ReceiptsStep({
 		);
 	};
 
-	const setReceiptUploading = (receiptId: string, uploading: boolean) => {
-		setUploadingFiles((prev) => {
-			const next = new Set(prev);
-			if (uploading) {
-				next.add(receiptId);
-			} else {
-				next.delete(receiptId);
-			}
-			return next;
-		});
+	// The ref is authoritative so async callbacks can check request tokens
+	// synchronously; state mirrors it for rendering.
+	const dispatchReceiptOperation = (action: ReceiptOperationAction) => {
+		const next = receiptOperationsReducer(receiptOperationsRef.current, action);
+		if (next === receiptOperationsRef.current) return;
+		receiptOperationsRef.current = next;
+		setReceiptOperations(next);
 	};
 
-	const setReceiptParsing = (receiptId: string, parsing: boolean) => {
-		setParsingReceipts((prev) => {
-			const next = new Set(prev);
-			if (parsing) {
-				next.add(receiptId);
-			} else {
-				next.delete(receiptId);
-			}
-			return next;
-		});
+	const nextReceiptOperationToken = () => {
+		receiptOperationTokenRef.current += 1;
+		return receiptOperationTokenRef.current;
 	};
 
-	const parseReceipt = async (receiptId: string, receiptUrl: string) => {
-		setReceiptParsing(receiptId, true);
-		setParseResults((prev) => {
-			const next = { ...prev };
-			delete next[receiptId];
-			return next;
-		});
-
+	const requestReceiptParse = async (
+		receiptId: string,
+		receiptUrl: string,
+		token: number,
+	) => {
 		try {
 			const response = await fetch("/api/parse-receipt", {
 				method: "POST",
@@ -1789,6 +1731,17 @@ function ReceiptsStep({
 							]
 						: [];
 
+			if (
+				!isCurrentReceiptRequest(
+					receiptOperationsRef.current,
+					receiptId,
+					token,
+					"parsing",
+				)
+			) {
+				return;
+			}
+
 			updateReceipt(receiptId, {
 				vendorName: parsed.vendorName || "",
 				location: parsed.location || "",
@@ -1801,25 +1754,27 @@ function ReceiptsStep({
 				total: Number(parsed.total) || 0,
 			});
 
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: true,
-					message: "Receipt parsed successfully. Please verify all fields.",
-				},
-			}));
+			dispatchReceiptOperation({
+				type: "parseSucceeded",
+				receiptId,
+				token,
+				message: "Receipt parsed successfully. Please verify all fields.",
+			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: false,
-					message: `AI parsing failed: ${message}. Enter details manually or try again.`,
-				},
-			}));
-		} finally {
-			setReceiptParsing(receiptId, false);
+			dispatchReceiptOperation({
+				type: "parseFailed",
+				receiptId,
+				token,
+				message: `AI parsing failed: ${message}. Enter details manually or try again.`,
+			});
 		}
+	};
+
+	const parseReceipt = (receiptId: string, receiptUrl: string) => {
+		const token = nextReceiptOperationToken();
+		dispatchReceiptOperation({ type: "parseStarted", receiptId, token });
+		return requestReceiptParse(receiptId, receiptUrl, token);
 	};
 
 	const handleFileUpload = async (receiptId: string, file: File) => {
@@ -1832,13 +1787,10 @@ function ReceiptsStep({
 			return;
 		}
 
-		setReceiptUploading(receiptId, true);
-		setParseResults((prev) => {
-			const next = { ...prev };
-			delete next[receiptId];
-			return next;
-		});
+		const token = nextReceiptOperationToken();
+		dispatchReceiptOperation({ type: "uploadStarted", receiptId, token });
 
+		let fileUrl: string;
 		try {
 			const uploadUrl = await generateUploadUrl({});
 
@@ -1854,32 +1806,49 @@ function ReceiptsStep({
 
 			const uploadPayload = await uploadResponse.json();
 
-			const fileUrl = await getStorageUrl({
+			const storageUrl = await getStorageUrl({
 				storageId: uploadPayload.storageId,
 			});
 
-			if (!fileUrl) {
+			if (!storageUrl) {
 				throw new Error("Failed to resolve receipt file URL");
 			}
-
-			updateReceipt(receiptId, {
-				receiptFile: fileUrl,
-				receiptFileType: file.type,
-			});
-			if (shouldAutoParseReceipt(aiEnabled)) {
-				await parseReceipt(receiptId, fileUrl);
-			}
+			fileUrl = storageUrl;
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: false,
-					message: `Upload failed: ${message}. Try again or choose a different file.`,
-				},
-			}));
-		} finally {
-			setReceiptUploading(receiptId, false);
+			dispatchReceiptOperation({
+				type: "uploadFailed",
+				receiptId,
+				token,
+				message: `Upload failed: ${message}. Try again or choose a different file.`,
+			});
+			return;
+		}
+
+		if (
+			!isCurrentReceiptRequest(
+				receiptOperationsRef.current,
+				receiptId,
+				token,
+				"uploading",
+			)
+		) {
+			return;
+		}
+
+		updateReceipt(receiptId, {
+			receiptFile: fileUrl,
+			receiptFileType: file.type,
+		});
+		const autoParse = shouldAutoParseReceipt(aiEnabled);
+		dispatchReceiptOperation({
+			type: "uploadSucceeded",
+			receiptId,
+			token,
+			autoParse,
+		});
+		if (autoParse) {
+			await requestReceiptParse(receiptId, fileUrl, token);
 		}
 	};
 
@@ -1887,11 +1856,7 @@ function ReceiptsStep({
 		receiptId: string,
 		next: "receipt" | "mileage",
 	) => {
-		setParseResults((prev) => {
-			const n = { ...prev };
-			delete n[receiptId];
-			return n;
-		});
+		dispatchReceiptOperation({ type: "cleared", receiptId });
 		setReceipts((prev) =>
 			prev.map((r) => {
 				if (r.id !== receiptId) return r;
@@ -1926,25 +1891,11 @@ function ReceiptsStep({
 		);
 	};
 
-	const expenseRowValid = (r: ReceiptEntry) => {
-		const nameOk = (r.vendorName ?? "").trim().length > 0;
-		if (r.expenseType === "mileage") {
-			return (r.miles ?? 0) > 0 && r.total > 0 && nameOk;
-		}
-		return !!r.receiptFile && r.total > 0 && nameOk;
-	};
-
-	const canProceed = receipts.length > 0 && receipts.every(expenseRowValid);
+	const canProceed = validateExpenses(receipts) === null;
 
 	const activeReceiptIndex = receipts.findIndex(
 		(r) => r.id === activeReceipt?.id,
 	);
-	const isActiveUploading = activeReceipt
-		? uploadingFiles.has(activeReceipt.id)
-		: false;
-	const isActiveParsing = activeReceipt
-		? parsingReceipts.has(activeReceipt.id)
-		: false;
 
 	const addReceipt = () => {
 		const nextReceipt = emptyReceipt();
@@ -1967,6 +1918,7 @@ function ReceiptsStep({
 		const indexToRemove = receipts.findIndex((r) => r.id === receiptId);
 		const nextReceipts = receipts.filter((r) => r.id !== receiptId);
 		setReceipts(nextReceipts);
+		dispatchReceiptOperation({ type: "cleared", receiptId });
 
 		if (activeReceiptId === receiptId) {
 			const fallbackIndex = Math.max(
@@ -1978,6 +1930,22 @@ function ReceiptsStep({
 	};
 
 	if (!activeReceipt) return null;
+
+	const activeOperation = getReceiptOperation(
+		receiptOperations,
+		activeReceipt.id,
+	);
+	const isActiveUploading = activeOperation.status === "uploading";
+	const isActiveParsing = activeOperation.status === "parsing";
+	const activeOperationOutcome =
+		activeOperation.status === "parsed" || activeOperation.status === "failed"
+			? activeOperation
+			: null;
+	const mileagePhase = deriveMileagePhase(
+		mileagePrerequisite,
+		mileageResult,
+		activeReceipt.id,
+	);
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -2132,16 +2100,14 @@ function ReceiptsStep({
 										<div
 											className={cn(
 												"flex h-9 items-center justify-between rounded-md border bg-muted/30 px-3 text-sm",
-												mileageCalculation.status === "error" &&
-													mileageCalculation.receiptId === activeReceipt.id &&
+												mileagePhase.status === "error" &&
 													"border-destructive/50 bg-destructive/5",
 											)}
 										>
 											<span className="font-mono tabular-nums">
 												{formatNumber(activeReceipt.miles ?? 0)} mi
 											</span>
-											{mileageCalculation.status === "calculating" &&
-											mileageCalculation.receiptId === activeReceipt.id ? (
+											{mileagePhase.status === "calculating" ? (
 												<Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
 											) : null}
 										</div>
@@ -2149,14 +2115,12 @@ function ReceiptsStep({
 											aria-live="polite"
 											className={cn(
 												"block text-[11px] leading-snug text-muted-foreground",
-												mileageCalculation.status === "error" &&
-													mileageCalculation.receiptId === activeReceipt.id &&
-													"text-destructive",
+												mileagePhase.status === "error" && "text-destructive",
 											)}
 										>
-											{mileageCalculation.receiptId === activeReceipt.id
-												? mileageCalculation.message
-												: "Mileage calculates automatically from the route."}
+											{mileagePhase.status === "idle"
+												? "Mileage calculates automatically from the route."
+												: mileagePhase.message}
 										</output>
 									</div>
 									<div className="space-y-2">
@@ -2483,7 +2447,7 @@ function ReceiptsStep({
 														activeReceipt.receiptFile!,
 													)
 												}
-												disabled={isActiveParsing}
+												disabled={isActiveUploading || isActiveParsing}
 											>
 												{isActiveParsing && (
 													<Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -2504,17 +2468,17 @@ function ReceiptsStep({
 									</output>
 								)}
 
-								{parseResults[activeReceipt.id] && (
+								{activeOperationOutcome && (
 									<output
 										aria-live="polite"
 										className={cn(
 											"block text-xs",
-											parseResults[activeReceipt.id].success
+											activeOperationOutcome.status === "parsed"
 												? "text-tone-success"
 												: "text-tone-warning",
 										)}
 									>
-										{parseResults[activeReceipt.id].message}
+										{activeOperationOutcome.message}
 									</output>
 								)}
 
@@ -2937,17 +2901,17 @@ function ReceiptsStep({
 												: "Ready for manual entry."}
 									</output>
 								)}
-								{parseResults[activeReceipt.id] && (
+								{activeOperationOutcome && (
 									<output
 										aria-live="polite"
 										className={cn(
 											"block mt-3 text-xs",
-											parseResults[activeReceipt.id].success
+											activeOperationOutcome.status === "parsed"
 												? "text-tone-success"
 												: "text-tone-warning",
 										)}
 									>
-										{parseResults[activeReceipt.id].message}
+										{activeOperationOutcome.message}
 									</output>
 								)}
 							</div>
@@ -3322,11 +3286,13 @@ function ReimbursementPage() {
 		[setSearch],
 	);
 	const [searchInput, setSearchInput] = useState(searchTerm);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	// Wizard step state
-	const [step, setStep] = useState(1);
-	const [maxVisitedStep, setMaxVisitedStep] = useState(1);
+	const [wizard, dispatchWizard] = useReducer(
+		wizardReducer,
+		initialWizardState,
+	);
+	const { step, maxVisitedStep } = wizard;
+	const isSubmitting = wizard.submitPhase === "submitting";
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -3362,8 +3328,11 @@ function ReimbursementPage() {
 			setReceipts(
 				draft.receipts.length > 0 ? draft.receipts : [emptyReceipt()],
 			);
-			setStep(draft.step || 1);
-			setMaxVisitedStep(draft.maxVisitedStep || draft.step || 1);
+			dispatchWizard({
+				type: "restore",
+				step: draft.step,
+				maxVisitedStep: draft.maxVisitedStep,
+			});
 			setView("create");
 			toast.info(
 				"Restored your reimbursement draft (form fields). Re-attach any receipts that weren’t uploaded yet.",
@@ -3392,8 +3361,7 @@ function ReimbursementPage() {
 			businessPurpose: "",
 		});
 		setReceipts([emptyReceipt()]);
-		setStep(1);
-		setMaxVisitedStep(1);
+		dispatchWizard({ type: "reset" });
 	}, []);
 
 	const previousViewRef = useRef(view);
@@ -3414,55 +3382,35 @@ function ReimbursementPage() {
 		reimbursements as ReimbursementData[] | undefined
 	)?.find((r) => r._id === selectedReimbursementId);
 
-	const handleStepChange = (newStep: number) => {
-		setStep(newStep);
-		if (newStep > maxVisitedStep) {
-			setMaxVisitedStep(newStep);
-		}
+	const reachableStep = findReachableStep(formData, receipts);
+
+	const handleStepClick = (target: number) => {
+		const parsedStep = parseWizardStep(target);
+		if (parsedStep === null) return;
+		dispatchWizard({ type: "jump", step: parsedStep, reachableStep });
 	};
 
 	const handleNext = () => {
-		if (step < STEPS.length) {
-			handleStepChange(step + 1);
-		}
+		dispatchWizard({ type: "next", reachableStep });
 	};
 
 	const handleBack = () => {
-		if (step > 1) {
-			setStep(step - 1);
-		}
+		dispatchWizard({ type: "back" });
 	};
 
 	const handleSubmit = async () => {
-		if (!logtoId) return;
+		if (!logtoId || isSubmitting) return;
 		if (!isOnline) {
 			toast.error("You’re offline. Reconnect to submit your reimbursement.");
 			return;
 		}
-		if (!formData.title.trim()) {
-			toast.error("Title is required. Add one in Report Details.");
-			return;
-		}
-		if (!formData.department) {
-			toast.error("Department is required. Choose one in Report Details.");
-			return;
-		}
-		if (!formData.paymentMethod) {
-			toast.error("Payment method is required. Choose one in Report Details.");
-			return;
-		}
-		if (!formData.businessPurpose.trim()) {
-			toast.error("Business purpose is required. Add one in Report Details.");
-			return;
-		}
-		if (totalAmount <= 0) {
-			toast.error(
-				"Total amount must be greater than zero. Add an amount to your expenses.",
-			);
+		const invalidStep = findFirstInvalidStep(formData, receipts);
+		if (invalidStep) {
+			toast.error(invalidStep.message);
 			return;
 		}
 
-		setIsSubmitting(true);
+		dispatchWizard({ type: "submitStarted" });
 		try {
 			const formattedReceipts = receipts.map((r) => {
 				const lineItems = r.lineItems.filter((li) => li.description.trim());
@@ -3537,7 +3485,7 @@ function ReimbursementPage() {
 					"Failed to submit reimbursement. Check your connection and try again.",
 			);
 		} finally {
-			setIsSubmitting(false);
+			dispatchWizard({ type: "submitSettled" });
 		}
 	};
 
@@ -3587,8 +3535,8 @@ function ReimbursementPage() {
 				{/* Step Progress Indicator */}
 				<StepIndicator
 					currentStep={step}
-					maxVisitedStep={maxVisitedStep}
-					onStepClick={handleStepChange}
+					maxJumpableStep={maxJumpableStep(wizard, reachableStep)}
+					onStepClick={handleStepClick}
 				/>
 
 				{/* Step Content */}

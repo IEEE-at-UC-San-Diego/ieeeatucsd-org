@@ -20,7 +20,16 @@ import {
 	UploadCloud,
 	XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+	type ChangeEvent,
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -63,6 +72,22 @@ import {
 	formatRelativeTime,
 	formatTime,
 } from "@/lib/formatters";
+import {
+	buildPaymentReviewForm,
+	hasUnsavedPaymentProgress,
+	initialPaidModalState,
+	isPaidModalOpenFor,
+	type PaymentReviewForm,
+	paidModalReducer,
+	toPaymentDetails,
+} from "@/lib/manage-reimbursements/paidModal";
+import {
+	getReviewStep,
+	type PendingReviewAction,
+	type PendingReviewActions,
+	withoutPendingAction,
+	withPendingAction,
+} from "@/lib/manage-reimbursements/reviewActions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import {
 	computeMileageTotal,
@@ -174,6 +199,10 @@ const ITEMS_PER_PAGE = 10;
 type ReimbursementStatus = (typeof REIMBURSEMENT_STATUSES)[number];
 type SortField = (typeof SORT_FIELDS)[number];
 
+type DeclineDialogState =
+	| { status: "closed" }
+	| { status: "open"; targetId: string; reason: string };
+
 const statusColors: Record<ReimbursementStatus, string> = {
 	submitted: "bg-ds-amber-100 text-tone-warning",
 	approved: "bg-ds-green-100 text-tone-success",
@@ -252,22 +281,28 @@ function ManageReimbursementsPage() {
 	);
 	const viewMode = selectedReimbursement ? "detail" : "list";
 	const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-	const [processingId, setProcessingId] = useState<string | null>(null);
-	const [declineTargetId, setDeclineTargetId] = useState<string | null>(null);
-	const [declineReason, setDeclineReason] = useState("");
+	const [pendingActions, setPendingActions] = useState<PendingReviewActions>(
+		{},
+	);
+	const [declineDialog, setDeclineDialog] = useState<DeclineDialogState>({
+		status: "closed",
+	});
 
 	// Paid confirmation modal state
-	const [isPaidModalOpen, setIsPaidModalOpen] = useState(false);
-	const [paidConfirmationNumber, setPaidConfirmationNumber] = useState("");
-	const [paidProofFile, setPaidProofFile] = useState<File | null>(null);
-	const [paymentReviewData, setPaymentReviewData] = useState<any>(null);
-	const [paymentDate, setPaymentDate] = useState("");
-	const [paymentAmount, setPaymentAmount] = useState("");
-	const [paymentMemo, setPaymentMemo] = useState("");
-	const [uploadedProofUrl, setUploadedProofUrl] = useState("");
-	const [aiProcessing, setAiProcessing] = useState(false);
+	const [paidModal, dispatchPaidModal] = useReducer(
+		paidModalReducer,
+		initialPaidModalState,
+	);
+	const extractionAttemptRef = useRef(0);
+	const extractionAbortRef = useRef<AbortController | null>(null);
+	const isPaidModalOpen = isPaidModalOpenFor(
+		paidModal,
+		selectedReimbursement?._id,
+	);
+	const isSelectingProof =
+		isPaidModalOpen && paidModal.status === "selectingProof";
 	const confirmDiscardPayment = useUnsavedChangesGuard(
-		isPaidModalOpen && (paidProofFile !== null || paymentReviewData !== null),
+		isPaidModalOpen && hasUnsavedPaymentProgress(paidModal),
 	);
 
 	// Receipt viewer state
@@ -278,11 +313,13 @@ function ManageReimbursementsPage() {
 		return () => setHideTabBar(false);
 	}, [viewMode, isPaidModalOpen, setHideTabBar]);
 
+	useEffect(() => () => extractionAbortRef.current?.abort(), []);
+
 	// Handle paste for file upload
 	useEffect(() => {
-		const handlePaste = (e: ClipboardEvent) => {
-			if (!isPaidModalOpen || paymentReviewData) return;
+		if (!isSelectingProof) return;
 
+		const handlePaste = (e: ClipboardEvent) => {
 			const items = e.clipboardData?.items;
 			if (!items) return;
 
@@ -290,7 +327,7 @@ function ManageReimbursementsPage() {
 				if (items[i].type.indexOf("image") !== -1) {
 					const file = items[i].getAsFile();
 					if (file) {
-						setPaidProofFile(file);
+						dispatchPaidModal({ type: "proofSelected", file });
 						toast.success("Image pasted successfully");
 						e.preventDefault();
 						break;
@@ -301,7 +338,7 @@ function ManageReimbursementsPage() {
 
 		window.addEventListener("paste", handlePaste);
 		return () => window.removeEventListener("paste", handlePaste);
-	}, [isPaidModalOpen, paymentReviewData]);
+	}, [isSelectingProof]);
 
 	const handleSort = (field: SortField) => {
 		setSearchParams({
@@ -430,9 +467,14 @@ function ManageReimbursementsPage() {
 	);
 
 	// Action handlers
+	const startPendingAction = (id: string, action: PendingReviewAction) =>
+		setPendingActions((pending) => withPendingAction(pending, id, action));
+	const settlePendingAction = (id: string) =>
+		setPendingActions((pending) => withoutPendingAction(pending, id));
+
 	const handleStatusChange = async (
 		id: string,
-		status: ReimbursementStatus,
+		status: "approved" | "declined",
 		reason?: string,
 	) => {
 		const trimmedReason = reason?.trim();
@@ -441,7 +483,7 @@ function ManageReimbursementsPage() {
 			return;
 		}
 
-		setProcessingId(id);
+		startPendingAction(id, status === "declined" ? "decline" : "approve");
 		try {
 			await updateStatus({
 				logtoId: logtoId!,
@@ -477,28 +519,35 @@ function ManageReimbursementsPage() {
 				"Failed to update status. Check your connection and try again.",
 			);
 		} finally {
-			setProcessingId(null);
+			settlePendingAction(id);
 		}
 	};
 
 	const handleDecline = (id: string) => {
-		setDeclineReason("");
-		setDeclineTargetId(id);
+		setDeclineDialog({ status: "open", targetId: id, reason: "" });
 	};
 
+	const closeDeclineDialog = () => setDeclineDialog({ status: "closed" });
+
 	const handleConfirmDecline = async () => {
-		if (!declineTargetId) return;
-		if (!declineReason.trim()) {
+		if (declineDialog.status !== "open") return;
+		const { targetId, reason } = declineDialog;
+		if (!reason.trim()) {
 			toast.error("Enter a reason to decline this reimbursement.");
 			return;
 		}
-		await handleStatusChange(declineTargetId, "declined", declineReason);
-		setDeclineTargetId(null);
+		await handleStatusChange(targetId, "declined", reason);
+		setDeclineDialog((dialog) =>
+			dialog.status === "open" && dialog.targetId === targetId
+				? { status: "closed" }
+				: dialog,
+		);
 	};
 
 	const handleApproveFull = async () => {
 		if (!selectedReimbursement) return;
-		setProcessingId(selectedReimbursement._id);
+		const id = selectedReimbursement._id;
+		startPendingAction(id, "approve");
 		try {
 			await updateStatus({
 				logtoId: logtoId!,
@@ -524,91 +573,47 @@ function ManageReimbursementsPage() {
 				"Failed to approve reimbursement. Check your connection and try again.",
 			);
 		} finally {
-			setProcessingId(null);
+			settlePendingAction(id);
 		}
 	};
 
-	const handlePaidSubmit = async () => {
-		if (!selectedReimbursement) return;
-
-		// Step 2: Final Confirmation
-		if (paymentReviewData) {
-			if (!paidConfirmationNumber.trim()) {
-				toast.error("Missing Information", {
-					description: "Please provide a confirmation number.",
-				});
-				return;
-			}
-
-			setProcessingId(selectedReimbursement._id);
-			try {
-				await updatePaymentDetails({
-					logtoId: logtoId!,
-					id: selectedReimbursement._id,
-					paymentDetails: {
-						confirmationNumber: paidConfirmationNumber.trim(),
-						paymentDate: new Date(paymentDate || Date.now()).getTime(),
-						amountPaid:
-							parseFloat(paymentAmount) ||
-							calculateTotalAmount(selectedReimbursement),
-						proofFileUrl: uploadedProofUrl || undefined,
-						memo: paymentMemo || undefined,
-					},
-				});
-				toast.success("Reimbursement marked as paid");
-
-				if (logtoId) {
-					sendNotification(getAuthHeaders(), "reimbursement_status_changed", {
-						reimbursementId: selectedReimbursement._id,
-						title: selectedReimbursement.title,
-						totalAmount: selectedReimbursement.totalAmount,
-						department: selectedReimbursement.department,
-						newStatus: "paid",
-						previousStatus: selectedReimbursement.status,
-						changedByName: user?.name || "Admin",
-						submittedBy: selectedReimbursement.submittedBy,
-						paymentDetails: {
-							confirmationNumber: paidConfirmationNumber.trim(),
-							paymentDate: new Date(paymentDate || Date.now()).getTime(),
-							amountPaid:
-								parseFloat(paymentAmount) ||
-								calculateTotalAmount(selectedReimbursement),
-						},
-					});
-				}
-				flushSync(() => {
-					setIsPaidModalOpen(false);
-					resetPaidModal();
-				});
-				handleBackToList();
-			} catch {
-				toast.error(
-					"Failed to mark as paid. Check your connection and try again.",
-				);
-			} finally {
-				setProcessingId(null);
-			}
+	const handleProcessProof = async () => {
+		if (
+			paidModal.status !== "selectingProof" ||
+			!selectedReimbursement ||
+			extractionAbortRef.current
+		) {
 			return;
 		}
-
-		// Step 1: Initial Processing (Upload & AI)
-		if (!paidProofFile) {
+		const { file } = paidModal;
+		if (!file) {
 			toast.error("Missing File", {
 				description: "Please upload a proof of payment.",
 			});
 			return;
 		}
 
-		setProcessingId(selectedReimbursement._id);
-		setAiProcessing(true);
+		const controller = new AbortController();
+		extractionAbortRef.current = controller;
+		const { signal } = controller;
+		extractionAttemptRef.current += 1;
+		const attempt = extractionAttemptRef.current;
+		dispatchPaidModal({ type: "extractionStarted", attempt });
+
+		const reviewDefaults = {
+			today: new Date().toISOString().split("T")[0],
+			fallbackAmount: calculateTotalAmount(selectedReimbursement).toFixed(2),
+		};
+		let proofUrl: string | null = null;
 		try {
 			const uploadUrl = await generateUploadUrl({});
 			const uploadResponse = await fetch(uploadUrl, {
 				method: "POST",
 				headers: {
-					"Content-Type": paidProofFile.type || "application/octet-stream",
+					"Content-Type": file.type || "application/octet-stream",
 				},
-				body: paidProofFile,
+				body: file,
+				signal,
 			});
 
 			if (!uploadResponse.ok) {
@@ -616,18 +621,19 @@ function ManageReimbursementsPage() {
 			}
 
 			const { storageId } = await uploadResponse.json();
-			const proofUrl = await getStorageUrl({ storageId });
+			proofUrl = await getStorageUrl({ storageId });
+			if (signal.aborted) return;
 			if (!proofUrl) {
 				throw new Error("Could not resolve uploaded proof file URL");
 			}
-			setUploadedProofUrl(proofUrl);
 
 			if (!aiEnabled) {
-				setPaymentReviewData({ manual: true });
-				setPaymentDate(new Date().toISOString().split("T")[0]);
-				setPaymentAmount(
-					calculateTotalAmount(selectedReimbursement).toFixed(2),
-				);
+				dispatchPaidModal({
+					type: "extractionFinished",
+					attempt,
+					proofUrl,
+					form: buildPaymentReviewForm(null, reviewDefaults),
+				});
 				toast.success("Proof uploaded", {
 					description: "AI is disabled. Please enter payment details manually.",
 				});
@@ -638,6 +644,7 @@ function ManageReimbursementsPage() {
 				method: "POST",
 				headers: { "Content-Type": "application/json", ...getAuthHeaders() },
 				body: JSON.stringify({ imageUrl: proofUrl }),
+				signal,
 			});
 
 			if (!response.ok) {
@@ -645,35 +652,21 @@ function ManageReimbursementsPage() {
 			}
 
 			const result = await response.json();
-			if (result.success && result.data) {
-				const data = result.data;
-				setPaymentReviewData(data);
-				if (data.confirmationNumber) {
-					setPaidConfirmationNumber(data.confirmationNumber);
-				}
-				if (data.paymentDate) {
-					setPaymentDate(data.paymentDate);
-				} else {
-					setPaymentDate(new Date().toISOString().split("T")[0]);
-				}
-				if (typeof data.amountPaid === "number" && data.amountPaid > 0) {
-					setPaymentAmount(data.amountPaid.toString());
-				} else {
-					setPaymentAmount(
-						calculateTotalAmount(selectedReimbursement).toFixed(2),
-					);
-				}
-				if (data.memo) {
-					setPaymentMemo(data.memo);
-				}
-
-				toast.success("Details extracted", {
-					description: "Please review the payment details.",
-				});
-			} else {
+			if (!result.success || !result.data) {
 				throw new Error(result.error || "No data returned");
 			}
+			if (signal.aborted) return;
+			dispatchPaidModal({
+				type: "extractionFinished",
+				attempt,
+				proofUrl,
+				form: buildPaymentReviewForm(result.data, reviewDefaults),
+			});
+			toast.success("Details extracted", {
+				description: "Please review the payment details.",
+			});
 		} catch (error) {
+			if (signal.aborted) return;
 			const message =
 				error instanceof Error
 					? error.message
@@ -681,25 +674,74 @@ function ManageReimbursementsPage() {
 			toast.error("AI Extraction Failed", {
 				description: `${message} Please enter details manually.`,
 			});
-			setPaymentReviewData({ manual: true });
-			setPaymentDate(new Date().toISOString().split("T")[0]);
-			setPaymentAmount(calculateTotalAmount(selectedReimbursement).toFixed(2));
+			dispatchPaidModal({
+				type: "extractionFinished",
+				attempt,
+				proofUrl,
+				form: buildPaymentReviewForm(null, reviewDefaults),
+			});
 		} finally {
-			setAiProcessing(false);
-			setProcessingId(null);
+			if (extractionAbortRef.current === controller) {
+				extractionAbortRef.current = null;
+			}
 		}
 	};
 
-	const resetPaidModal = () => {
-		setPaidConfirmationNumber("");
-		setPaidProofFile(null);
-		setPaymentReviewData(null);
-		setPaymentDate("");
-		setPaymentAmount("");
-		setPaymentMemo("");
-		setUploadedProofUrl("");
-		setAiProcessing(false);
+	const handleConfirmPayment = async () => {
+		if (paidModal.status !== "reviewing" || !selectedReimbursement) return;
+		const { form, proofUrl } = paidModal;
+		if (!form.confirmationNumber.trim()) {
+			toast.error("Missing Information", {
+				description: "Please provide a confirmation number.",
+			});
+			return;
+		}
+
+		const paymentDetails = toPaymentDetails(form, {
+			proofUrl,
+			fallbackAmount: calculateTotalAmount(selectedReimbursement),
+			now: Date.now(),
+		});
+		dispatchPaidModal({ type: "submitStarted" });
+		try {
+			await updatePaymentDetails({
+				logtoId: logtoId!,
+				id: selectedReimbursement._id,
+				paymentDetails,
+			});
+			toast.success("Reimbursement marked as paid");
+
+			if (logtoId) {
+				sendNotification(getAuthHeaders(), "reimbursement_status_changed", {
+					reimbursementId: selectedReimbursement._id,
+					title: selectedReimbursement.title,
+					totalAmount: selectedReimbursement.totalAmount,
+					department: selectedReimbursement.department,
+					newStatus: "paid",
+					previousStatus: selectedReimbursement.status,
+					changedByName: user?.name || "Admin",
+					submittedBy: selectedReimbursement.submittedBy,
+					paymentDetails: {
+						confirmationNumber: paymentDetails.confirmationNumber,
+						paymentDate: paymentDetails.paymentDate,
+						amountPaid: paymentDetails.amountPaid,
+					},
+				});
+			}
+			flushSync(() => dispatchPaidModal({ type: "close" }));
+			handleBackToList();
+		} catch {
+			toast.error(
+				"Failed to mark as paid. Check your connection and try again.",
+			);
+			dispatchPaidModal({ type: "submitFailed" });
+		}
 	};
+
+	const setPaymentReviewField =
+		(field: keyof PaymentReviewForm) =>
+		(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+			dispatchPaidModal({ type: "fieldChanged", field, value: e.target.value });
 
 	const handleViewDetails = (reimbursement: any) => {
 		setActiveReceiptIndex(0);
@@ -710,10 +752,14 @@ function ManageReimbursementsPage() {
 		navigate({ search: (prev) => ({ ...prev, id: undefined }) });
 	};
 
+	const openPaidModal = (reimbursementId: string) =>
+		dispatchPaidModal({ type: "open", reimbursementId });
+
 	const closePaidModal = async () => {
 		if (!(await confirmDiscardPayment())) return;
-		setIsPaidModalOpen(false);
-		setTimeout(resetPaidModal, 300);
+		extractionAbortRef.current?.abort();
+		extractionAbortRef.current = null;
+		dispatchPaidModal({ type: "close" });
 	};
 
 	const renderSortableHead = (field: SortField, label: string) => (
@@ -737,11 +783,16 @@ function ManageReimbursementsPage() {
 		</TableHead>
 	);
 
+	const declineTargetId =
+		declineDialog.status === "open" ? declineDialog.targetId : null;
+	const declineTargetPendingAction =
+		declineTargetId !== null ? pendingActions[declineTargetId] : undefined;
+
 	const declineOverlay = (
 		<ResponsiveOverlay
-			open={declineTargetId !== null}
+			open={declineDialog.status === "open"}
 			onOpenChange={(open) => {
-				if (!open) setDeclineTargetId(null);
+				if (!open) closeDeclineDialog();
 			}}
 			title="Decline Reimbursement?"
 			description="Provide a reason. It’s included in the notification sent to the submitter."
@@ -750,7 +801,7 @@ function ManageReimbursementsPage() {
 					<Button
 						variant="outline"
 						className="h-11 flex-1 sm:h-9 sm:flex-none"
-						onClick={() => setDeclineTargetId(null)}
+						onClick={closeDeclineDialog}
 					>
 						Cancel
 					</Button>
@@ -758,11 +809,9 @@ function ManageReimbursementsPage() {
 						variant="destructive"
 						className="h-11 flex-1 sm:h-9 sm:flex-none"
 						onClick={handleConfirmDecline}
-						disabled={
-							declineTargetId !== null && processingId === declineTargetId
-						}
+						disabled={declineTargetPendingAction !== undefined}
 					>
-						{declineTargetId !== null && processingId === declineTargetId ? (
+						{declineTargetPendingAction === "decline" ? (
 							<Loader2 className="h-4 w-4 animate-spin mr-1" />
 						) : null}
 						Decline Reimbursement
@@ -777,8 +826,13 @@ function ManageReimbursementsPage() {
 					name="declineReason"
 					autoComplete="off"
 					placeholder="Explain why this request is being declined…"
-					value={declineReason}
-					onChange={(e) => setDeclineReason(e.target.value)}
+					value={declineDialog.status === "open" ? declineDialog.reason : ""}
+					onChange={(e) => {
+						const reason = e.target.value;
+						setDeclineDialog((dialog) =>
+							dialog.status === "open" ? { ...dialog, reason } : dialog,
+						);
+					}}
 					rows={3}
 					className="text-base sm:text-sm"
 				/>
@@ -809,6 +863,25 @@ function ManageReimbursementsPage() {
 
 	// Detail View - Split Pane Layout
 	if (selectedReimbursement) {
+		const reviewStep = getReviewStep(selectedReimbursement);
+		const pendingAction = pendingActions[selectedReimbursement._id];
+		const paidModalView =
+			paidModal.status === "closed" ? paidModal.previous : paidModal;
+		const isPaidModalBusy =
+			paidModalView?.status === "extracting" ||
+			paidModalView?.status === "submitting";
+		const paymentReview =
+			paidModalView?.status === "reviewing" ||
+			paidModalView?.status === "submitting"
+				? paidModalView
+				: null;
+		const isReviewingPayment = paymentReview !== null;
+		const proofFile =
+			paidModalView?.status === "selectingProof" ||
+			paidModalView?.status === "extracting"
+				? paidModalView.file
+				: null;
+
 		return (
 			<div className="flex flex-col h-full bg-muted/50 absolute inset-0 z-10 overflow-hidden">
 				{/* Header */}
@@ -874,22 +947,21 @@ function ManageReimbursementsPage() {
 					<div className="w-5/12 flex flex-col border-r border-border bg-background overflow-y-auto">
 						<div className="p-6 space-y-8">
 							{/* Actions Section */}
-							{(selectedReimbursement.status === "submitted" ||
-								selectedReimbursement.status === "approved") && (
+							{reviewStep !== "none" && (
 								<section className="border-b border-border pb-6 space-y-3">
 									<h3 className="text-xs font-medium text-muted-foreground">
 										Actions
 									</h3>
 									<div className="flex flex-wrap gap-2">
-										{selectedReimbursement.status === "submitted" && (
+										{reviewStep === "approveOrDecline" && (
 											<>
 												<Button
 													size="sm"
 													onClick={handleApproveFull}
-													disabled={processingId === selectedReimbursement._id}
+													disabled={pendingAction !== undefined}
 													className="bg-ds-green-700 hover:bg-ds-green-800"
 												>
-													{processingId === selectedReimbursement._id ? (
+													{pendingAction === "approve" ? (
 														<Loader2 className="h-4 w-4 animate-spin mr-1" />
 													) : (
 														<CheckCircle className="h-4 w-4 mr-1" />
@@ -902,24 +974,23 @@ function ManageReimbursementsPage() {
 													onClick={() =>
 														handleDecline(selectedReimbursement._id)
 													}
-													disabled={processingId === selectedReimbursement._id}
+													disabled={pendingAction !== undefined}
 												>
 													<XCircle className="h-4 w-4 mr-1" />
 													Decline
 												</Button>
 											</>
 										)}
-										{selectedReimbursement.status === "approved" &&
-											!selectedReimbursement.paymentDetails && (
-												<Button
-													size="sm"
-													onClick={() => setIsPaidModalOpen(true)}
-													className="bg-ds-purple-700 hover:bg-ds-purple-800"
-												>
-													<DollarSign className="h-4 w-4 mr-1" />
-													Mark as Paid
-												</Button>
-											)}
+										{reviewStep === "markPaid" && (
+											<Button
+												size="sm"
+												onClick={() => openPaidModal(selectedReimbursement._id)}
+												className="bg-ds-purple-700 hover:bg-ds-purple-800"
+											>
+												<DollarSign className="h-4 w-4 mr-1" />
+												Mark as Paid
+											</Button>
+										)}
 									</div>
 								</section>
 							)}
@@ -1472,17 +1543,13 @@ function ManageReimbursementsPage() {
 				<ResponsiveOverlay
 					open={isPaidModalOpen}
 					onOpenChange={(open) => {
-						if (!open) {
-							void closePaidModal();
-							return;
-						}
-						setIsPaidModalOpen(open);
+						if (!open) void closePaidModal();
 					}}
 					title={
-						paymentReviewData ? "Review Payment Details" : "Process Payment"
+						isReviewingPayment ? "Review Payment Details" : "Process Payment"
 					}
-					variant={paymentReviewData ? "fullscreen" : "large-sheet"}
-					className={paymentReviewData ? "sm:max-w-4xl" : undefined}
+					variant={isReviewingPayment ? "fullscreen" : "large-sheet"}
+					className={isReviewingPayment ? "sm:max-w-4xl" : undefined}
 					footer={
 						<div className="flex w-full gap-2">
 							<Button
@@ -1493,19 +1560,21 @@ function ManageReimbursementsPage() {
 								Cancel
 							</Button>
 							<Button
-								onClick={handlePaidSubmit}
-								disabled={
-									processingId === selectedReimbursement?._id || aiProcessing
+								onClick={
+									isReviewingPayment ? handleConfirmPayment : handleProcessProof
 								}
+								disabled={isPaidModalBusy}
 								className={cn(
 									"h-11 flex-1 sm:h-9 sm:flex-none",
-									aiProcessing ? "bg-ds-purple-700" : "",
+									paidModalView?.status === "extracting"
+										? "bg-ds-purple-700"
+										: "",
 								)}
 							>
-								{processingId === selectedReimbursement?._id || aiProcessing ? (
+								{isPaidModalBusy ? (
 									<Loader2 className="h-4 w-4 animate-spin mr-1" />
 								) : null}
-								{paymentReviewData
+								{isReviewingPayment
 									? "Confirm Payment"
 									: aiEnabled
 										? "Process & Analyze"
@@ -1514,7 +1583,7 @@ function ManageReimbursementsPage() {
 						</div>
 					}
 				>
-					{paymentReviewData ? (
+					{paymentReview ? (
 						<div className="flex flex-col gap-6 md:flex-row">
 							{/* Left: Inputs */}
 							<div className="flex-1 space-y-4">
@@ -1544,8 +1613,9 @@ function ManageReimbursementsPage() {
 											name="paymentDate"
 											autoComplete="off"
 											type="date"
-											value={paymentDate}
-											onChange={(e) => setPaymentDate(e.target.value)}
+											value={paymentReview.form.paymentDate}
+											onChange={setPaymentReviewField("paymentDate")}
+											disabled={paymentReview.status === "submitting"}
 											className="h-11 text-base sm:h-9 sm:text-sm"
 										/>
 									</div>
@@ -1567,8 +1637,9 @@ function ManageReimbursementsPage() {
 												type="number"
 												inputMode="decimal"
 												step="0.01"
-												value={paymentAmount}
-												onChange={(e) => setPaymentAmount(e.target.value)}
+												value={paymentReview.form.amount}
+												onChange={setPaymentReviewField("amount")}
+												disabled={paymentReview.status === "submitting"}
 												className="h-11 pl-7 text-base tabular-nums sm:h-9 sm:text-sm"
 											/>
 										</div>
@@ -1585,8 +1656,9 @@ function ManageReimbursementsPage() {
 										autoComplete="off"
 										spellCheck={false}
 										placeholder="Transaction ID…"
-										value={paidConfirmationNumber}
-										onChange={(e) => setPaidConfirmationNumber(e.target.value)}
+										value={paymentReview.form.confirmationNumber}
+										onChange={setPaymentReviewField("confirmationNumber")}
+										disabled={paymentReview.status === "submitting"}
 										className="h-11 text-base sm:h-9 sm:text-sm"
 									/>
 								</div>
@@ -1598,8 +1670,9 @@ function ManageReimbursementsPage() {
 										name="paymentMemo"
 										autoComplete="off"
 										placeholder="Any additional notes…"
-										value={paymentMemo}
-										onChange={(e) => setPaymentMemo(e.target.value)}
+										value={paymentReview.form.memo}
+										onChange={setPaymentReviewField("memo")}
+										disabled={paymentReview.status === "submitting"}
 										rows={2}
 										className="text-base sm:text-sm"
 									/>
@@ -1612,9 +1685,9 @@ function ManageReimbursementsPage() {
 									Proof Preview
 								</p>
 								<div className="border rounded-lg overflow-hidden h-64 bg-muted flex items-center justify-center relative">
-									{uploadedProofUrl ? (
+									{paymentReview.proofUrl ? (
 										<img
-											src={uploadedProofUrl}
+											src={paymentReview.proofUrl}
 											width={320}
 											height={256}
 											className="w-full h-full object-contain"
@@ -1623,9 +1696,9 @@ function ManageReimbursementsPage() {
 									) : (
 										<FileText className="text-muted-foreground w-12 h-12" />
 									)}
-									{uploadedProofUrl && (
+									{paymentReview.proofUrl && (
 										<a
-											href={uploadedProofUrl}
+											href={paymentReview.proofUrl}
 											target="_blank"
 											rel="noreferrer"
 											className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-medium opacity-100 md:opacity-0 md:hover:opacity-100 transition-opacity"
@@ -1640,7 +1713,7 @@ function ManageReimbursementsPage() {
 						<div className="py-2">
 							<div
 								className={`border-2 border-dashed rounded-md p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
-									paidProofFile
+									proofFile
 										? "border-ds-blue-700 bg-ds-blue-100"
 										: "border-border active:border-ds-gray-500 sm:hover:border-ds-gray-500 bg-muted"
 								}`}
@@ -1651,8 +1724,12 @@ function ManageReimbursementsPage() {
 									name="paymentProof"
 									accept="image/*,application/pdf"
 									onChange={(e) =>
-										setPaidProofFile(e.target.files ? e.target.files[0] : null)
+										dispatchPaidModal({
+											type: "proofSelected",
+											file: e.target.files?.[0] ?? null,
+										})
 									}
+									disabled={isPaidModalBusy}
 									className="hidden"
 								/>
 
@@ -1660,12 +1737,12 @@ function ManageReimbursementsPage() {
 									htmlFor={`${formId}-payment-proof-upload`}
 									className="cursor-pointer space-y-3 block min-h-11"
 								>
-									{paidProofFile ? (
+									{proofFile ? (
 										<>
 											<CheckCircle className="w-12 h-12 text-tone-info mx-auto" />
 											<output className="block">
 												<p className="font-bold break-words">
-													{paidProofFile.name}
+													{proofFile.name}
 												</p>
 												<p className="text-sm text-muted-foreground">
 													Ready to process
@@ -1691,11 +1768,14 @@ function ManageReimbursementsPage() {
 										</>
 									)}
 								</label>
-								{paidProofFile && (
+								{proofFile && (
 									<Button
 										className="mt-3 h-11 sm:h-9"
 										variant="outline"
-										onClick={() => setPaidProofFile(null)}
+										onClick={() =>
+											dispatchPaidModal({ type: "proofSelected", file: null })
+										}
+										disabled={isPaidModalBusy}
 									>
 										Remove File
 									</Button>
@@ -1862,6 +1942,8 @@ function ManageReimbursementsPage() {
 									{paginated.map((r) => {
 										const isHovered = hoveredRow === r._id;
 										const totalAmt = calculateTotalAmount(r);
+										const reviewStep = getReviewStep(r);
+										const pendingAction = pendingActions[r._id];
 
 										return (
 											<TableRow
@@ -1926,7 +2008,7 @@ function ManageReimbursementsPage() {
 															isHovered ? "opacity-100" : "opacity-0"
 														}`}
 													>
-														{r.status === "submitted" && (
+														{reviewStep === "approveOrDecline" && (
 															<>
 																<Button
 																	variant="ghost"
@@ -1936,11 +2018,11 @@ function ManageReimbursementsPage() {
 																		e.stopPropagation();
 																		handleStatusChange(r._id, "approved");
 																	}}
-																	disabled={processingId === r._id}
+																	disabled={pendingAction !== undefined}
 																	title="Approve"
 																	aria-label={`Approve ${r.title}`}
 																>
-																	{processingId === r._id ? (
+																	{pendingAction === "approve" ? (
 																		<Loader2 className="h-4 w-4 animate-spin" />
 																	) : (
 																		<CheckCircle className="h-4 w-4" />
@@ -1954,7 +2036,7 @@ function ManageReimbursementsPage() {
 																		e.stopPropagation();
 																		handleDecline(r._id);
 																	}}
-																	disabled={processingId === r._id}
+																	disabled={pendingAction !== undefined}
 																	title="Decline"
 																	aria-label={`Decline ${r.title}`}
 																>
@@ -1962,7 +2044,7 @@ function ManageReimbursementsPage() {
 																</Button>
 															</>
 														)}
-														{r.status === "approved" && (
+														{reviewStep === "markPaid" && (
 															<Button
 																variant="ghost"
 																size="sm"
@@ -1970,6 +2052,7 @@ function ManageReimbursementsPage() {
 																onClick={(e) => {
 																	e.stopPropagation();
 																	handleViewDetails(r);
+																	openPaidModal(r._id);
 																}}
 																title="Mark as Paid"
 																aria-label={`Mark ${r.title} as paid`}
