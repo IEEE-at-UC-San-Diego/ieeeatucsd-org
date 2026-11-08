@@ -27,9 +27,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useGlobalImagePaste } from "@/hooks/useGlobalImagePaste";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
 import { formatCurrencyUSD } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MultiFileUpload } from "./MultiFileUpload";
+import {
+	createRequestGate,
+	mergeParsedReceipt,
+	type ParsedReceipt,
+	type ReceiptParseState,
+} from "./receiptParse";
 import type { DepositMethod, IeeeDepositSource } from "./types";
 
 interface FundDepositWizardProps {
@@ -53,8 +60,6 @@ export function FundDepositWizard({
 	const { setHideTabBar } = useMobileShell();
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
-	const [step, setStep] = useState(1);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 	const createDeposit = useAuthedMutation(api.fundDeposits.create);
 	const generateUploadUrl = useAuthedMutation(
 		api.fundDeposits.generateUploadUrl,
@@ -75,159 +80,11 @@ export function FundDepositWizard({
 	});
 	const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-	const [isAiParsing, setIsAiParsing] = useState(false);
-	const [aiParseMessage, setAiParseMessage] = useState("");
-
-	const isDirty =
-		isOpen &&
-		!isSubmitting &&
-		(Boolean(
-			formData.title ||
-				formData.amount ||
-				formData.purpose ||
-				formData.otherDepositMethod ||
-				formData.description ||
-				formData.referenceNumber,
-		) ||
-			receiptFiles.length > 0);
-	const confirmDiscard = useUnsavedChangesGuard(isDirty);
-
-	useEffect(() => {
-		setHideTabBar(isOpen);
-		return () => setHideTabBar(false);
-	}, [isOpen, setHideTabBar]);
-
-	const fileToDataUrl = async (file: File): Promise<string> =>
-		await new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = () => reject(new Error("Failed to read file"));
-			reader.readAsDataURL(file);
-		});
-
-	const parseReceiptWithAI = async (file: File) => {
-		setIsAiParsing(true);
-		setAiParseMessage("");
-		try {
-			const imageUrl = await fileToDataUrl(file);
-			const response = await fetch("/api/parse-receipt", {
-				method: "POST",
-				headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-				body: JSON.stringify({ imageUrl }),
-			});
-
-			const result = await response.json();
-			if (!response.ok || !result.success || !result.data) {
-				throw new Error(result.error || "Failed to parse receipt");
-			}
-
-			const parsed = result.data as {
-				vendorName?: string;
-				dateOfPurchase?: string;
-				total?: number;
-				lineItems?: Array<{ description?: string; amount?: number }>;
-			};
-
-			const detectedAmount =
-				parsed.total && parsed.total > 0 ? parsed.total : undefined;
-			const parsedDate = parsed.dateOfPurchase
-				? new Date(parsed.dateOfPurchase)
-				: null;
-			const hasValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
-			const todayDate = new Date().toISOString().split("T")[0];
-			const aiDescription = Array.isArray(parsed.lineItems)
-				? parsed.lineItems
-						.filter((item) => item.description)
-						.slice(0, 5)
-						.map(
-							(item) =>
-								`${item.description}${item.amount ? ` (${formatCurrencyUSD(Number(item.amount))})` : ""}`,
-						)
-						.join(", ")
-				: "";
-
-			setFormData((prev) => ({
-				...prev,
-				title:
-					prev.title.trim() ||
-					(parsed.vendorName ? `${parsed.vendorName} Deposit` : prev.title),
-				amount:
-					detectedAmount && !prev.amount
-						? detectedAmount.toFixed(2)
-						: prev.amount,
-				depositDate:
-					hasValidDate && prev.depositDate === todayDate
-						? parsedDate.toISOString().split("T")[0]
-						: prev.depositDate,
-				description:
-					prev.description.trim() || aiDescription || prev.description,
-			}));
-
-			setAiParseMessage(
-				"AI extracted details from the latest receipt. Review before submitting.",
-			);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			setAiParseMessage(
-				`AI parse failed: ${message}. You can continue with manual entry.`,
-			);
-		} finally {
-			setIsAiParsing(false);
-		}
-	};
-
-	const handleReceiptFilesChange = (nextFiles: File[]) => {
-		const latestFile = nextFiles[nextFiles.length - 1];
-		const prevCount = receiptFiles.length;
-		setReceiptFiles(nextFiles);
-		if (aiEnabled && latestFile && nextFiles.length > prevCount) {
-			void parseReceiptWithAI(latestFile);
-		}
-	};
-
-	// Global paste support
-	useGlobalImagePaste({
-		enabled: isOpen && step === 3,
-		onImagePasted: (files) => {
-			if (files.length > 0 && receiptFiles.length < 10) {
-				const remainingSlots = 10 - receiptFiles.length;
-				const filesToAdd = files.slice(0, remainingSlots);
-				const updatedFiles = [...receiptFiles, ...filesToAdd];
-				handleReceiptFilesChange(updatedFiles);
-				toast.success(`${filesToAdd.length} image(s) pasted from clipboard`);
-			}
-		},
+	const [parseState, setParseState] = useState<ReceiptParseState>({
+		status: "idle",
 	});
-
-	const resetForm = () => {
-		setFormData({
-			title: "",
-			amount: "",
-			purpose: "",
-			depositDate: new Date().toISOString().split("T")[0],
-			depositMethod: "cash",
-			otherDepositMethod: "",
-			description: "",
-			referenceNumber: "",
-			isIeeeDeposit: false,
-			ieeeDepositSource: "upp",
-		});
-		setReceiptFiles([]);
-		setFormErrors({});
-		setIsAiParsing(false);
-		setAiParseMessage("");
-		setStep(1);
-	};
-
-	const handleClose = () => {
-		onClose();
-		setTimeout(resetForm, 300); // Reset after animation
-	};
-
-	const handleCancel = async () => {
-		if (!(await confirmDiscard())) return;
-		handleClose();
-	};
+	const [parseGate] = useState(createRequestGate);
+	const isAiParsing = parseState.status === "parsing";
 
 	const validateStep1 = () => {
 		const errors: Record<string, string> = {};
@@ -257,19 +114,131 @@ export function FundDepositWizard({
 		return Object.keys(errors).length === 0;
 	};
 
-	const handleNext = () => {
-		if (step === 1 && validateStep1()) {
-			setStep(2);
-		}
-		if (step === 2 && validateStep2()) {
-			setStep(3);
+	const wizard = useWizard({
+		stepCount: DEPOSIT_STEPS.length,
+		canAdvance: (step) => {
+			if (step === 1) return validateStep1();
+			if (step === 2) return validateStep2();
+			return true;
+		},
+	});
+	const { step } = wizard;
+
+	const isDirty =
+		isOpen &&
+		wizard.isEditable &&
+		(Boolean(
+			formData.title ||
+				formData.amount ||
+				formData.purpose ||
+				formData.otherDepositMethod ||
+				formData.description ||
+				formData.referenceNumber,
+		) ||
+			receiptFiles.length > 0);
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
+
+	useEffect(() => {
+		setHideTabBar(isOpen);
+		return () => setHideTabBar(false);
+	}, [isOpen, setHideTabBar]);
+
+	const fileToDataUrl = async (file: File): Promise<string> =>
+		await new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = () => reject(new Error("Failed to read file"));
+			reader.readAsDataURL(file);
+		});
+
+	const parseReceiptWithAI = async (file: File) => {
+		if (!wizard.isEditable) return;
+		const token = parseGate.begin();
+		setParseState({ status: "parsing" });
+		try {
+			const imageUrl = await fileToDataUrl(file);
+			const response = await fetch("/api/parse-receipt", {
+				method: "POST",
+				headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+				body: JSON.stringify({ imageUrl }),
+			});
+
+			const result = await response.json();
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || "Failed to parse receipt");
+			}
+
+			if (!parseGate.isCurrent(token)) return;
+			const parsed = result.data as ParsedReceipt;
+			const todayDate = new Date().toISOString().split("T")[0];
+			setFormData((prev) => mergeParsedReceipt(prev, parsed, todayDate));
+			setParseState({
+				status: "done",
+				message:
+					"AI extracted details from the latest receipt. Review before submitting.",
+			});
+		} catch (error) {
+			if (!parseGate.isCurrent(token)) return;
+			const message = error instanceof Error ? error.message : "Unknown error";
+			setParseState({
+				status: "done",
+				message: `AI parse failed: ${message}. You can continue with manual entry.`,
+			});
 		}
 	};
 
-	const handleBack = () => {
-		if (step > 1) {
-			setStep(step - 1);
+	const handleReceiptFilesChange = (nextFiles: File[]) => {
+		const latestFile = nextFiles[nextFiles.length - 1];
+		const prevCount = receiptFiles.length;
+		setReceiptFiles(nextFiles);
+		if (aiEnabled && latestFile && nextFiles.length > prevCount) {
+			void parseReceiptWithAI(latestFile);
 		}
+	};
+
+	// Global paste support
+	useGlobalImagePaste({
+		enabled: isOpen && step === 3 && wizard.isEditable,
+		onImagePasted: (files) => {
+			if (files.length > 0 && receiptFiles.length < 10) {
+				const remainingSlots = 10 - receiptFiles.length;
+				const filesToAdd = files.slice(0, remainingSlots);
+				const updatedFiles = [...receiptFiles, ...filesToAdd];
+				handleReceiptFilesChange(updatedFiles);
+				toast.success(`${filesToAdd.length} image(s) pasted from clipboard`);
+			}
+		},
+	});
+
+	const resetForm = () => {
+		setFormData({
+			title: "",
+			amount: "",
+			purpose: "",
+			depositDate: new Date().toISOString().split("T")[0],
+			depositMethod: "cash",
+			otherDepositMethod: "",
+			description: "",
+			referenceNumber: "",
+			isIeeeDeposit: false,
+			ieeeDepositSource: "upp",
+		});
+		setReceiptFiles([]);
+		setFormErrors({});
+		parseGate.invalidate();
+		setParseState({ status: "idle" });
+		wizard.reset();
+	};
+
+	const handleClose = () => {
+		parseGate.invalidate();
+		onClose();
+		setTimeout(resetForm, 300); // Reset after animation
+	};
+
+	const handleCancel = async () => {
+		if (wizard.isPending || !(await confirmDiscard())) return;
+		handleClose();
 	};
 
 	const uploadFiles = async (files: File[]): Promise<string[]> => {
@@ -299,7 +268,8 @@ export function FundDepositWizard({
 	};
 
 	const handleSubmit = async () => {
-		setIsSubmitting(true);
+		if (isAiParsing || !wizard.startSubmit()) return;
+		parseGate.invalidate();
 		try {
 			let receiptFileUrls: string[] = [];
 			if (receiptFiles.length > 0) {
@@ -322,6 +292,7 @@ export function FundDepositWizard({
 			});
 
 			toast.success("Deposit submitted successfully");
+			wizard.submitSucceeded();
 			handleClose();
 		} catch (error: unknown) {
 			const errorMessage =
@@ -329,8 +300,7 @@ export function FundDepositWizard({
 					? error.message
 					: "Failed to submit deposit. Please try again.";
 			toast.error(errorMessage);
-		} finally {
-			setIsSubmitting(false);
+			wizard.submitFailed(errorMessage);
 		}
 	};
 
@@ -341,16 +311,16 @@ export function FundDepositWizard({
 				if (!open) void handleCancel();
 			}}
 			title="New Fund Deposit"
-			description={`Step ${step} of 3: ${DEPOSIT_STEPS[step - 1].name}`}
+			description={`Step ${step} of ${wizard.stepCount}: ${DEPOSIT_STEPS[step - 1].name}`}
 			variant="fullscreen"
 			className="sm:max-w-[600px]"
 			footer={
 				<div className="flex w-full items-center justify-between gap-2">
 					<Button
 						variant="ghost"
-						onClick={handleBack}
-						disabled={step === 1 || isSubmitting}
-						className={cn("h-11 sm:h-9", step === 1 ? "invisible" : "")}
+						onClick={wizard.back}
+						disabled={wizard.isFirstStep || !wizard.isEditable}
+						className={cn("h-11 sm:h-9", wizard.isFirstStep ? "invisible" : "")}
 					>
 						<ChevronLeft className="h-4 w-4 mr-2" /> Back
 					</Button>
@@ -359,15 +329,15 @@ export function FundDepositWizard({
 						<Button
 							variant="outline"
 							onClick={() => void handleCancel()}
-							disabled={isSubmitting}
+							disabled={wizard.isPending}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Cancel
 						</Button>
 
-						{step < 3 ? (
+						{!wizard.isLastStep ? (
 							<Button
-								onClick={handleNext}
+								onClick={() => wizard.next()}
 								className="h-11 flex-1 sm:h-9 sm:flex-none"
 							>
 								Next <ArrowRight className="h-4 w-4 ml-2" />
@@ -375,10 +345,10 @@ export function FundDepositWizard({
 						) : (
 							<Button
 								onClick={handleSubmit}
-								disabled={isSubmitting}
+								disabled={!wizard.isEditable || isAiParsing}
 								className="h-11 flex-1 sm:h-9 sm:flex-none"
 							>
-								{isSubmitting && (
+								{wizard.phase.kind === "submitting" && (
 									<Loader2 className="h-4 w-4 animate-spin mr-2" />
 								)}
 								Submit Deposit
@@ -392,7 +362,7 @@ export function FundDepositWizard({
 			<div className="mb-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
 				<div
 					className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
-					style={{ transform: `scaleX(${step / 3})` }}
+					style={{ transform: `scaleX(${step / wizard.stepCount})` }}
 				/>
 			</div>
 
@@ -681,7 +651,10 @@ export function FundDepositWizard({
 									variant="outline"
 									className="h-11 sm:h-9"
 									disabled={
-										!aiEnabled || isAiParsing || receiptFiles.length === 0
+										!aiEnabled ||
+										isAiParsing ||
+										!wizard.isEditable ||
+										receiptFiles.length === 0
 									}
 									onClick={() => {
 										if (receiptFiles.length > 0) {
@@ -708,9 +681,9 @@ export function FundDepositWizard({
 										Analyzing receipt…
 									</p>
 								)}
-								{aiParseMessage && (
+								{parseState.status === "done" && (
 									<p className="text-xs mt-2 text-muted-foreground">
-										{aiParseMessage}
+										{parseState.message}
 									</p>
 								)}
 							</output>

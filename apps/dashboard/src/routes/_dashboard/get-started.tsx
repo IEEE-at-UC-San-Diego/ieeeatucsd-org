@@ -22,6 +22,7 @@ import { LEGAL_VERSIONS } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
 import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/get-started")({
@@ -122,6 +123,20 @@ const questions: Question[] = [
 	},
 ];
 
+function getQuestionError(question: Question, answer: unknown): string | null {
+	if (question.type === "legal-acceptance") {
+		const legalValue = answer as
+			| { tos?: boolean; privacy?: boolean }
+			| undefined;
+		return legalValue?.tos && legalValue?.privacy
+			? null
+			: "You must accept both the Terms of Service and Privacy Policy to continue";
+	}
+	return question.required && !answer
+		? `Enter your ${question.title} to continue.`
+		: null;
+}
+
 function GetStartedPage() {
 	const formId = useId();
 	const { user, logtoId } = useAuth();
@@ -129,58 +144,50 @@ function GetStartedPage() {
 	const generateResumeUploadUrl = useAuthedMutation(
 		api.users.generateResumeUploadUrl,
 	);
-	const [currentStep, setCurrentStep] = useState(0);
 	const [answers, setAnswers] = useState<Record<string, unknown>>({});
-	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
+	const [validationError, setValidationError] = useState<string | null>(null);
 	const navigate = useNavigate();
-	useUnsavedChangesGuard(
-		Object.keys(answers).length > 0 &&
-			!loading &&
-			currentStep < questions.length,
-	);
 
-	const currentQuestion = questions[currentStep];
-	const isLastStep = currentStep === questions.length - 1;
+	const validateStep = (step: number) => {
+		const question = questions[step - 1];
+		const message = getQuestionError(question, answers[question.id]);
+		setValidationError(message);
+		return message === null;
+	};
+
+	const wizard = useWizard({
+		stepCount: questions.length,
+		canAdvance: validateStep,
+	});
+	const isSubmitting = wizard.phase.kind === "submitting";
+	const error = validationError ?? wizard.errorMessage;
+	useUnsavedChangesGuard(Object.keys(answers).length > 0 && wizard.isEditable);
+
+	const currentQuestion = questions[wizard.step - 1];
+	const { isLastStep } = wizard;
 
 	if (user?.signedUp) {
 		return <Navigate to="/overview" replace />;
 	}
 
 	const handleNext = () => {
-		if (currentQuestion.type === "legal-acceptance") {
-			const legalValue = answers[currentQuestion.id] as
-				| { tos?: boolean; privacy?: boolean }
-				| undefined;
-			if (!legalValue?.tos || !legalValue?.privacy) {
-				setError(
-					"You must accept both the Terms of Service and Privacy Policy to continue",
-				);
-				return;
-			}
-		} else if (currentQuestion.required && !answers[currentQuestion.id]) {
-			setError(`Enter your ${currentQuestion.title} to continue.`);
-			return;
-		}
-
-		setError(null);
-		if (isLastStep) {
-			handleSubmit();
-		} else {
-			setCurrentStep((prev) => prev + 1);
+		if (!isLastStep) {
+			wizard.next();
+		} else if (validateStep(wizard.step)) {
+			void handleSubmit();
 		}
 	};
 
 	const handleBack = () => {
-		if (currentStep > 0) {
-			setCurrentStep((prev) => prev - 1);
-			setError(null);
-		}
+		wizard.back();
+		wizard.dismissError();
+		setValidationError(null);
 	};
 
 	const handleInputChange = (value: unknown) => {
 		setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
-		setError(null);
+		setValidationError(null);
+		wizard.dismissError();
 	};
 
 	const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -191,8 +198,7 @@ function GetStartedPage() {
 	};
 
 	const handleSubmit = async () => {
-		setLoading(true);
-		setError(null);
+		if (!wizard.startSubmit()) return;
 		try {
 			const resumeFile = answers.resume as File | null | undefined;
 			let resumeStorageId;
@@ -217,21 +223,20 @@ function GetStartedPage() {
 				tosVersion: LEGAL_VERSIONS.TOS_VERSION,
 				privacyPolicyVersion: LEGAL_VERSIONS.PRIVACY_POLICY_VERSION,
 			});
-			setCurrentStep(questions.length);
+			wizard.submitSucceeded();
 			setTimeout(() => {
 				navigate({ to: "/overview", replace: true });
 			}, 2000);
 		} catch (err: unknown) {
-			setError(
+			wizard.submitFailed(
 				err instanceof Error
 					? err.message
 					: "Couldn’t complete setup. Check your connection and try again.",
 			);
-			setLoading(false);
 		}
 	};
 
-	if (currentStep === questions.length) {
+	if (wizard.phase.kind === "succeeded") {
 		return (
 			<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
 				<div className="text-center success-reveal">
@@ -317,9 +322,9 @@ function GetStartedPage() {
 								onChange={(e) => {
 									const file = e.target.files?.[0] || null;
 									if (file) {
-										const validationError = validateResumeFile(file);
-										if (validationError) {
-											setError(validationError);
+										const fileError = validateResumeFile(file);
+										if (fileError) {
+											setValidationError(fileError);
 											e.target.value = "";
 											return;
 										}
@@ -444,7 +449,7 @@ function GetStartedPage() {
 				<div className="flex min-h-0 flex-1 flex-col rounded-md border bg-card md:shadow-sm">
 					<div className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
 						<MobileTaskStepper
-							currentStep={currentStep + 1}
+							currentStep={wizard.step}
 							totalSteps={questions.length}
 							stepTitle={currentQuestion.title}
 						/>
@@ -495,7 +500,7 @@ function GetStartedPage() {
 							<Button
 								variant="outline"
 								onClick={handleBack}
-								disabled={currentStep === 0}
+								disabled={wizard.isFirstStep || !wizard.isEditable}
 								className="h-12 min-w-[5.5rem] shrink-0"
 							>
 								<ArrowLeft className="mr-1.5 size-4" />
@@ -503,10 +508,10 @@ function GetStartedPage() {
 							</Button>
 							<Button
 								onClick={handleNext}
-								disabled={loading}
+								disabled={isSubmitting}
 								className="h-12 flex-1"
 							>
-								{loading ? (
+								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 size-4 animate-spin" />
 										Finishing…
@@ -528,6 +533,7 @@ function GetStartedPage() {
 							<Button
 								variant="ghost"
 								onClick={handleNext}
+								disabled={isSubmitting}
 								className="h-10 w-full text-muted-foreground"
 							>
 								Skip This Question

@@ -9,18 +9,12 @@ import {
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/hooks/useAuth";
-import type { InvoiceItem } from "../types";
-import { invoiceScanFailureMessage } from "./invoice-scan-error";
-
-interface ParsedInvoiceData {
-	vendor: string;
-	items: InvoiceItem[];
-	tax: number;
-	tip: number;
-	subtotal: number;
-	total: number;
-}
+import {
+	invoiceUploadErrorMessage,
+	isInvoiceUploadBusy,
+	type ParsedInvoiceData,
+} from "./invoiceUploadState";
+import { useInvoiceUpload } from "./useInvoiceUpload";
 
 interface InvoiceFileUploadProps {
 	invoiceId: string;
@@ -42,119 +36,26 @@ export function InvoiceFileUpload({
 	generateUploadUrl,
 	aiEnabled = true,
 }: InvoiceFileUploadProps) {
-	const { getAuthHeaders } = useAuth();
-	const [isUploading, setIsUploading] = useState(false);
-	const [isParsing, setIsParsing] = useState(false);
-	const [error, setError] = useState("");
 	const [uploadedFileUrl, setUploadedFileUrl] = useState(existingFile || "");
-	const [parseSuccess, setParseSuccess] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const { phase, selectFile, dismiss } = useInvoiceUpload({
+		generateUploadUrl,
+		parseWithAI: shouldParseUploadedInvoiceWithAI(aiEnabled),
+		onUploaded: (storageId) => {
+			setUploadedFileUrl(storageId);
+			onFileUploaded(storageId);
+		},
+		onFinished: ({ parsed }) => {
+			if (parsed) onParsed(parsed);
+		},
+	});
+	const error = invoiceUploadErrorMessage(phase);
 
-	const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		e.target.value = "";
-
-		setError("");
-		setParseSuccess(false);
-
-		// Validate file
-		const maxSize = 10 * 1024 * 1024; // 10MB
-		if (file.size > maxSize) {
-			setError("File too large. Choose a file under 10\u00a0MB.");
-			return;
-		}
-
-		const allowedTypes = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp"];
-		const ext = "." + file.name.split(".").pop()?.toLowerCase();
-		if (!allowedTypes.includes(ext)) {
-			setError("Unsupported file type. Use PDF, JPG, PNG, GIF, or WebP.");
-			return;
-		}
-
-		const parseDataUrl = await new Promise<string>((resolve) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.readAsDataURL(file);
-		});
-
-		// Upload file to Convex storage if generateUploadUrl is available
-		let fileUrl = "";
-		if (generateUploadUrl) {
-			setIsUploading(true);
-			try {
-				const uploadUrl = await generateUploadUrl();
-				const uploadResponse = await fetch(uploadUrl, {
-					method: "POST",
-					headers: { "Content-Type": file.type },
-					body: file,
-				});
-
-				if (!uploadResponse.ok) {
-					throw new Error("Upload failed");
-				}
-
-				const { storageId } = await uploadResponse.json();
-				fileUrl = storageId;
-				setUploadedFileUrl(fileUrl);
-				onFileUploaded(fileUrl);
-			} catch (err) {
-				setError("Failed to upload file. Check your connection and try again.");
-				setIsUploading(false);
-				return;
-			}
-			setIsUploading(false);
-		}
-
-		// Parse with AI
-		if (shouldParseUploadedInvoiceWithAI(aiEnabled)) {
-			setIsParsing(true);
-			try {
-				const response = await fetch("/api/parse-invoice", {
-					method: "POST",
-					headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-					// Parse the actual file bytes via data URL, not Convex storage ID.
-					body: JSON.stringify({ imageUrl: parseDataUrl }),
-				});
-
-				if (!response.ok) {
-					const errData = await response.json().catch(() => ({}));
-					throw new Error(errData.error || "AI parsing failed");
-				}
-
-				const result = await response.json();
-				if (result.success && result.data) {
-					onParsed({
-						vendor: result.data.vendor,
-						items: result.data.items.map((item: any) => ({
-							description: item.description,
-							quantity: item.quantity || 1,
-							unitPrice: item.unitPrice || 0,
-							total: item.total || 0,
-						})),
-						tax: result.data.tax || 0,
-						tip: result.data.tip || 0,
-						subtotal: result.data.subtotal || 0,
-						total: result.data.total || 0,
-					});
-					setParseSuccess(true);
-				} else {
-					throw new Error("No data returned from AI");
-				}
-			} catch (err) {
-				setError(
-					invoiceScanFailureMessage(
-						err instanceof Error ? err.message : undefined,
-					),
-				);
-			} finally {
-				setIsParsing(false);
-			}
-		} else {
-			setError(
-				"AI is disabled for this account. Enter the vendor and line items below.",
-			);
-		}
+		selectFile(file);
 	};
 
 	return (
@@ -171,7 +72,7 @@ export function InvoiceFileUpload({
 							variant="ghost"
 							size="sm"
 							className="h-5 w-5 p-0"
-							onClick={() => setError("")}
+							onClick={dismiss}
 							aria-label="Dismiss error"
 						>
 							<X className="h-3 w-3" />
@@ -179,7 +80,7 @@ export function InvoiceFileUpload({
 					</div>
 				)}
 
-				{parseSuccess && (
+				{phase.status === "parsed" && (
 					<div className="flex items-center gap-2 p-2 bg-ds-green-100 border border-ds-green-100 rounded-lg">
 						<CheckCircle className="h-4 w-4 text-tone-success shrink-0" />
 						<p className="text-xs text-tone-success">
@@ -202,15 +103,15 @@ export function InvoiceFileUpload({
 					variant="outline"
 					size="sm"
 					className="h-8 text-xs"
-					disabled={isUploading || isParsing}
+					disabled={isInvoiceUploadBusy(phase)}
 					onClick={() => fileInputRef.current?.click()}
 				>
-					{isUploading ? (
+					{phase.status === "uploading" ? (
 						<>
 							<Loader2 className="h-3 w-3 mr-1 animate-spin" />
 							Uploading…
 						</>
-					) : isParsing ? (
+					) : phase.status === "parsing" ? (
 						<>
 							<Loader2 className="h-3 w-3 mr-1 animate-spin" />
 							AI Scanning…

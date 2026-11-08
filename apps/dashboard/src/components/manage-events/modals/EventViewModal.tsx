@@ -94,6 +94,14 @@ interface EventViewModalProps {
 	canManageStatus?: boolean;
 }
 
+type GraphicsStatus =
+	| { kind: "idle" }
+	| { kind: "uploading" }
+	| { kind: "saving" }
+	| { kind: "error"; message: string };
+
+const graphicsIdle: GraphicsStatus = { kind: "idle" };
+
 const editableStatuses: { value: EventStatus; label: string }[] = [
 	{ value: "submitted", label: "Submitted" },
 	{ value: "pending", label: "Pending" },
@@ -198,9 +206,10 @@ export function EventViewModal({
 	const [copiedInvoice, setCopiedInvoice] = useState(false);
 	const [graphicsCompleted, setGraphicsCompleted] = useState(false);
 	const [graphicsUploadNote, setGraphicsUploadNote] = useState("");
-	const [isSavingGraphics, setIsSavingGraphics] = useState(false);
-	const [isUploadingGraphics, setIsUploadingGraphics] = useState(false);
-	const [graphicsUploadError, setGraphicsUploadError] = useState("");
+	const [graphicsStatus, setGraphicsStatus] =
+		useState<GraphicsStatus>(graphicsIdle);
+	const isGraphicsBusy =
+		graphicsStatus.kind === "uploading" || graphicsStatus.kind === "saving";
 	const [resolvedStorageUrls, setResolvedStorageUrls] = useState<
 		Record<string, string>
 	>({});
@@ -333,29 +342,30 @@ export function EventViewModal({
 	};
 
 	const saveGraphicsUpdate = async () => {
-		if (!onUpdateGraphics) return;
-		setIsSavingGraphics(true);
+		if (!onUpdateGraphics || isGraphicsBusy) return;
+		setGraphicsStatus({ kind: "saving" });
 		try {
 			await onUpdateGraphics(event, {
 				flyersCompleted: graphicsCompleted,
 				graphicsUploadNote: graphicsUploadNote.trim() || undefined,
 			});
 		} finally {
-			setIsSavingGraphics(false);
+			setGraphicsStatus(graphicsIdle);
 		}
 	};
 
 	const handleGraphicsFileUpload = async (file: File) => {
-		if (!file) return;
-		setGraphicsUploadError("");
+		if (!file || isGraphicsBusy) return;
 		const maxSize = 25 * 1024 * 1024;
 		if (file.size > maxSize) {
-			setGraphicsUploadError(
-				"File is larger than 25\u00A0MB. Choose a smaller file or paste a link instead.",
-			);
+			setGraphicsStatus({
+				kind: "error",
+				message:
+					"File is larger than 25\u00A0MB. Choose a smaller file or paste a link instead.",
+			});
 			return;
 		}
-		setIsUploadingGraphics(true);
+		setGraphicsStatus({ kind: "uploading" });
 		try {
 			const uploadUrl = await generateUploadUrl({});
 			const uploadResponse = await fetch(uploadUrl, {
@@ -372,13 +382,13 @@ export function EventViewModal({
 					: fileUrl;
 				setGraphicsUploadNote(newNote);
 			}
+			setGraphicsStatus(graphicsIdle);
 		} catch (error) {
 			console.error("Graphics file upload failed:", error);
-			setGraphicsUploadError(
-				"Upload failed. Check your connection and try again.",
-			);
-		} finally {
-			setIsUploadingGraphics(false);
+			setGraphicsStatus({
+				kind: "error",
+				message: "Upload failed. Check your connection and try again.",
+			});
 		}
 	};
 
@@ -785,6 +795,7 @@ export function EventViewModal({
 												aria-label="Upload graphics file"
 												className="hidden"
 												accept="image/*,application/pdf,.ai,.psd,.svg,.eps,.fig"
+												disabled={isGraphicsBusy}
 												onChange={(e) => {
 													const file = e.target.files?.[0];
 													if (file) void handleGraphicsFileUpload(file);
@@ -795,15 +806,15 @@ export function EventViewModal({
 												variant="outline"
 												size="sm"
 												asChild
-												disabled={isUploadingGraphics}
+												disabled={isGraphicsBusy}
 											>
 												<span>
-													{isUploadingGraphics ? (
+													{graphicsStatus.kind === "uploading" ? (
 														<Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
 													) : (
 														<Upload className="h-3.5 w-3.5 mr-1.5" />
 													)}
-													{isUploadingGraphics
+													{graphicsStatus.kind === "uploading"
 														? "Uploading…"
 														: "Upload Graphics File"}
 												</span>
@@ -818,7 +829,9 @@ export function EventViewModal({
 									aria-live="polite"
 									className="block text-xs text-destructive empty:hidden"
 								>
-									{graphicsUploadError}
+									{graphicsStatus.kind === "error"
+										? graphicsStatus.message
+										: ""}
 								</output>
 							</div>
 
@@ -843,9 +856,11 @@ export function EventViewModal({
 									<Button
 										size="sm"
 										onClick={saveGraphicsUpdate}
-										disabled={isSavingGraphics || isUploadingGraphics}
+										disabled={isGraphicsBusy}
 									>
-										{isSavingGraphics ? "Saving…" : "Save Graphics Update"}
+										{graphicsStatus.kind === "saving"
+											? "Saving…"
+											: "Save Graphics Update"}
 									</Button>
 								)}
 							</div>

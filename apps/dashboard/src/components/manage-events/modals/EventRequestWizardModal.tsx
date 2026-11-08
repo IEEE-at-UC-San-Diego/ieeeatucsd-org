@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
 import { CheckCircle, Loader2 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MobileTaskStepper, ResponsiveOverlay } from "@/components/mobile";
 import {
 	AlertDialog,
@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
 import { EventRequestMapping } from "../EventRequestMapping";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
@@ -26,6 +27,11 @@ import { EventReviewSection } from "../wizard/EventReviewSection";
 import { FundingSection } from "../wizard/FundingSection";
 import { LogisticsSection } from "../wizard/LogisticsSection";
 import { MarketingSection } from "../wizard/MarketingSection";
+import {
+	canProceedFromStep,
+	canSaveEventRequest,
+	getBlockedMessage,
+} from "./eventRequestWizardSteps";
 
 interface EventRequestWizardModalProps {
 	isOpen: boolean;
@@ -45,8 +51,6 @@ const steps = [
 	{ id: 6, title: "Review", description: "Final check" },
 ];
 
-const defaultFormData = EventRequestMapping.defaultFormData;
-
 export function EventRequestWizardModal({
 	isOpen,
 	onClose,
@@ -60,32 +64,42 @@ export function EventRequestWizardModal({
 	const isConvertingDraft = initialData?.status === "draft";
 	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
-	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
 		EventRequestMapping.toFormData(initialData),
 	);
 	const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [submitError, setSubmitError] = useState<string | null>(null);
-	const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
 	const initialSnapshotRef = useRef(JSON.stringify(formData));
+	const closeTimerRef = useRef<number | undefined>(undefined);
+	const wizardInput = { formData, disclaimerAccepted };
+	const wizard = useWizard({
+		stepCount: steps.length,
+		initialStep: isEditing ? 2 : 1,
+		canAdvance: (step) => canProceedFromStep(step, wizardInput),
+	});
+	const { step: currentStep, phase, reset: resetWizard } = wizard;
+	const isSubmitting = phase.kind === "submitting";
+	const isSaving = phase.kind === "saving";
+	const submissionSucceeded = phase.kind === "succeeded";
+	const submitError = wizard.errorMessage;
+
+	const resetState = useCallback(
+		(data?: Partial<EventRequest>) => {
+			window.clearTimeout(closeTimerRef.current);
+			const nextFormData = EventRequestMapping.toFormData(data);
+			setFormData(nextFormData);
+			initialSnapshotRef.current = JSON.stringify(nextFormData);
+			setDisclaimerAccepted(!!data);
+			setShowDiscardDialog(false);
+			resetWizard(data ? 2 : 1);
+		},
+		[resetWizard],
+	);
 
 	// Sync form data when initialData changes (e.g., opening edit for a different event)
 	useEffect(() => {
-		if (isOpen) {
-			const nextFormData = EventRequestMapping.toFormData(initialData);
-			setFormData(nextFormData);
-			initialSnapshotRef.current = JSON.stringify(nextFormData);
-			setCurrentStep(initialData ? 2 : 1);
-			setDisclaimerAccepted(!!initialData);
-			setIsSubmitting(false);
-			setIsSaving(false);
-			setSubmitError(null);
-			setSubmissionSucceeded(false);
-		}
-	}, [isOpen, initialData]);
+		if (isOpen) resetState(initialData);
+	}, [isOpen, initialData, resetState]);
 
 	const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
@@ -93,54 +107,12 @@ export function EventRequestWizardModal({
 		setFormData((prev) => ({ ...prev, ...data }));
 	};
 
-	const canProceed = () => {
-		switch (currentStep) {
-			case 1:
-				return disclaimerAccepted;
-			case 2:
-				return (
-					formData.eventName.trim() &&
-					formData.eventDescription.trim() &&
-					formData.eventType
-				);
-			case 3:
-				return (
-					formData.location.trim() &&
-					formData.startDate &&
-					formData.endDate &&
-					formData.endDate > formData.startDate &&
-					formData.eventCode.trim()
-				);
-			default:
-				return true;
-		}
-	};
-
-	const canSave = () =>
-		!!formData.eventName.trim() &&
-		!!formData.eventDescription.trim() &&
-		!!formData.eventType &&
-		!!formData.location.trim() &&
-		formData.endDate > formData.startDate;
-
-	const handleNext = () => {
-		if (currentStep < steps.length) {
-			setCurrentStep((prev) => prev + 1);
-		}
-	};
-
-	const handleBack = () => {
-		if (currentStep > 1) {
-			setCurrentStep((prev) => prev - 1);
-		}
-	};
+	const canProceed = canProceedFromStep(currentStep, wizardInput);
+	const canSave = canSaveEventRequest(formData);
 
 	const resetAndClose = () => {
 		onClose();
-		setCurrentStep(1);
-		setDisclaimerAccepted(false);
-		setFormData({ ...defaultFormData });
-		setShowDiscardDialog(false);
+		resetState();
 	};
 
 	const isDirty =
@@ -150,7 +122,7 @@ export function EventRequestWizardModal({
 	useUnsavedChangesGuard(isOpen && isDirty && !submissionSucceeded);
 
 	const requestClose = () => {
-		if (isSubmitting || isSaving) return;
+		if (wizard.isPending) return;
 		if (isDirty && !submissionSucceeded) {
 			setShowDiscardDialog(true);
 			return;
@@ -159,51 +131,36 @@ export function EventRequestWizardModal({
 	};
 
 	const handleSubmit = async () => {
-		setIsSubmitting(true);
-		setSubmitError(null);
+		if (!wizard.startSubmit()) return;
 		try {
 			await onSubmit(formData);
-			setSubmissionSucceeded(true);
-			window.setTimeout(resetAndClose, 700);
+			wizard.submitSucceeded();
+			closeTimerRef.current = window.setTimeout(resetAndClose, 700);
 		} catch (error) {
-			setSubmitError(
+			wizard.submitFailed(
 				error instanceof Error
 					? error.message
 					: "The request couldn’t be submitted. Check your connection and try again.",
 			);
-			setIsSubmitting(false);
 		}
 	};
 
 	const handleSave = async () => {
-		if (!onSave) return;
-		setIsSaving(true);
-		setSubmitError(null);
+		if (!onSave || !canSave || !wizard.startSave()) return;
 		try {
 			await onSave(formData);
 			initialSnapshotRef.current = JSON.stringify(formData);
+			wizard.saveSucceeded();
 		} catch (error) {
-			setSubmitError(
+			wizard.saveFailed(
 				error instanceof Error
 					? error.message
 					: "The request couldn’t be saved. Check your connection and try again.",
 			);
-		} finally {
-			setIsSaving(false);
 		}
 	};
 
-	const blockedMessage = (() => {
-		if (currentStep === 1 && !disclaimerAccepted)
-			return "Accept the requirements to continue.";
-		if (currentStep === 2 && !canProceed())
-			return "Add the event name, description, and type to continue.";
-		if (currentStep === 3 && !canProceed())
-			return "Add a location, valid time range, and event code to continue.";
-		if (onSave && currentStep >= 2 && !canSave())
-			return "Add the event name, description, type, location, and valid time range to save.";
-		return null;
-	})();
+	const blockedMessage = getBlockedMessage(currentStep, wizardInput, !!onSave);
 
 	const renderStepContent = () => {
 		switch (currentStep) {
@@ -315,7 +272,8 @@ export function EventRequestWizardModal({
 						type="button"
 						variant="outline"
 						className="h-11 sm:h-9"
-						onClick={handleBack}
+						onClick={wizard.back}
+						disabled={!wizard.isEditable}
 					>
 						Back
 					</Button>
@@ -336,7 +294,7 @@ export function EventRequestWizardModal({
 					variant="outline"
 					className="h-11 sm:h-9"
 					onClick={requestClose}
-					disabled={isSubmitting || isSaving}
+					disabled={wizard.isPending}
 				>
 					Cancel
 				</Button>
@@ -346,7 +304,7 @@ export function EventRequestWizardModal({
 						variant="outline"
 						className="h-11 sm:h-9"
 						onClick={handleSave}
-						disabled={isSubmitting || isSaving || !canSave()}
+						disabled={!wizard.isEditable || !canSave}
 					>
 						{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
 						{isSaving ? "Saving…" : "Save"}
@@ -356,8 +314,8 @@ export function EventRequestWizardModal({
 					<Button
 						type="button"
 						className="h-11 sm:h-9"
-						onClick={handleNext}
-						disabled={!canProceed() || isSaving}
+						onClick={() => wizard.next()}
+						disabled={!canProceed || !wizard.isEditable}
 					>
 						Next
 					</Button>
@@ -366,7 +324,7 @@ export function EventRequestWizardModal({
 						type="button"
 						className="h-11 sm:h-9"
 						onClick={handleSubmit}
-						disabled={isSubmitting || isSaving}
+						disabled={!wizard.isEditable}
 					>
 						{isSubmitting ? (
 							<Loader2 className="h-4 w-4 animate-spin" />

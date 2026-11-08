@@ -6,17 +6,21 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
 import { formatCurrencyUSD } from "@/lib/formatters";
 import type { Invoice, InvoiceItem } from "../types";
-import { invoiceScanFailureMessage } from "./invoice-scan-error";
+import {
+	invoiceFromUpload,
+	invoiceUploadErrorMessage,
+	isInvoiceUploadBusy,
+} from "./invoiceUploadState";
+import { useInvoiceUpload } from "./useInvoiceUpload";
 
 interface FundingSectionProps {
 	data: {
@@ -39,125 +43,28 @@ export function FundingSection({
 	generateUploadUrl,
 	aiEnabled = true,
 }: FundingSectionProps) {
-	const { getAuthHeaders } = useAuth();
-	const [isUploading, setIsUploading] = useState(false);
-	const [uploadError, setUploadError] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const confirm = useConfirm();
 	const fundingQuestionId = useId();
 	const formId = useId();
-
-	const handleAddInvoiceViaUpload = async (file: File) => {
-		setUploadError("");
-		const maxSize = 10 * 1024 * 1024;
-		if (file.size > maxSize) {
-			setUploadError("File too large. Choose a file under 10\u00a0MB.");
-			return;
-		}
-		const allowedExts = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp"];
-		const ext = "." + file.name.split(".").pop()?.toLowerCase();
-		if (!allowedExts.includes(ext)) {
-			setUploadError("Unsupported file type. Use PDF, JPG, PNG, GIF, or WebP.");
-			return;
-		}
-
-		setIsUploading(true);
-		const newInvoiceId = crypto.randomUUID();
-
-		let fileUrl = "";
-		const parseDataUrl = await new Promise<string>((resolve) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.readAsDataURL(file);
-		});
-
-		// Upload to Convex if available
-		if (generateUploadUrl) {
-			try {
-				const uploadUrl = await generateUploadUrl();
-				const res = await fetch(uploadUrl, {
-					method: "POST",
-					headers: { "Content-Type": file.type },
-					body: file,
-				});
-				if (res.ok) {
-					const { storageId } = await res.json();
-					fileUrl = storageId;
-				}
-			} catch (err) {
-				console.error("Upload failed:", err);
-			}
-		}
-
-		// AI parse
-		if (shouldParseInvoiceWithAI(aiEnabled)) {
-			try {
-				const response = await fetch("/api/parse-invoice", {
-					method: "POST",
-					headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-					// Use local data URL for parsing. Convex storage IDs are not fetchable URLs.
-					body: JSON.stringify({ imageUrl: parseDataUrl }),
-				});
-
-				const result = await response.json().catch(() => ({}));
-				if (response.ok && result.success && result.data) {
-					const parsed = result.data;
-					const newInvoice: Invoice = {
-						_id: newInvoiceId,
-						vendor: parsed.vendor || "",
-						items: (parsed.items || []).map((item: any) => ({
-							description: item.description || "",
-							quantity: item.quantity || 1,
-							unitPrice: item.unitPrice || 0,
-							total: item.total || 0,
-						})),
-						tax: parsed.tax || 0,
-						tip: parsed.tip || 0,
-						invoiceFile: fileUrl || undefined,
-						additionalFiles: [],
-						subtotal: parsed.subtotal || 0,
-						total: parsed.total || 0,
-						amount: parsed.total || 0,
-						description: "",
-					};
-					onChange({ invoices: [...data.invoices, newInvoice] });
-					setIsUploading(false);
-					return;
-				}
-				setUploadError(
-					invoiceScanFailureMessage(
-						typeof result.error === "string" ? result.error : undefined,
-					),
-				);
-			} catch {
-				setUploadError(invoiceScanFailureMessage());
-			}
-		} else {
-			setUploadError(
-				"AI is disabled for this account. Enter the vendor and line items below.",
+	const { phase, selectFile } = useInvoiceUpload({
+		generateUploadUrl,
+		parseWithAI: shouldParseInvoiceWithAI(aiEnabled),
+		onFinished: ({ storageId, parsed }) => {
+			const newInvoice = invoiceFromUpload(
+				crypto.randomUUID(),
+				storageId,
+				parsed,
 			);
-		}
-
-		const newInvoice: Invoice = {
-			_id: newInvoiceId,
-			vendor: "",
-			items: [],
-			tax: 0,
-			tip: 0,
-			invoiceFile: fileUrl || undefined,
-			additionalFiles: [],
-			subtotal: 0,
-			total: 0,
-			amount: 0,
-			description: "",
-		};
-		onChange({ invoices: [...data.invoices, newInvoice] });
-		setIsUploading(false);
-	};
+			onChange({ invoices: [...data.invoices, newInvoice] });
+		},
+	});
+	const isUploading = isInvoiceUploadBusy(phase);
+	const uploadError = invoiceUploadErrorMessage(phase);
 
 	const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		if (file) handleAddInvoiceViaUpload(file);
+		if (file) selectFile(file);
 		e.target.value = "";
 	};
 
