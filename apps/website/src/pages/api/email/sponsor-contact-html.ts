@@ -12,6 +12,36 @@ export function officerContactHtml(input: {
       `;
 }
 
+export function sponsorContactMessages(input: {
+  email: string;
+  phone: string;
+  message: string;
+  from: string;
+  contactTo: string;
+  replyTo: string;
+}) {
+  return [
+    {
+      from: input.from,
+      to: [input.contactTo],
+      replyTo: input.email,
+      subject: "New Contact Form Submission",
+      html: officerContactHtml({
+        email: input.email,
+        phone: input.phone,
+        message: input.message,
+      }),
+    },
+    {
+      from: input.from,
+      to: [input.email],
+      replyTo: input.replyTo,
+      subject: "IEEE UCSD — We received your message",
+      html: senderConfirmationHtml(input.message),
+    },
+  ];
+}
+
 export function senderConfirmationHtml(message: string) {
   return `
         <p>Hi!</p>

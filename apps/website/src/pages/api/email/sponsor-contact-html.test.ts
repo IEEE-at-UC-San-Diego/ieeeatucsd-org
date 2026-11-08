@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   officerContactHtml,
   senderConfirmationHtml,
+  sponsorContactMessages,
 } from "./sponsor-contact-html";
 
 describe("officerContactHtml", () => {
@@ -29,6 +30,23 @@ describe("officerContactHtml", () => {
 
     expect(html).toContain("(none)");
     expect(html).toContain("ada@ieeeatucsd.org");
+  });
+});
+
+describe("sponsorContactMessages", () => {
+  it("sends the org mail only to the org inbox", () => {
+    const messages = sponsorContactMessages({
+      email: "attacker@evil.test",
+      phone: "555",
+      message: "wire the funds",
+      from: "IEEE UCSD <onboarding@resend.dev>",
+      contactTo: "president@ieeeatucsd.org",
+      replyTo: "president@ieeeatucsd.org",
+    });
+
+    expect(messages.flatMap((message) => message.to)).toEqual([
+      "president@ieeeatucsd.org",
+    ]);
   });
 });
 
