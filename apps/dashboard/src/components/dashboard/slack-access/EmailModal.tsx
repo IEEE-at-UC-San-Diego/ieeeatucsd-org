@@ -15,11 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDateTime, formatFileSize } from "@/lib/formatters";
-import type { EmailMessage } from "./types";
+import type { EmailMessage, InboxCredentials } from "./types";
 
 interface EmailModalProps {
 	email: EmailMessage | null;
-	credentials: { email: string; password: string } | null;
+	credentials: InboxCredentials | null;
 	onClose: () => void;
 }
 

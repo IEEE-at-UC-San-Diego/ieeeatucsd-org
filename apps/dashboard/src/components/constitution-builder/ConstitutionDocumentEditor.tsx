@@ -2,6 +2,7 @@ import Heading from "@tiptap/extension-heading";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import {
+	type Dispatch,
 	forwardRef,
 	useCallback,
 	useEffect,
@@ -48,12 +50,21 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useVisualViewportBottom } from "@/hooks/useVisualViewportBottom";
 import { cn } from "@/lib/utils";
+import {
+	canStartSave,
+	canSyncFromServer,
+	type DocumentSaveEvent,
+	type DocumentSaveState,
+	getSaveFeedback,
+	hasUnsavedChanges,
+	isSaveInFlight,
+	isWritingDocument,
+} from "./documentSaveState";
 import type {
 	ConstitutionDocumentSaveResult,
 	ConstitutionDocumentSectionInput,
 	ConstitutionSection,
 	ConstitutionSectionType,
-	SaveStatus,
 } from "./types";
 import { toRomanNumeral } from "./utils/constitutionUtils";
 import {
@@ -72,8 +83,10 @@ interface ConstitutionDocumentEditorProps {
 		versionNumber: number;
 		label: string;
 	} | null>;
-	/** Reports real save status (idle/saving/saved/error) up to the parent header. */
-	onSaveStatusChange?: (status: SaveStatus) => void;
+	/** Owned by the parent so the header status and this editor read one save state. */
+	saveState: DocumentSaveState;
+	/** Must be referentially stable (e.g. a `useReducer` dispatch); unmounting dispatches `discarded`. */
+	dispatchSaveState: Dispatch<DocumentSaveEvent>;
 }
 
 export interface ConstitutionDocumentEditorHandle {
@@ -166,7 +179,7 @@ function toAlphabeticIndex(index: number): string {
  * during in-session structural edits (insert/delete/reorder).
  */
 function buildPrefixDecorations(
-	doc: import("@tiptap/pm/model").Node,
+	doc: ProseMirrorNode,
 	allSections: ConstitutionSection[],
 ): DecorationSet {
 	const existingTypeById = new Map<string, ConstitutionSectionType>();
@@ -175,7 +188,7 @@ function buildPrefixDecorations(
 	}
 
 	const headings: Array<{
-		node: import("@tiptap/pm/model").Node;
+		node: ProseMirrorNode;
 		pos: number;
 		sectionId: string | null;
 		sectionType: ConstitutionSectionType;
@@ -403,31 +416,34 @@ const ConstitutionDocumentEditor = forwardRef<
 	ConstitutionDocumentEditorHandle,
 	ConstitutionDocumentEditorProps
 >(function ConstitutionDocumentEditor(
-	{ sections, onSaveDocument, onSaveVersion, onSaveStatusChange },
+	{ sections, onSaveDocument, onSaveVersion, saveState, dispatchSaveState },
 	ref,
 ) {
 	const isMobile = useIsMobile();
 	const keyboardInset = useVisualViewportBottom();
 	const prefersReducedMotion = usePrefersReducedMotion();
-	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-	const confirmDiscard = useUnsavedChangesGuard(hasUnsavedChanges);
-	const [isSaving, setIsSaving] = useState(false);
-	const [isSavingVersion, setIsSavingVersion] = useState(false);
+	const isDirty = hasUnsavedChanges(saveState);
+	const isBusy = isSaveInFlight(saveState);
+	const isSavingVersion = saveState.kind === "savingVersion";
+	const canSave = canStartSave(saveState);
+	const canSync = canSyncFromServer(saveState);
+	const saveFeedback = getSaveFeedback(saveState);
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
 	const [saveVersionDialogOpen, setSaveVersionDialogOpen] = useState(false);
 	const [versionNote, setVersionNote] = useState("");
 	const versionNoteBaseId = useId();
-	const [saveMessage, setSaveMessage] = useState("");
 	const [sectionNavOpen, setSectionNavOpen] = useState(false);
 	const [sectionNavQuery, setSectionNavQuery] = useState("");
 	// Counter that increments on every editor transaction to force toolbar re-renders
 	const [, setEditorRevision] = useState(0);
-	const initialHtmlRef = useRef<string>("");
 	const sectionsRef = useRef(sections);
 	const editorScrollRef = useRef<HTMLDivElement>(null);
-	// Ref flag to suppress onUpdate when we programmatically set content
-	const suppressOnUpdateRef = useRef(false);
-	// Ref flag to block external sync during save (prevents stale overwrite)
-	const isSavingRef = useRef(false);
+
+	// Local edits die with the Tiptap instance, so the shared save state must forget them too
+	useEffect(
+		() => () => dispatchSaveState({ type: "discarded" }),
+		[dispatchSaveState],
+	);
 
 	// Keep sections ref up to date
 	useEffect(() => {
@@ -464,9 +480,7 @@ const ConstitutionDocumentEditor = forwardRef<
 		content: initialHtml,
 		immediatelyRender: false,
 		onUpdate: () => {
-			if (suppressOnUpdateRef.current) return;
-			setHasUnsavedChanges(true);
-			setSaveMessage("");
+			dispatchSaveState({ type: "edited" });
 		},
 		onSelectionUpdate: () => {
 			// Force re-render so toolbar active states update
@@ -495,69 +509,42 @@ const ConstitutionDocumentEditor = forwardRef<
 		}
 	}, [sections, editor]);
 
-	// Update editor content when sections change externally (only if no unsaved changes and not saving)
+	// Update editor content when sections change externally
 	useEffect(() => {
-		if (editor && !hasUnsavedChanges && !isSavingRef.current) {
-			const serverHtml = sectionsToHtml(sections, sections);
-			const editorHtml = editor.getHTML();
-			if (
-				normalizeHtmlForComparison(serverHtml) !==
-				normalizeHtmlForComparison(editorHtml)
-			) {
-				suppressOnUpdateRef.current = true;
-				editor.commands.setContent(serverHtml);
-				suppressOnUpdateRef.current = false;
-			}
-			initialHtmlRef.current = serverHtml;
+		if (!editor || !canSync) return;
+		const serverHtml = sectionsToHtml(sections, sections);
+		if (
+			normalizeHtmlForComparison(serverHtml) !==
+			normalizeHtmlForComparison(editor.getHTML())
+		) {
+			editor.commands.setContent(serverHtml, { emitUpdate: false });
 		}
-	}, [sections, editor, hasUnsavedChanges]);
+	}, [sections, editor, canSync]);
 
-	const handleSave = useCallback(async (): Promise<boolean> => {
-		if (!editor) return false;
-
-		setIsSaving(true);
-		isSavingRef.current = true;
-		setSaveMessage("");
-		onSaveStatusChange?.("saving");
-
-		const currentHtml = editor.getHTML();
-
-		try {
-			const parsedSections = htmlToDocumentSections(
-				currentHtml,
-				sectionsRef.current,
-			);
-			const result = await onSaveDocument(parsedSections);
-			const changedCount =
-				result.created + result.updated + result.deleted + result.reordered;
-
-			if (changedCount === 0) {
-				setSaveMessage("No changes detected");
-				setHasUnsavedChanges(false);
-				initialHtmlRef.current = currentHtml;
-				onSaveStatusChange?.("saved");
+	const writeDocument = useCallback(
+		async (html: string): Promise<boolean> => {
+			try {
+				const parsedSections = htmlToDocumentSections(
+					html,
+					sectionsRef.current,
+				);
+				const result = await onSaveDocument(parsedSections);
+				dispatchSaveState({ type: "saveSucceeded", result });
 				return true;
+			} catch (error) {
+				console.error("Failed to save:", error);
+				dispatchSaveState({ type: "saveFailed" });
+				return false;
 			}
+		},
+		[onSaveDocument, dispatchSaveState],
+	);
 
-			setHasUnsavedChanges(false);
-			initialHtmlRef.current = currentHtml;
-			setSaveMessage(
-				`Saved ${changedCount} change${changedCount > 1 ? "s" : ""} (${result.created} created, ${result.updated} updated, ${result.deleted} deleted, ${result.reordered} reordered)`,
-			);
-			onSaveStatusChange?.("saved");
-			return true;
-		} catch (error) {
-			console.error("Failed to save:", error);
-			setSaveMessage(
-				"Failed to save changes. Check your connection and try again.",
-			);
-			onSaveStatusChange?.("error");
-			return false;
-		} finally {
-			setIsSaving(false);
-			isSavingRef.current = false;
-		}
-	}, [editor, onSaveDocument, onSaveStatusChange]);
+	const handleSave = useCallback(async () => {
+		if (!editor || !canSave) return;
+		dispatchSaveState({ type: "saveStarted" });
+		await writeDocument(editor.getHTML());
+	}, [editor, canSave, dispatchSaveState, writeDocument]);
 
 	useImperativeHandle(
 		ref,
@@ -570,63 +557,64 @@ const ConstitutionDocumentEditor = forwardRef<
 	);
 
 	const handleSaveVersion = useCallback(async () => {
-		setIsSavingVersion(true);
-		try {
-			if (hasUnsavedChanges) {
-				const saved = await handleSave();
-				if (!saved) {
-					toast.error(
-						"Couldn’t save current edits before versioning. Fix the save error and try again.",
-					);
-					return;
-				}
-			}
+		if (!editor || isBusy) return;
+		dispatchSaveState({ type: "versionStarted" });
 
+		if (canSave && !(await writeDocument(editor.getHTML()))) {
+			toast.error(
+				"Couldn’t save current edits before versioning. Fix the save error and try again.",
+			);
+			return;
+		}
+
+		try {
 			const result = await onSaveVersion(versionNote);
 			if (!result) {
+				dispatchSaveState({ type: "versionFailed" });
 				toast.error("Failed to create version. Please try again.");
 				return;
 			}
 
-			setSaveMessage(`Saved version ${result.label}`);
+			dispatchSaveState({ type: "versionSucceeded", label: result.label });
 			setVersionNote("");
 			setSaveVersionDialogOpen(false);
 			toast.success(`Saved version ${result.label}`);
 		} catch (error) {
 			console.error("Failed to save version:", error);
+			dispatchSaveState({ type: "versionFailed" });
 			toast.error(
 				"Failed to save version. Check your connection and try again.",
 			);
-		} finally {
-			setIsSavingVersion(false);
 		}
-	}, [hasUnsavedChanges, handleSave, onSaveVersion, versionNote]);
+	}, [
+		editor,
+		isBusy,
+		canSave,
+		dispatchSaveState,
+		writeDocument,
+		onSaveVersion,
+		versionNote,
+	]);
 
 	// Ctrl/Cmd+S keyboard shortcut to save
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === "s") {
 				e.preventDefault();
-				if (hasUnsavedChanges && !isSaving && !isSavingVersion) {
-					handleSave();
-				}
+				void handleSave();
 			}
 		};
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [handleSave, hasUnsavedChanges, isSaving, isSavingVersion]);
+	}, [handleSave]);
 
 	const handleReset = useCallback(async () => {
 		if (!editor) return;
 		if (!(await confirmDiscard())) return;
 		const freshHtml = sectionsToHtml(sectionsRef.current, sectionsRef.current);
-		suppressOnUpdateRef.current = true;
-		editor.commands.setContent(freshHtml);
-		suppressOnUpdateRef.current = false;
-		initialHtmlRef.current = freshHtml;
-		setHasUnsavedChanges(false);
-		setSaveMessage("");
-	}, [editor, confirmDiscard]);
+		editor.commands.setContent(freshHtml, { emitUpdate: false });
+		dispatchSaveState({ type: "discarded" });
+	}, [editor, confirmDiscard, dispatchSaveState]);
 
 	const sortedSections = useMemo(
 		() => [...sections].sort((a, b) => a.order - b.order),
@@ -829,19 +817,19 @@ const ConstitutionDocumentEditor = forwardRef<
 	const saveControls = (
 		<div className="flex min-w-0 flex-wrap items-center gap-2">
 			<output aria-live="polite" className="contents">
-				{saveMessage && (
+				{saveFeedback && (
 					<span
 						className={`text-xs font-medium px-2 py-1 rounded break-words ${
-							saveMessage.includes("Failed")
+							saveFeedback.tone === "danger"
 								? "text-tone-danger bg-ds-red-100"
 								: "text-tone-success bg-ds-green-100"
 						}`}
 					>
-						{saveMessage}
+						{saveFeedback.message}
 					</span>
 				)}
 			</output>
-			{hasUnsavedChanges && (
+			{isDirty && (
 				<span className="text-xs text-tone-warning font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
 					Unsaved
 				</span>
@@ -850,7 +838,7 @@ const ConstitutionDocumentEditor = forwardRef<
 				onClick={handleReset}
 				variant="outline"
 				size="sm"
-				disabled={!hasUnsavedChanges}
+				disabled={!isDirty || isBusy}
 				aria-label="Reset Unsaved Changes"
 				className="h-11 min-w-11 text-xs md:h-9"
 			>
@@ -861,7 +849,7 @@ const ConstitutionDocumentEditor = forwardRef<
 				onClick={() => setSaveVersionDialogOpen(true)}
 				size="sm"
 				variant="outline"
-				disabled={isSaving || isSavingVersion}
+				disabled={isBusy}
 				aria-label="Save Version"
 				className="h-11 min-w-11 text-xs md:h-9"
 			>
@@ -873,15 +861,14 @@ const ConstitutionDocumentEditor = forwardRef<
 			<Button
 				onClick={handleSave}
 				size="sm"
-				disabled={!hasUnsavedChanges || isSaving || isSavingVersion}
+				disabled={!canSave}
 				className={cn(
 					"h-11 min-w-11 text-xs md:h-9",
-					hasUnsavedChanges &&
-						"bg-ds-green-700 hover:bg-ds-green-800 text-on-accent",
+					isDirty && "bg-ds-green-700 hover:bg-ds-green-800 text-on-accent",
 				)}
 			>
 				<Save className="h-3.5 w-3.5 mr-1" />
-				{isSaving ? "Saving…" : "Save"}
+				{isWritingDocument(saveState) ? "Saving…" : "Save"}
 			</Button>
 		</div>
 	);
@@ -1040,7 +1027,7 @@ const ConstitutionDocumentEditor = forwardRef<
 						maxLength={120}
 						className="h-11 text-base md:h-9 md:text-sm"
 					/>
-					{hasUnsavedChanges && (
+					{isDirty && (
 						<p className="text-xs text-tone-warning">
 							Unsaved changes will be saved first before creating this version.
 						</p>

@@ -6,6 +6,7 @@ import {
   requireAdminAccess,
 } from "./permissions";
 import {
+  assertFundRequestWithdrawable,
   fundAuditAction,
   spentFundRequestTotal,
   transitionFundRequest,
@@ -383,9 +384,7 @@ export const deleteRequest = mutation({
       throw new Error("You can only delete your own requests");
     }
 
-    if (request.status !== "draft") {
-      throw new Error("You can only delete draft requests");
-    }
+    assertFundRequestWithdrawable(request.status);
 
     await ctx.db.delete(args.id);
     return args.id;

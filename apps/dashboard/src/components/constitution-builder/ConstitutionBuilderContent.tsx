@@ -13,7 +13,7 @@ import {
 	RefreshCw,
 	RotateCcw,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,12 @@ import ConstitutionDocumentEditor, {
 import ConstitutionPreview from "./ConstitutionPreview";
 import ConstitutionSearch from "./ConstitutionSearch";
 import ConstitutionVersionHistory from "./ConstitutionVersionHistory";
+import {
+	CLEAN_DOCUMENT,
+	documentSaveReducer,
+	toSaveStatus,
+} from "./documentSaveState";
 import { useConstitutionData } from "./hooks/useConstitutionData";
-import type { SaveStatus } from "./types";
 import { exportConstitutionToPdf } from "./utils/pdfExport";
 
 type BuilderView = "editor" | "audit" | "versions";
@@ -58,11 +62,13 @@ const ConstitutionBuilderContent = () => {
 	};
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [exportSheetOpen, setExportSheetOpen] = useState(false);
-	const [documentSaveStatus, setDocumentSaveStatus] =
-		useState<SaveStatus>("idle");
+	const [documentSaveState, dispatchDocumentSave] = useReducer(
+		documentSaveReducer,
+		CLEAN_DOCUMENT,
+	);
 	const editorRef = useRef<ConstitutionDocumentEditorHandle>(null);
 
-	const saveStatus: SaveStatus = isLoading ? "idle" : documentSaveStatus;
+	const saveStatus = toSaveStatus(documentSaveState);
 
 	useEffect(() => {
 		initializeConstitution();
@@ -389,7 +395,8 @@ const ConstitutionBuilderContent = () => {
 						sections={sections}
 						onSaveDocument={saveDocumentSections}
 						onSaveVersion={saveVersion}
-						onSaveStatusChange={setDocumentSaveStatus}
+						saveState={documentSaveState}
+						dispatchSaveState={dispatchDocumentSave}
 					/>
 				) : currentView === "versions" ? (
 					<div className="bg-background rounded-md shadow-sm border border-border p-4 md:p-6">

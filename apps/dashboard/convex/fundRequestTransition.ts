@@ -57,6 +57,31 @@ export function transitionFundRequest(
   throw new Error(`Cannot move a fund request from ${from} to ${to}`);
 }
 
+export function canWithdrawFundRequest(status: FundRequestStatus): boolean {
+  switch (status) {
+    case "draft":
+    case "submitted":
+    case "needs_info":
+      return true;
+    case "approved":
+    case "denied":
+    case "completed":
+      return false;
+    default: {
+      const unreachable: never = status;
+      throw new Error(`Unknown fund request status: ${String(unreachable)}`);
+    }
+  }
+}
+
+export function assertFundRequestWithdrawable(status: FundRequestStatus) {
+  if (!canWithdrawFundRequest(status)) {
+    throw new Error(
+      `A ${status} fund request can't be withdrawn; it's kept for the budget record`,
+    );
+  }
+}
+
 export function fundAuditAction(
   from: FundRequestStatus,
   to: FundRequestStatus,

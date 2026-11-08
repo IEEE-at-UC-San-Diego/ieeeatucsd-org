@@ -10,7 +10,7 @@ import {
 	Mail,
 	RefreshCw,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -21,10 +21,16 @@ import {
 	EmailModal,
 	parseSender,
 } from "@/components/dashboard/slack-access/EmailModal";
+import {
+	emailGenerationReducer,
+	initialEmailGenerationState,
+} from "@/components/dashboard/slack-access/emailGenerationState";
+import {
+	emailInboxReducer,
+	initialEmailInboxState,
+} from "@/components/dashboard/slack-access/emailInboxState";
 import { PasswordStrengthIndicator } from "@/components/dashboard/slack-access/PasswordStrengthIndicator";
 import type {
-	EmailGenerationState,
-	EmailInboxState,
 	EmailMessage,
 	PasswordValidation,
 } from "@/components/dashboard/slack-access/types";
@@ -68,21 +74,24 @@ function SlackAccessPage() {
 	const emailsPerPage = 10;
 
 	const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
-	const [emailState, setEmailState] = useState<EmailGenerationState>({
-		isGenerating: false,
-		isResetting: false,
-		generatedEmail: null,
-		error: null,
-		success: null,
-	});
-	const [inboxState, setInboxState] = useState<EmailInboxState>({
-		isAuthenticated: false,
-		isLoading: false,
-		isRefreshing: false,
-		emails: [],
-		error: null,
-		credentials: null,
-	});
+	const [emailState, dispatchEmail] = useReducer(
+		emailGenerationReducer,
+		initialEmailGenerationState,
+	);
+	const [inboxState, dispatchInbox] = useReducer(
+		emailInboxReducer,
+		initialEmailInboxState,
+	);
+	const isGenerating = emailState.status === "generating";
+	const isResetting = emailState.status === "resetting";
+	const emailNotice = emailState.status === "idle" ? emailState.notice : null;
+	const inboxEmails = inboxState.status === "signedIn" ? inboxState.emails : [];
+	const inboxError =
+		inboxState.status === "failed"
+			? inboxState.message
+			: inboxState.status === "signedIn"
+				? inboxState.refreshError
+				: null;
 
 	// Check if user has existing IEEE email
 	const hasIEEEEmail = !!user?.ieeeEmail;
@@ -123,7 +132,7 @@ function SlackAccessPage() {
 			e.preventDefault();
 			if (hasIEEEEmail) {
 				if (
-					!emailState.isResetting &&
+					!isResetting &&
 					customPassword.trim() &&
 					passwordValidation.isValid
 				) {
@@ -131,7 +140,7 @@ function SlackAccessPage() {
 				}
 			} else {
 				if (
-					!emailState.isGenerating &&
+					!isGenerating &&
 					customPassword.trim() &&
 					passwordValidation.isValid
 				) {
@@ -146,7 +155,7 @@ function SlackAccessPage() {
 	const handleInboxPasswordKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			if (!inboxState.isLoading && inboxPassword.trim()) {
+			if (inboxState.status !== "signingIn" && inboxPassword.trim()) {
 				authenticateInbox();
 			}
 		}
@@ -154,58 +163,55 @@ function SlackAccessPage() {
 
 	const inboxTotalPages = Math.max(
 		1,
-		Math.ceil(inboxState.emails.length / emailsPerPage),
+		Math.ceil(inboxEmails.length / emailsPerPage),
 	);
 	const currentPage = Math.min(inboxPage, inboxTotalPages);
 
 	const getPaginatedEmails = () => {
 		const startIndex = (currentPage - 1) * emailsPerPage;
 		const endIndex = startIndex + emailsPerPage;
-		return inboxState.emails.slice(startIndex, endIndex);
+		return inboxEmails.slice(startIndex, endIndex);
 	};
 
 	const generateIEEEEmail = async () => {
+		if (emailState.status !== "idle") return;
+
 		if (!user) {
-			setEmailState((prev) => ({
-				...prev,
-				error: "You’re signed out. Sign in again to continue.",
-			}));
+			dispatchEmail({
+				type: "rejected",
+				message: "You’re signed out. Sign in again to continue.",
+			});
 			return;
 		}
 
 		if (!user.email || !user.email.includes("@")) {
-			setEmailState((prev) => ({
-				...prev,
-				error:
+			dispatchEmail({
+				type: "rejected",
+				message:
 					"Your account email looks invalid. Contact webmaster@ieeeatucsd.org for help.",
-			}));
+			});
 			return;
 		}
 
 		if (!customPassword.trim()) {
-			setEmailState((prev) => ({
-				...prev,
-				error: "Enter a password to continue.",
-			}));
+			dispatchEmail({
+				type: "rejected",
+				message: "Enter a password to continue.",
+			});
 			return;
 		}
 
 		const validation = validatePassword(customPassword);
 		if (!validation.isValid) {
-			setEmailState((prev) => ({
-				...prev,
-				error:
+			dispatchEmail({
+				type: "rejected",
+				message:
 					"Password doesn’t meet the requirements below. Update it and try again.",
-			}));
+			});
 			return;
 		}
 
-		setEmailState((prev) => ({
-			...prev,
-			isGenerating: true,
-			error: null,
-			success: null,
-		}));
+		dispatchEmail({ type: "generateStarted" });
 
 		try {
 			const username = extractUsername(user.email);
@@ -220,11 +226,10 @@ function SlackAccessPage() {
 			if (checkResponse.ok) {
 				const checkResult = await checkResponse.json();
 				if (checkResult.exists) {
-					setEmailState((prev) => ({
-						...prev,
-						isGenerating: false,
-						error: `Email ${proposedEmail} already exists. Please contact webmaster@ieeeatucsd.org.`,
-					}));
+					dispatchEmail({
+						type: "failed",
+						message: `Email ${proposedEmail} already exists. Please contact webmaster@ieeeatucsd.org.`,
+					});
 					return;
 				}
 			}
@@ -243,62 +248,52 @@ function SlackAccessPage() {
 			const result = await response.json();
 
 			if (result.success) {
-				setEmailState((prev) => ({
-					...prev,
-					isGenerating: false,
-					generatedEmail: result.ieeeEmail,
-					success: `IEEE email ${result.ieeeEmail} created successfully!`,
-				}));
+				dispatchEmail({ type: "generateSucceeded", email: result.ieeeEmail });
 				toast.success("IEEE email created successfully!");
 				setCustomPassword("");
 			} else {
-				setEmailState((prev) => ({
-					...prev,
-					isGenerating: false,
-					error:
+				dispatchEmail({
+					type: "failed",
+					message:
 						result.message ||
 						"Failed to create IEEE email. Try again or contact webmaster@ieeeatucsd.org.",
-				}));
+				});
 			}
 		} catch (error) {
 			console.error("Error creating IEEE email:", error);
-			setEmailState((prev) => ({
-				...prev,
-				isGenerating: false,
-				error:
+			dispatchEmail({
+				type: "failed",
+				message:
 					error instanceof Error
 						? error.message
 						: "Failed to create IEEE email. Try again or contact webmaster@ieeeatucsd.org.",
-			}));
+			});
 		}
 	};
 
 	const resetEmailPassword = async () => {
+		if (emailState.status !== "idle") return;
+
 		const ieeeEmailAddress = emailState.generatedEmail || user?.ieeeEmail;
 		if (!ieeeEmailAddress || !customPassword.trim()) {
-			setEmailState((prev) => ({
-				...prev,
-				error: "Enter a new password to continue.",
-			}));
+			dispatchEmail({
+				type: "rejected",
+				message: "Enter a new password to continue.",
+			});
 			return;
 		}
 
 		const validation = validatePassword(customPassword);
 		if (!validation.isValid) {
-			setEmailState((prev) => ({
-				...prev,
-				error:
+			dispatchEmail({
+				type: "rejected",
+				message:
 					"Password doesn’t meet the requirements below. Update it and try again.",
-			}));
+			});
 			return;
 		}
 
-		setEmailState((prev) => ({
-			...prev,
-			isResetting: true,
-			error: null,
-			success: null,
-		}));
+		dispatchEmail({ type: "resetStarted" });
 
 		try {
 			const response = await fetch("/api/reset-email-password", {
@@ -315,46 +310,43 @@ function SlackAccessPage() {
 			const result = await response.json();
 
 			if (result.success) {
-				setEmailState((prev) => ({
-					...prev,
-					isResetting: false,
-					success: result.message,
-				}));
+				dispatchEmail({ type: "resetSucceeded", message: result.message });
 				toast.success("Password reset successfully!");
 				setCustomPassword("");
 			} else {
-				setEmailState((prev) => ({
-					...prev,
-					isResetting: false,
-					error:
+				dispatchEmail({
+					type: "failed",
+					message:
 						result.message ||
 						"Failed to reset password. Try again or contact webmaster@ieeeatucsd.org.",
-				}));
+				});
 			}
 		} catch (error) {
 			console.error("Error resetting password:", error);
-			setEmailState((prev) => ({
-				...prev,
-				isResetting: false,
-				error:
+			dispatchEmail({
+				type: "failed",
+				message:
 					error instanceof Error
 						? error.message
 						: "Failed to reset password. Try again or contact webmaster@ieeeatucsd.org.",
-			}));
+			});
 		}
 	};
 
 	const authenticateInbox = async () => {
+		if (inboxState.status === "signingIn" || inboxState.status === "signedIn")
+			return;
+
 		const ieeeEmailAddress = emailState.generatedEmail || user?.ieeeEmail;
 		if (!ieeeEmailAddress || !inboxPassword.trim()) {
-			setInboxState((prev) => ({
-				...prev,
-				error: "Enter your email password to open the inbox.",
-			}));
+			dispatchInbox({
+				type: "signInFailed",
+				message: "Enter your email password to open the inbox.",
+			});
 			return;
 		}
 
-		setInboxState((prev) => ({ ...prev, isLoading: true, error: null }));
+		dispatchInbox({ type: "signInStarted" });
 
 		try {
 			const response = await fetch("/api/ieee-email/fetch-emails", {
@@ -370,13 +362,11 @@ function SlackAccessPage() {
 
 			if (result.success) {
 				setCurrentPage(1);
-				setInboxState((prev) => ({
-					...prev,
-					isLoading: false,
-					isAuthenticated: true,
-					emails: result.emails || [],
+				dispatchInbox({
+					type: "signInSucceeded",
 					credentials: { email: ieeeEmailAddress, password: inboxPassword },
-				}));
+					emails: result.emails || [],
+				});
 				setInboxPassword("");
 				toast.success("Inbox authenticated successfully!");
 			} else {
@@ -384,27 +374,25 @@ function SlackAccessPage() {
 				const isAuthError =
 					errorMessage.toLowerCase().includes("password") ||
 					errorMessage.toLowerCase().includes("login");
-				setInboxState((prev) => ({
-					...prev,
-					isLoading: false,
-					error: isAuthError
+				dispatchInbox({
+					type: "signInFailed",
+					message: isAuthError
 						? "Login failed. Check your email password and try again."
 						: "Connection failed. Check your connection and try again.",
-				}));
+				});
 			}
 		} catch (error) {
 			console.error("Error authenticating inbox:", error);
-			setInboxState((prev) => ({
-				...prev,
-				isLoading: false,
-				error: "Connection failed. Check your connection and try again.",
-			}));
+			dispatchInbox({
+				type: "signInFailed",
+				message: "Connection failed. Check your connection and try again.",
+			});
 		}
 	};
 
 	const refreshInbox = async () => {
-		if (!inboxState.isAuthenticated || !inboxState.credentials) return;
-		setInboxState((prev) => ({ ...prev, isRefreshing: true, error: null }));
+		if (inboxState.status !== "signedIn" || inboxState.refreshing) return;
+		dispatchInbox({ type: "refreshStarted" });
 
 		try {
 			const response = await fetch("/api/ieee-email/fetch-emails", {
@@ -416,25 +404,22 @@ function SlackAccessPage() {
 			const result = await response.json();
 			if (result.success) {
 				setCurrentPage(1);
-				setInboxState((prev) => ({
-					...prev,
-					isRefreshing: false,
+				dispatchInbox({
+					type: "refreshSucceeded",
 					emails: result.emails || [],
-				}));
+				});
 				toast.success("Inbox refreshed!");
 			} else {
-				setInboxState((prev) => ({
-					...prev,
-					isRefreshing: false,
-					error: "Failed to refresh. Check your connection and try again.",
-				}));
+				dispatchInbox({
+					type: "refreshFailed",
+					message: "Failed to refresh. Check your connection and try again.",
+				});
 			}
 		} catch (_error) {
-			setInboxState((prev) => ({
-				...prev,
-				isRefreshing: false,
-				error: "Failed to refresh. Check your connection and try again.",
-			}));
+			dispatchInbox({
+				type: "refreshFailed",
+				message: "Failed to refresh. Check your connection and try again.",
+			});
 		}
 	};
 
@@ -608,11 +593,11 @@ function SlackAccessPage() {
 										disabled={
 											!customPassword.trim() ||
 											!passwordValidation.isValid ||
-											emailState.isResetting
+											emailState.status !== "idle"
 										}
 										className="h-11 w-full md:h-10"
 									>
-										{emailState.isResetting ? (
+										{isResetting ? (
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 										) : (
 											<RefreshCw className="mr-2 h-4 w-4" />
@@ -630,11 +615,11 @@ function SlackAccessPage() {
 									disabled={
 										!customPassword.trim() ||
 										!passwordValidation.isValid ||
-										emailState.isGenerating
+										emailState.status !== "idle"
 									}
 									className="h-11 w-full md:h-10"
 								>
-									{emailState.isGenerating ? (
+									{isGenerating ? (
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 									) : (
 										<Mail className="mr-2 h-4 w-4" />
@@ -643,22 +628,22 @@ function SlackAccessPage() {
 								</Button>
 							)}
 
-							{emailState.success && (
+							{emailNotice?.kind === "success" && (
 								<output
 									aria-live="polite"
 									className="flex items-center gap-2 break-words text-sm text-tone-success"
 								>
 									<CheckCircle className="h-4 w-4 shrink-0" />
-									{emailState.success}
+									{emailNotice.message}
 								</output>
 							)}
-							{emailState.error && (
+							{emailNotice?.kind === "error" && (
 								<p
 									role="alert"
 									className="flex items-center gap-2 break-words text-sm text-tone-danger"
 								>
 									<AlertCircle className="h-4 w-4 shrink-0" />
-									{emailState.error}
+									{emailNotice.message}
 								</p>
 							)}
 						</div>
@@ -693,16 +678,16 @@ function SlackAccessPage() {
 									Verification codes and account updates.
 								</p>
 							</div>
-							{inboxState.isAuthenticated && (
+							{inboxState.status === "signedIn" && (
 								<Button
 									variant="ghost"
 									size="icon"
 									onClick={refreshInbox}
-									disabled={inboxState.isRefreshing}
+									disabled={inboxState.refreshing}
 									aria-label="Refresh inbox"
 									className="text-muted-foreground hover:text-foreground"
 								>
-									{inboxState.isRefreshing ? (
+									{inboxState.refreshing ? (
 										<Loader2 className="h-4 w-4 animate-spin" />
 									) : (
 										<RefreshCw className="h-4 w-4" />
@@ -720,7 +705,7 @@ function SlackAccessPage() {
 										up here.
 									</p>
 								</div>
-							) : !inboxState.isAuthenticated ? (
+							) : inboxState.status !== "signedIn" ? (
 								<div className="flex flex-1 items-center justify-center px-6">
 									<div className="w-full max-w-[320px] space-y-4">
 										<div className="text-center">
@@ -771,10 +756,13 @@ function SlackAccessPage() {
 											</div>
 											<Button
 												onClick={authenticateInbox}
-												disabled={!inboxPassword.trim() || inboxState.isLoading}
+												disabled={
+													!inboxPassword.trim() ||
+													inboxState.status === "signingIn"
+												}
 												className="h-11 w-full md:h-10"
 											>
-												{inboxState.isLoading ? (
+												{inboxState.status === "signingIn" ? (
 													<>
 														<Loader2 className="h-4 w-4 animate-spin" />
 														<span className="sr-only">Opening Inbox…</span>
@@ -789,7 +777,7 @@ function SlackAccessPage() {
 							) : (
 								<>
 									<div className="min-h-0 flex-1 overflow-y-auto">
-										{inboxState.emails.length === 0 ? (
+										{inboxEmails.length === 0 ? (
 											<div className="flex h-full flex-col items-center justify-center text-muted-foreground">
 												<p className="text-sm">Your inbox is empty.</p>
 											</div>
@@ -883,12 +871,12 @@ function SlackAccessPage() {
 									)}
 								</>
 							)}
-							{inboxState.error && (
+							{inboxError && (
 								<p
 									role="alert"
 									className="border-t px-5 py-3 text-sm text-tone-danger"
 								>
-									{inboxState.error}
+									{inboxError}
 								</p>
 							)}
 						</div>
@@ -899,7 +887,9 @@ function SlackAccessPage() {
 			{selectedEmail && (
 				<EmailModal
 					email={selectedEmail}
-					credentials={inboxState.credentials}
+					credentials={
+						inboxState.status === "signedIn" ? inboxState.credentials : null
+					}
 					onClose={() => setSelectedEmail(null)}
 				/>
 			)}

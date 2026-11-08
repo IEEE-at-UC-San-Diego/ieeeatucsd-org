@@ -1,5 +1,6 @@
 import { api } from "@convex/_generated/api";
 import type { Doc } from "@convex/_generated/dataModel";
+import { canWithdrawFundRequest } from "@convex/fundRequestTransition";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	AlertCircle,
@@ -680,9 +681,9 @@ function FundRequestsPage() {
 		if (!logtoId) return;
 		if (
 			!(await confirm({
-				title: "Delete Draft?",
-				description: `“${request.title}” will be permanently deleted. This can’t be undone.`,
-				confirmLabel: "Delete Draft",
+				title: "Withdraw Request?",
+				description: `“${request.title}” will be withdrawn and permanently deleted. Officers will no longer see it. This can’t be undone.`,
+				confirmLabel: "Withdraw Request",
 				destructive: true,
 			}))
 		)
@@ -690,12 +691,12 @@ function FundRequestsPage() {
 		setIsDeleting(true);
 		try {
 			await deleteFundRequest({ logtoId, id: request._id });
-			toast.success("Fund request deleted successfully");
+			toast.success("Fund request withdrawn");
 		} catch (error) {
 			const message =
 				error instanceof Error
 					? error.message
-					: "Failed to delete fund request. Please try again.";
+					: "Failed to withdraw fund request. Please try again.";
 			toast.error(message);
 		} finally {
 			setIsDeleting(false);
@@ -1121,7 +1122,7 @@ function FundRequestsPage() {
 													<Edit className="w-3.5 h-3.5" />
 												</Button>
 											)}
-											{r.status === "draft" && (
+											{canWithdrawFundRequest(r.status) && (
 												<Button
 													variant="ghost"
 													size="icon"
@@ -1131,7 +1132,8 @@ function FundRequestsPage() {
 													}}
 													disabled={isDeleting}
 													className="h-9 w-9 text-muted-foreground hover:text-destructive"
-													aria-label={`Delete ${r.title}`}
+													aria-label={`Withdraw ${r.title}`}
+													title="Withdraw request"
 												>
 													<Trash2 className="w-3.5 h-3.5" />
 												</Button>

@@ -1644,7 +1644,10 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 	const [resendingId, setResendingId] = useState<string | null>(null);
 
 	const isExpired = (inv: { expiresAt: number; status: string }) => {
-		return Date.now() > inv.expiresAt && inv.status === "pending";
+		return (
+			inv.status === "expired" ||
+			(inv.status === "pending" && Date.now() > inv.expiresAt)
+		);
 	};
 
 	const getStatusBadge = (status: string, expired: boolean) => {

@@ -5,6 +5,10 @@ import {
 } from "./accountStatusTransition";
 import { constitutionsToArchive } from "./constitutionPublication";
 import {
+  transitionConstitutionStatus,
+  type ConstitutionStatus,
+} from "./constitutionTransition";
+import {
   eventRequestLabel,
   listingForStatus,
   transitionEventRequest,
@@ -14,6 +18,8 @@ import {
   transitionFundDeposit,
 } from "./fundDepositTransition";
 import {
+  assertFundRequestWithdrawable,
+  canWithdrawFundRequest,
   fundAuditAction,
   spentFundRequestTotal,
   transitionFundRequest,
@@ -191,6 +197,32 @@ describe("event request transitions", () => {
 });
 
 describe("officer invitation transitions", () => {
+  it("expires a pending invitation only after its deadline", () => {
+    expect(
+      transitionOfficerInvitation(invite(), { type: "expire" }, 2_000),
+    ).toEqual({ ok: false, error: "Invitation has not reached its expiry time" });
+
+    const result = transitionOfficerInvitation(
+      invite(),
+      { type: "expire" },
+      2_001,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.stamp).toMatchObject({
+      status: "expired",
+      acceptedAt: undefined,
+      declinedAt: undefined,
+      grantRole: false,
+    });
+
+    for (const status of ["accepted", "declined", "expired"] as const) {
+      expect(
+        transitionOfficerInvitation(invite({ status }), { type: "expire" }, 5_000)
+          .ok,
+      ).toBe(false);
+    }
+  });
+
   it("does not grant a role when the email does not match", () => {
     const result = transitionOfficerInvitation(
       invite(),
@@ -432,6 +464,19 @@ describe("fund request transitions", () => {
       ),
     ).toBe(15);
   });
+
+  it("lets owners withdraw a request only until an officer decides it", () => {
+    for (const status of ["draft", "submitted", "needs_info"] as const) {
+      expect(canWithdrawFundRequest(status)).toBe(true);
+      expect(() => assertFundRequestWithdrawable(status)).not.toThrow();
+    }
+    for (const status of ["approved", "denied", "completed"] as const) {
+      expect(canWithdrawFundRequest(status)).toBe(false);
+      expect(() => assertFundRequestWithdrawable(status)).toThrow(
+        /kept for the budget record/,
+      );
+    }
+  });
 });
 
 describe("reimbursement transitions", () => {
@@ -483,6 +528,14 @@ describe("account status", () => {
     expect(transitionAccountStatus("suspended", "active")).toBe("active");
     expect(transitionAccountStatus("active", "inactive")).toBe("inactive");
     expect(transitionAccountStatus("inactive", "active")).toBe("active");
+    expect(transitionAccountStatus("inactive", "suspended")).toBe("suspended");
+    expect(transitionAccountStatus("suspended", "inactive")).toBe("inactive");
+  });
+
+  it("keeps a profile save that leaves the status unchanged", () => {
+    expect(transitionAccountStatus("active", "active")).toBe("active");
+    expect(transitionAccountStatus("inactive", "inactive")).toBe("inactive");
+    expect(transitionAccountStatus("suspended", "suspended")).toBe("suspended");
   });
 });
 
@@ -521,9 +574,67 @@ describe("constitution publication", () => {
   it("archives every other published constitution", () => {
     expect(
       constitutionsToArchive(
-        [{ _id: "a" }, { _id: "b" }, { _id: "c" }],
+        [
+          { _id: "a", status: "published" as const },
+          { _id: "b", status: "published" as const },
+          { _id: "c", status: "published" as const },
+        ],
         "b",
-      ).map((row) => row._id),
-    ).toEqual(["a", "c"]);
+      ),
+    ).toEqual([
+      { _id: "a", status: "archived" },
+      { _id: "c", status: "archived" },
+    ]);
+  });
+
+  it("refuses to supersede a constitution that is not published", () => {
+    expect(() =>
+      constitutionsToArchive([{ _id: "a", status: "draft" as const }], "b"),
+    ).toThrow(/Only a published constitution can be superseded/);
+  });
+});
+
+describe("constitution status transitions", () => {
+  const update = (to: ConstitutionStatus) => ({ kind: "update" as const, to });
+
+  it("archives other published rows only when entering published", () => {
+    expect(transitionConstitutionStatus("draft", update("published"))).toEqual({
+      status: "published",
+      archiveOtherPublished: true,
+    });
+    expect(
+      transitionConstitutionStatus("published", update("published")),
+    ).toEqual({ status: "published", archiveOtherPublished: false });
+  });
+
+  it("allows archiving, discarding a draft, and reopening an archive", () => {
+    expect(transitionConstitutionStatus("published", update("archived"))).toEqual(
+      { status: "archived", archiveOtherPublished: false },
+    );
+    expect(transitionConstitutionStatus("draft", update("archived")).status).toBe(
+      "archived",
+    );
+    expect(transitionConstitutionStatus("archived", update("draft")).status).toBe(
+      "draft",
+    );
+  });
+
+  it("rejects unpublishing to draft and republishing an archive directly", () => {
+    expect(() =>
+      transitionConstitutionStatus("published", update("draft")),
+    ).toThrow(/Cannot move a constitution from published to draft/);
+    expect(() =>
+      transitionConstitutionStatus("archived", update("published")),
+    ).toThrow(/Cannot move a constitution from archived to published/);
+  });
+
+  it("keeps a same-status edit in place", () => {
+    expect(transitionConstitutionStatus("draft", update("draft"))).toEqual({
+      status: "draft",
+      archiveOtherPublished: false,
+    });
+    expect(transitionConstitutionStatus("archived", update("archived"))).toEqual(
+      { status: "archived", archiveOtherPublished: false },
+    );
   });
 });

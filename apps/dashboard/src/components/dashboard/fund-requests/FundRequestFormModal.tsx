@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
 import { sendNotification } from "@/lib/send-notification";
 import {
 	CATEGORY_LABELS,
@@ -128,12 +129,6 @@ export function FundRequestFormModal({
 	const { user: authUser, getAuthHeaders } = useAuth();
 	const createFundRequest = useAuthedMutation(api.fundRequests.create);
 	const updateFundRequest = useAuthedMutation(api.fundRequests.update);
-	const [currentStep, setCurrentStep] = useState(1);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const stepTrackInset = `${100 / (STEPS.length * 2)}%`;
-	const stepTrackProgress =
-		STEPS.length > 1 ? ((currentStep - 1) / (STEPS.length - 1)) * 100 : 100;
-
 	const titleId = useId();
 	const purposeId = useId();
 	const departmentId = useId();
@@ -151,6 +146,36 @@ export function FundRequestFormModal({
 	// Validation state
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
+	const validateStep = (step: number): boolean => {
+		const newErrors: Record<string, string> = {};
+
+		switch (step) {
+			case 1:
+				if (!title.trim()) newErrors.title = "Title is required";
+				if (!purpose.trim())
+					newErrors.purpose = "Purpose/justification is required";
+				break;
+			case 2:
+				if (!amount || parseFloat(amount) <= 0) {
+					newErrors.amount = "Valid budget amount is required";
+				}
+				break;
+		}
+
+		setErrors(newErrors);
+		return Object.keys(newErrors).length === 0;
+	};
+
+	const wizard = useWizard({
+		stepCount: STEPS.length,
+		canAdvance: validateStep,
+	});
+	const { step: currentStep, reset: resetWizard } = wizard;
+	const isSubmitting = wizard.phase.kind === "submitting";
+	const stepTrackInset = `${100 / (STEPS.length * 2)}%`;
+	const stepTrackProgress =
+		STEPS.length > 1 ? ((currentStep - 1) / (STEPS.length - 1)) * 100 : 100;
+
 	const [initialSnapshot, setInitialSnapshot] = useState(BLANK_SNAPSHOT);
 	const currentSnapshot = formSnapshot({
 		title,
@@ -161,7 +186,7 @@ export function FundRequestFormModal({
 		vendorLinks,
 	});
 	const isDirty =
-		isOpen && !isSubmitting && currentSnapshot !== initialSnapshot;
+		isOpen && !wizard.isPending && currentSnapshot !== initialSnapshot;
 	const confirmDiscard = useUnsavedChangesGuard(isDirty);
 
 	const resetForm = useCallback(() => {
@@ -174,9 +199,9 @@ export function FundRequestFormModal({
 			{ id: crypto.randomUUID(), url: "", itemName: "", quantity: 1 },
 		]);
 		setErrors({});
-		setCurrentStep(1);
+		resetWizard();
 		setInitialSnapshot(BLANK_SNAPSHOT);
-	}, []);
+	}, [resetWizard]);
 
 	// Initialize form with existing data
 	useEffect(() => {
@@ -201,39 +226,9 @@ export function FundRequestFormModal({
 			} else {
 				resetForm();
 			}
-			setCurrentStep(1);
+			resetWizard();
 		}
-	}, [isOpen, initialData, resetForm]);
-
-	const validateStep = (step: number): boolean => {
-		const newErrors: Record<string, string> = {};
-
-		switch (step) {
-			case 1:
-				if (!title.trim()) newErrors.title = "Title is required";
-				if (!purpose.trim())
-					newErrors.purpose = "Purpose/justification is required";
-				break;
-			case 2:
-				if (!amount || parseFloat(amount) <= 0) {
-					newErrors.amount = "Valid budget amount is required";
-				}
-				break;
-		}
-
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
-
-	const handleNextStep = () => {
-		if (validateStep(currentStep)) {
-			setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
-		}
-	};
-
-	const handlePrevStep = () => {
-		setCurrentStep((prev) => Math.max(prev - 1, 1));
-	};
+	}, [isOpen, initialData, resetForm, resetWizard]);
 
 	// Initialize with one empty row if list is empty
 	useEffect(() => {
@@ -338,7 +333,7 @@ export function FundRequestFormModal({
 			return;
 		}
 
-		setIsSubmitting(true);
+		if (!wizard.startSubmit()) return;
 
 		try {
 			const cleanedVendorLinks = vendorLinks.filter(
@@ -387,15 +382,15 @@ export function FundRequestFormModal({
 				}
 			}
 
+			wizard.submitSucceeded();
 			onSuccess();
 			resetForm();
 		} catch (error) {
 			console.error("Error saving fund request:", error);
-			toast.error(
-				"Failed to save fund request. Check your connection and try again.",
-			);
-		} finally {
-			setIsSubmitting(false);
+			const message =
+				"Failed to save fund request. Check your connection and try again.";
+			toast.error(message);
+			wizard.submitFailed(message);
 		}
 	};
 
@@ -987,22 +982,22 @@ export function FundRequestFormModal({
 				</Button>
 
 				<div className="flex gap-2 w-full sm:w-auto">
-					{currentStep > 1 && (
+					{!wizard.isFirstStep && (
 						<Button
 							type="button"
 							variant="outline"
-							onClick={handlePrevStep}
-							disabled={isSubmitting}
+							onClick={wizard.back}
+							disabled={!wizard.isEditable}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Back
 						</Button>
 					)}
 
-					{currentStep < STEPS.length ? (
+					{!wizard.isLastStep ? (
 						<Button
 							type="button"
-							onClick={handleNextStep}
+							onClick={() => wizard.next()}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Next Step
@@ -1011,7 +1006,7 @@ export function FundRequestFormModal({
 						<Button
 							type="button"
 							onClick={handleSubmit}
-							disabled={isSubmitting}
+							disabled={!wizard.isEditable}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							{isSubmitting && (

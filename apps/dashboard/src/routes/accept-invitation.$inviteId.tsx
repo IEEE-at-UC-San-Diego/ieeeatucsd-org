@@ -9,25 +9,32 @@ import {
 	User,
 	XCircle,
 } from "lucide-react";
-import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import {
+	type KeyboardEvent,
+	useEffect,
+	useId,
+	useReducer,
+	useState,
+} from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	type Invitation,
+	initialInvitationPhase,
+	invitationPhaseReducer,
+} from "@/lib/invitations/invitationPhase";
 
 export const Route = createFileRoute("/accept-invitation/$inviteId")({
 	component: AcceptInvitationPage,
 });
 
-type Invitation = {
-	name: string;
+const EXPIRED_INVITATION_MESSAGE =
+	"This invitation has expired. Contact IEEE UCSD leadership to request a new one.";
+
+type AcceptDetails = {
 	email: string;
-	role: string;
-	position: string;
-	offeredPositions?: string[];
-	status: "pending" | "accepted" | "declined" | "expired";
-	expiresAt: number;
-	message?: string;
-	acceptanceDeadline?: string;
+	selectedPosition: string;
 };
 
 function getAcceptInvitationEndpoint() {
@@ -35,33 +42,19 @@ function getAcceptInvitationEndpoint() {
 }
 
 function AcceptInvitationPage() {
-	const formId = useId();
 	const { inviteId } = Route.useParams();
-	const [invitation, setInvitation] = useState<Invitation | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [processing, setProcessing] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const [success, setSuccess] = useState(false);
-	const [declined, setDeclined] = useState(false);
-	const [selectedPosition, setSelectedPosition] = useState("");
-	const [confirmEmail, setConfirmEmail] = useState("");
+	const [phase, dispatch] = useReducer(
+		invitationPhaseReducer,
+		initialInvitationPhase,
+	);
 	const confirm = useConfirm();
-
-	const offeredPositions =
-		invitation?.offeredPositions && invitation.offeredPositions.length > 0
-			? invitation.offeredPositions
-			: invitation?.position
-				? [invitation.position]
-				: [];
-	const hasMultiplePositions = offeredPositions.length > 1;
 
 	useEffect(() => {
 		let cancelled = false;
 
 		const fetchInvitation = async () => {
+			dispatch({ type: "loadStarted" });
 			try {
-				setLoading(true);
-				setError(null);
 				const endpoint = new URL(
 					getAcceptInvitationEndpoint(),
 					window.location.origin,
@@ -70,44 +63,30 @@ function AcceptInvitationPage() {
 				const response = await fetch(endpoint.toString());
 				const result = await response.json();
 
+				if (cancelled) return;
 				if (!response.ok) {
-					setError(
-						result.error ||
+					dispatch({
+						type: "loadFailed",
+						message:
+							result.error ||
 							"Invitation not found. Please check your link and try again.",
-					);
+					});
 					return;
 				}
 
-				if (cancelled) return;
-				const data = result.invitation as Invitation;
-				setInvitation(data);
-				setSuccess(data.status === "accepted");
-				setDeclined(data.status === "declined");
-				setSelectedPosition(
-					data.offeredPositions && data.offeredPositions.length > 1
-						? ""
-						: data.position,
-				);
-
-				const expiresAt = new Date(data.expiresAt);
-				if (
-					(new Date() > expiresAt && data.status === "pending") ||
-					data.status === "expired"
-				) {
-					setError(
-						"This invitation has expired. Contact IEEE UCSD leadership to request a new one.",
-					);
-				}
+				dispatch({
+					type: "loadSucceeded",
+					invitation: result.invitation as Invitation,
+					now: Date.now(),
+				});
 			} catch (err) {
 				console.error("Error fetching invitation:", err);
 				if (!cancelled) {
-					setError(
-						"Failed to load invitation. Check your connection and reload the page.",
-					);
-				}
-			} finally {
-				if (!cancelled) {
-					setLoading(false);
+					dispatch({
+						type: "loadFailed",
+						message:
+							"Failed to load invitation. Check your connection and reload the page.",
+					});
 				}
 			}
 		};
@@ -119,21 +98,17 @@ function AcceptInvitationPage() {
 		};
 	}, [inviteId]);
 
-	const handleAccept = async () => {
+	const handleAccept = async ({ email, selectedPosition }: AcceptDetails) => {
+		dispatch({ type: "acceptStarted" });
 		try {
-			setProcessing(true);
-			setError(null);
-
 			const response = await fetch(getAcceptInvitationEndpoint(), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					inviteId,
 					action: "accept",
-					email: confirmEmail.trim(),
-					selectedPosition: hasMultiplePositions
-						? selectedPosition
-						: invitation?.position,
+					email,
+					selectedPosition,
 				}),
 			});
 			const result = await response.json();
@@ -142,19 +117,165 @@ function AcceptInvitationPage() {
 				throw new Error(result.error || "Failed to accept invitation");
 			}
 
-			setInvitation(result.invitation as Invitation);
-			setSuccess(true);
+			dispatch({
+				type: "acceptSucceeded",
+				invitation: result.invitation as Invitation,
+			});
 		} catch (err) {
 			console.error("Error accepting invitation:", err);
-			setError(
-				err instanceof Error
-					? err.message
-					: "Failed to accept invitation. Try again in a moment.",
-			);
-		} finally {
-			setProcessing(false);
+			dispatch({
+				type: "actionFailed",
+				message:
+					err instanceof Error
+						? err.message
+						: "Failed to accept invitation. Try again in a moment.",
+			});
 		}
 	};
+
+	const handleDecline = async () => {
+		if (
+			!(await confirm({
+				title: "Decline Position?",
+				description:
+					"You won’t be able to accept this invitation after declining.",
+				confirmLabel: "Decline Position",
+				destructive: true,
+			}))
+		) {
+			return;
+		}
+
+		dispatch({ type: "declineStarted" });
+		try {
+			const response = await fetch(getAcceptInvitationEndpoint(), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					inviteId,
+					action: "decline",
+				}),
+			});
+			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || "Failed to decline invitation");
+			}
+
+			dispatch({
+				type: "declineSucceeded",
+				invitation: result.invitation as Invitation,
+			});
+		} catch (err) {
+			console.error("Error declining invitation:", err);
+			dispatch({
+				type: "actionFailed",
+				message:
+					err instanceof Error
+						? err.message
+						: "Failed to decline invitation. Try again in a moment.",
+			});
+		}
+	};
+
+	switch (phase.kind) {
+		case "loading":
+			return (
+				<CenteredShell>
+					<output className="block">
+						<Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+						<p className="text-muted-foreground">Loading invitation…</p>
+					</output>
+				</CenteredShell>
+			);
+		case "loadFailed":
+			return <InvitationUnavailable message={phase.message} />;
+		case "expired":
+			return <InvitationUnavailable message={EXPIRED_INVITATION_MESSAGE} />;
+		case "accepted":
+			return (
+				<StatusShell
+					className="success-reveal"
+					icon={<CheckCircle className="h-12 w-12 text-tone-success" />}
+					title="Welcome to the Team!"
+					description="You’ve successfully accepted the position."
+					invitation={phase.invitation}
+				>
+					<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5 text-left text-ds-blue-1000">
+						<h2 className="mb-3 font-semibold text-balance">What’s Next?</h2>
+						<ul className="list-disc space-y-2 pl-5 text-sm">
+							<li>Check your email for detailed onboarding instructions.</li>
+							<li>Your officer invitation has been recorded.</li>
+							<li>
+								Sign in to the dashboard and complete your onboarding steps.
+							</li>
+						</ul>
+					</div>
+					<Button asChild className="w-full">
+						<a href="/signin">Sign In to Dashboard</a>
+					</Button>
+				</StatusShell>
+			);
+		case "declined":
+			return (
+				<StatusShell
+					icon={<XCircle className="h-12 w-12 text-muted-foreground" />}
+					title="Invitation Declined"
+					description={`You have declined the ${phase.invitation.position ?? "officer"} position.`}
+					invitation={phase.invitation}
+				>
+					<Button asChild variant="outline" className="w-full">
+						<a href="/signin">Go to Dashboard</a>
+					</Button>
+				</StatusShell>
+			);
+		case "pending":
+		case "accepting":
+		case "declining":
+			return (
+				<InvitationOfferForm
+					invitation={phase.invitation}
+					processing={phase.kind !== "pending"}
+					actionError={phase.kind === "pending" ? phase.actionError : undefined}
+					onAccept={handleAccept}
+					onDecline={handleDecline}
+				/>
+			);
+		default: {
+			const unreachable: never = phase;
+			return unreachable;
+		}
+	}
+}
+
+function InvitationOfferForm({
+	invitation,
+	processing,
+	actionError,
+	onAccept,
+	onDecline,
+}: {
+	invitation: Invitation;
+	processing: boolean;
+	actionError: string | undefined;
+	onAccept: (details: AcceptDetails) => void;
+	onDecline: () => void;
+}) {
+	const formId = useId();
+	const [selectedPosition, setSelectedPosition] = useState(() =>
+		invitation.offeredPositions && invitation.offeredPositions.length > 1
+			? ""
+			: invitation.position,
+	);
+	const [confirmEmail, setConfirmEmail] = useState("");
+
+	const offeredPositions =
+		invitation.offeredPositions && invitation.offeredPositions.length > 0
+			? invitation.offeredPositions
+			: invitation.position
+				? [invitation.position]
+				: [];
+	const hasMultiplePositions = offeredPositions.length > 1;
 
 	const handlePositionKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
 		const step =
@@ -185,119 +306,13 @@ function AcceptInvitationPage() {
 		Boolean(confirmEmail.trim()) &&
 		(!hasMultiplePositions || Boolean(selectedPosition));
 
-	const handleDecline = async () => {
-		if (
-			!(await confirm({
-				title: "Decline Position?",
-				description:
-					"You won’t be able to accept this invitation after declining.",
-				confirmLabel: "Decline Position",
-				destructive: true,
-			}))
-		) {
-			return;
-		}
-
-		try {
-			setProcessing(true);
-			setError(null);
-
-			const response = await fetch(getAcceptInvitationEndpoint(), {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					inviteId,
-					action: "decline",
-				}),
-			});
-			const result = await response.json();
-
-			if (!response.ok) {
-				throw new Error(result.error || "Failed to decline invitation");
-			}
-
-			setInvitation(result.invitation as Invitation);
-			setDeclined(true);
-		} catch (err) {
-			console.error("Error declining invitation:", err);
-			setError(
-				err instanceof Error
-					? err.message
-					: "Failed to decline invitation. Try again in a moment.",
-			);
-		} finally {
-			setProcessing(false);
-		}
-	};
-
-	if (loading) {
-		return (
-			<CenteredShell>
-				<output className="block">
-					<Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
-					<p className="text-muted-foreground">Loading invitation…</p>
-				</output>
-			</CenteredShell>
-		);
-	}
-
-	if (error) {
-		return (
-			<CenteredShell>
-				<AlertCircle className="mx-auto mb-4 h-16 w-16 text-destructive" />
-				<h1 className="mb-2 text-2xl font-bold text-balance">
-					Invitation Unavailable
-				</h1>
-				<p className="mb-6 text-muted-foreground" role="alert">
-					{error}
-				</p>
-				<Button asChild>
-					<a href="/signin">Go to Dashboard</a>
-				</Button>
-			</CenteredShell>
-		);
-	}
-
-	if (success) {
-		return (
-			<StatusShell
-				className="success-reveal"
-				icon={<CheckCircle className="h-12 w-12 text-tone-success" />}
-				title="Welcome to the Team!"
-				description="You’ve successfully accepted the position."
-				invitation={invitation}
-			>
-				<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5 text-left text-ds-blue-1000">
-					<h2 className="mb-3 font-semibold text-balance">What’s Next?</h2>
-					<ul className="list-disc space-y-2 pl-5 text-sm">
-						<li>Check your email for detailed onboarding instructions.</li>
-						<li>Your officer invitation has been recorded.</li>
-						<li>
-							Sign in to the dashboard and complete your onboarding steps.
-						</li>
-					</ul>
-				</div>
-				<Button asChild className="w-full">
-					<a href="/signin">Sign In to Dashboard</a>
-				</Button>
-			</StatusShell>
-		);
-	}
-
-	if (declined) {
-		return (
-			<StatusShell
-				icon={<XCircle className="h-12 w-12 text-muted-foreground" />}
-				title="Invitation Declined"
-				description={`You have declined the ${invitation?.position ?? "officer"} position.`}
-				invitation={invitation}
-			>
-				<Button asChild variant="outline" className="w-full">
-					<a href="/signin">Go to Dashboard</a>
-				</Button>
-			</StatusShell>
-		);
-	}
+	const handleAccept = () =>
+		onAccept({
+			email: confirmEmail.trim(),
+			selectedPosition: hasMultiplePositions
+				? selectedPosition
+				: invitation.position,
+		});
 
 	return (
 		<main className="min-h-dvh bg-muted/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -305,7 +320,7 @@ function AcceptInvitationPage() {
 				<div className="w-full overflow-hidden rounded-md border bg-background shadow-sm">
 					<div className="bg-primary px-4 py-6 text-center text-primary-foreground sm:px-8 sm:py-10">
 						<h1 className="mb-1 text-xl font-bold text-balance break-words sm:mb-2 sm:text-3xl">
-							Congratulations, {invitation?.name}!
+							Congratulations, {invitation.name}!
 						</h1>
 						<p className="text-sm text-primary-foreground/80 sm:text-base">
 							You’ve been elected to the IEEE at UCSD board.
@@ -327,10 +342,10 @@ function AcceptInvitationPage() {
 									<h2 className="text-xl font-bold text-balance break-words sm:text-2xl">
 										{hasMultiplePositions
 											? "Choose One Position"
-											: invitation?.position}
+											: invitation.position}
 									</h2>
 									<p className="mt-1 text-sm text-muted-foreground">
-										{invitation?.role}
+										{invitation.role}
 									</p>
 								</div>
 							</div>
@@ -408,7 +423,7 @@ function AcceptInvitationPage() {
 							/>
 						</div>
 
-						{invitation?.message && (
+						{invitation.message && (
 							<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5">
 								<p className="mb-2 text-sm font-medium text-ds-blue-1000">
 									Message from Leadership
@@ -427,18 +442,30 @@ function AcceptInvitationPage() {
 								<strong className="text-foreground">
 									{hasMultiplePositions
 										? selectedPosition || "the selected position"
-										: invitation?.position}
+										: invitation.position}
 								</strong>{" "}
 								and commit to supporting IEEE at UCSD’s mission.
 							</p>
 						</div>
+
+						{actionError && (
+							<div
+								role="alert"
+								className="flex items-center gap-2 rounded-md border border-ds-red-100 bg-ds-red-100 p-4 text-tone-danger"
+							>
+								<AlertCircle className="h-5 w-5 shrink-0" />
+								<span className="min-w-0 break-words text-sm">
+									{actionError}
+								</span>
+							</div>
+						)}
 
 						<div className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
 							<div className="flex flex-col gap-3 sm:flex-row">
 								<Button
 									type="button"
 									variant="outline"
-									onClick={handleDecline}
+									onClick={onDecline}
 									disabled={processing}
 									className="h-12 flex-1"
 								>
@@ -464,6 +491,23 @@ function AcceptInvitationPage() {
 	);
 }
 
+function InvitationUnavailable({ message }: { message: string }) {
+	return (
+		<CenteredShell>
+			<AlertCircle className="mx-auto mb-4 h-16 w-16 text-destructive" />
+			<h1 className="mb-2 text-2xl font-bold text-balance">
+				Invitation Unavailable
+			</h1>
+			<p className="mb-6 text-muted-foreground" role="alert">
+				{message}
+			</p>
+			<Button asChild>
+				<a href="/signin">Go to Dashboard</a>
+			</Button>
+		</CenteredShell>
+	);
+}
+
 function CenteredShell({ children }: { children: React.ReactNode }) {
 	return (
 		<main className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -485,7 +529,7 @@ function StatusShell({
 	icon: React.ReactNode;
 	title: string;
 	description: string;
-	invitation: Invitation | null;
+	invitation: Invitation;
 	children: React.ReactNode;
 	className?: string;
 }) {
@@ -514,22 +558,22 @@ function StatusShell({
 	);
 }
 
-function InvitationDetails({ invitation }: { invitation: Invitation | null }) {
+function InvitationDetails({ invitation }: { invitation: Invitation }) {
 	return (
 		<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 			<DetailItem
 				icon={<User className="h-5 w-5 text-primary" />}
 				label="Full Name"
-				value={invitation?.name}
+				value={invitation.name}
 			/>
-			{invitation?.email ? (
+			{invitation.email ? (
 				<DetailItem
 					icon={<Mail className="h-5 w-5 text-primary" />}
 					label="Email Address"
 					value={invitation.email}
 				/>
 			) : null}
-			{invitation?.acceptanceDeadline ? (
+			{invitation.acceptanceDeadline ? (
 				<DetailItem
 					icon={<Calendar className="h-5 w-5 text-primary" />}
 					label="Response Deadline"

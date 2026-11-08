@@ -9,25 +9,37 @@ export interface EmailMessage {
 	attachmentCount?: number;
 }
 
-export interface EmailInboxState {
-	isAuthenticated: boolean;
-	isLoading: boolean;
-	isRefreshing: boolean;
-	emails: EmailMessage[];
-	error: string | null;
-	credentials: {
-		email: string;
-		password: string;
-	} | null;
+export interface InboxCredentials {
+	email: string;
+	password: string;
 }
 
-export interface EmailGenerationState {
-	isGenerating: boolean;
-	isResetting: boolean;
-	generatedEmail: string | null;
-	error: string | null;
-	success: string | null;
+export type EmailInboxState =
+	| { status: "signedOut" }
+	| { status: "signingIn" }
+	| { status: "failed"; message: string }
+	| {
+			status: "signedIn";
+			credentials: InboxCredentials;
+			emails: EmailMessage[];
+			refreshing: boolean;
+			refreshError: string | null;
+	  };
+
+export interface EmailNotice {
+	kind: "error" | "success";
+	message: string;
 }
+
+/** `generatedEmail` survives across phases so the address stays visible after creation. */
+export type EmailGenerationState =
+	| {
+			status: "idle";
+			generatedEmail: string | null;
+			notice: EmailNotice | null;
+	  }
+	| { status: "generating"; generatedEmail: string | null }
+	| { status: "resetting"; generatedEmail: string | null };
 
 export interface PasswordValidation {
 	isValid: boolean;

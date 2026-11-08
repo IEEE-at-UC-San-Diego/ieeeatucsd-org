@@ -15,7 +15,13 @@ import {
 	Wrench,
 	X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useReducer,
+	useRef,
+	useState,
+} from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,29 +29,17 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-
-type ChatMeta = {
-	status?: string;
-	locale?: string;
-	timeZone?: string;
-	currentDateTime?: string;
-	currentUser?: {
-		name?: string;
-		role?: string;
-		position?: string;
-		team?: string;
-	};
-	totalMatches?: number;
-	scannedTables?: number;
-	toolCallCount?: number;
-};
-
-type ToolStartInfo = {
-	id: string;
-	name: string;
-	args: Record<string, unknown>;
-	round?: number;
-};
+import {
+	type ChatMeta,
+	chatRequestReducer,
+	getActiveAssistantId,
+	getStatusLabel,
+	IDLE_PHASE,
+	isReasoningActive,
+	isRequestInFlight,
+	type StreamEvent,
+	type ToolStartInfo,
+} from "./officerAiChatState";
 
 type ToolResultInfo = {
 	id: string;
@@ -53,21 +47,6 @@ type ToolResultInfo = {
 	summary: string;
 	durationMs: number;
 };
-
-type StreamEvent =
-	| { type: "status"; message: string }
-	| { type: "reasoning"; content: string }
-	| { type: "token"; content: string }
-	| { type: "tool_start"; tools: ToolStartInfo[] }
-	| {
-			type: "tool_result";
-			id: string;
-			name: string;
-			summary: string;
-			durationMs: number;
-	  }
-	| { type: "done"; reply: string; steps: string[]; meta: ChatMeta }
-	| { type: "error"; error: string };
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
 const SESSION_STORAGE_KEY = "officer-ai-chat-messages";
@@ -83,7 +62,6 @@ interface Message {
 	meta?: ChatMeta;
 	error?: boolean;
 	createdAt: number;
-	isReasoning?: boolean;
 	currentToolRound?: number;
 }
 
@@ -647,17 +625,26 @@ export function OfficerAiChat() {
 		return loadSessionMessages() || [INITIAL_MESSAGE];
 	});
 	const [input, setInput] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [loadingStep, setLoadingStep] = useState("Ready");
+	const [phase, dispatchPhase] = useReducer(chatRequestReducer, IDLE_PHASE);
 	const [lastMeta, setLastMeta] = useState<ChatMeta | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const abortRef = useRef<AbortController | null>(null);
+	const activeRequestRef = useRef<{
+		assistantId: string;
+		controller: AbortController;
+	} | null>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const userIsNearBottom = useRef(true);
+	const isLoading = isRequestInFlight(phase);
+	const activeAssistantId = getActiveAssistantId(phase);
+	const statusLabel = getStatusLabel(phase);
 
 	useEffect(() => {
 		saveSessionMessages(messages);
 	}, [messages]);
+
+	useEffect(() => {
+		return () => activeRequestRef.current?.controller.abort();
+	}, []);
 
 	const scrollToBottom = useCallback(() => {
 		if (scrollRef.current && userIsNearBottom.current) {
@@ -689,10 +676,11 @@ export function OfficerAiChat() {
 	);
 
 	const handleStop = useCallback(() => {
-		abortRef.current?.abort();
-		abortRef.current = null;
-		setIsLoading(false);
-		setLoadingStep("Stopped");
+		const request = activeRequestRef.current;
+		if (!request) return;
+		activeRequestRef.current = null;
+		request.controller.abort();
+		dispatchPhase({ type: "stop", assistantId: request.assistantId });
 	}, []);
 
 	const handleClearChat = useCallback(async () => {
@@ -707,7 +695,7 @@ export function OfficerAiChat() {
 			return;
 		setMessages([INITIAL_MESSAGE]);
 		setLastMeta(null);
-		setLoadingStep("Ready");
+		dispatchPhase({ type: "reset" });
 		setInput("");
 		try {
 			sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -749,7 +737,7 @@ export function OfficerAiChat() {
 		const locale = getClientLocale();
 		const assistantId = nextMessageId();
 		const controller = new AbortController();
-		abortRef.current = controller;
+		activeRequestRef.current = { assistantId, controller };
 
 		setInput("");
 		if (textareaRef.current) {
@@ -770,8 +758,7 @@ export function OfficerAiChat() {
 			},
 		]);
 
-		setIsLoading(true);
-		setLoadingStep("Submitting query…");
+		dispatchPhase({ type: "submit", assistantId });
 		userIsNearBottom.current = true;
 
 		try {
@@ -823,7 +810,6 @@ export function OfficerAiChat() {
 					meta: data.meta || msg.meta,
 				}));
 				if (data.meta) setLastMeta(data.meta);
-				setLoadingStep("Ready");
 				return;
 			}
 
@@ -857,8 +843,9 @@ export function OfficerAiChat() {
 						continue;
 					}
 
+					dispatchPhase({ type: "stream_event", assistantId, event });
+
 					if (event.type === "status") {
-						setLoadingStep(event.message);
 						updateAssistantMessage(assistantId, (msg) => ({
 							...msg,
 							content: sawFirstToken ? msg.content : "",
@@ -868,11 +855,9 @@ export function OfficerAiChat() {
 					}
 
 					if (event.type === "reasoning") {
-						setLoadingStep("AI is thinking…");
 						updateAssistantMessage(assistantId, (msg) => ({
 							...msg,
 							reasoning: (msg.reasoning || "") + event.content,
-							isReasoning: true,
 						}));
 						continue;
 					}
@@ -882,7 +867,6 @@ export function OfficerAiChat() {
 						const round = currentToolRound;
 						updateAssistantMessage(assistantId, (msg) => ({
 							...msg,
-							isReasoning: false,
 							currentToolRound: round,
 							toolCalls: [
 								...(msg.toolCalls || []),
@@ -911,18 +895,15 @@ export function OfficerAiChat() {
 					if (event.type === "token") {
 						if (!sawFirstToken) {
 							sawFirstToken = true;
-							setLoadingStep("Streaming response…");
 							updateAssistantMessage(assistantId, (msg) => ({
 								...msg,
 								content: event.content,
-								isReasoning: false,
 							}));
 							continue;
 						}
 						updateAssistantMessage(assistantId, (msg) => ({
 							...msg,
 							content: msg.content + event.content,
-							isReasoning: false,
 						}));
 						continue;
 					}
@@ -933,10 +914,8 @@ export function OfficerAiChat() {
 							content: event.reply || msg.content,
 							steps: event.steps,
 							meta: event.meta,
-							isReasoning: false,
 						}));
 						setLastMeta(event.meta);
-						setLoadingStep("Ready");
 						continue;
 					}
 
@@ -946,11 +925,12 @@ export function OfficerAiChat() {
 				}
 			}
 		} catch (error) {
-			if ((error as Error)?.name === "AbortError") {
+			if (controller.signal.aborted) {
 				updateAssistantMessage(assistantId, (msg) => ({
 					...msg,
 					content: msg.content || "Generation stopped.",
 				}));
+				dispatchPhase({ type: "stop", assistantId });
 				return;
 			}
 			console.error("Chat error:", error);
@@ -963,10 +943,12 @@ export function OfficerAiChat() {
 				content: msg.content || message,
 				error: true,
 			}));
-			setLoadingStep(message);
+			dispatchPhase({ type: "fail", assistantId, message });
 		} finally {
-			setIsLoading(false);
-			abortRef.current = null;
+			dispatchPhase({ type: "complete", assistantId });
+			if (activeRequestRef.current?.controller === controller) {
+				activeRequestRef.current = null;
+			}
 		}
 	};
 
@@ -1071,7 +1053,7 @@ export function OfficerAiChat() {
 								) : (
 									<Bot className="w-3 h-3" />
 								)}
-								{isLoading ? loadingStep : "Ready"}
+								{statusLabel}
 							</output>
 							<span className="text-muted-foreground/60">
 								{lastMeta?.currentDateTime || formatPacificNow()}
@@ -1115,22 +1097,16 @@ export function OfficerAiChat() {
 											{msg.role === "assistant" && msg.reasoning && (
 												<ReasoningBlock
 													content={msg.reasoning}
-													isStreaming={
-														isLoading &&
-														msg.id === messages[messages.length - 1]?.id &&
-														(msg.isReasoning ?? false)
-													}
+													isStreaming={isReasoningActive(phase, msg.id)}
 												/>
 											)}
 
 											{msg.content ? (
 												<MarkdownRenderer content={msg.content} />
-											) : msg.role === "assistant" &&
-												isLoading &&
-												msg.id === messages[messages.length - 1]?.id ? (
+											) : msg.id === activeAssistantId ? (
 												<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
 													<Loader2 className="w-3 h-3 animate-spin" />
-													{loadingStep}
+													{statusLabel}
 												</span>
 											) : null}
 										</div>

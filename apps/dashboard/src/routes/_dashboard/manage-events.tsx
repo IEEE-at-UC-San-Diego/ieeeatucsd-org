@@ -9,7 +9,7 @@ import {
 	MoreHorizontal,
 	Plus,
 } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
@@ -29,7 +29,6 @@ import {
 	EventsDataTable,
 	EventsFilters,
 	EventViewModal,
-	FileManagerModal,
 	type SortConfig,
 	type VcoPipelinePatch,
 	VcoPipelineView,
@@ -65,6 +64,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import {
+	type DeclineDialog,
+	declineDialogClosed,
+	isImmersiveSurface,
+	noSurface,
+	type PendingAction,
+	transitionDeclineDialog,
+	transitionSurface,
+} from "@/lib/manage-events/manageEventsSurface";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { sendNotification } from "@/lib/send-notification";
 
@@ -175,54 +183,52 @@ function ManageEventsPage() {
 	const sortConfig: SortConfig = { field: search.sort, direction: search.dir };
 	const itemsPerPage = 10;
 
-	// Modal states
-	const [selectedRequest, setSelectedRequest] = useState<EventRequest | null>(
-		null,
-	);
-	const [isWizardOpen, setIsWizardOpen] = useState(false);
-	const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-	const [isDraftViewModalOpen, setIsDraftViewModalOpen] = useState(false);
-	const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
-	const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
-	const [isWeekSettingsOpen, setIsWeekSettingsOpen] = useState(false);
-	const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-	const [editingRequest, setEditingRequest] = useState<EventRequest | null>(
-		null,
-	);
-	const [editingDraft, setEditingDraft] = useState<EventRequest | null>(null);
-	const [draftDate, setDraftDate] = useState<Date | null>(null);
+	const [surface, dispatchSurface] = useReducer(transitionSurface, noSurface);
+	const wizardTarget = surface.kind === "wizard" ? surface.target : null;
+	const editingRequest =
+		wizardTarget?.type === "existing" ? wizardTarget.request : null;
+	const wizardInitialData =
+		wizardTarget?.type === "existing"
+			? wizardTarget.request
+			: wizardTarget?.prefill;
+	const editingDraft = surface.kind === "draftEdit" ? surface.draft : null;
+	const draftInitialData = useMemo((): Partial<EventRequest> | undefined => {
+		if (surface.kind === "draftEdit") return surface.draft;
+		if (surface.kind === "draftCreate" && surface.date) {
+			return {
+				startDate: surface.date.getTime(),
+				endDate: surface.date.getTime() + 3600000,
+			};
+		}
+		return undefined;
+	}, [surface]);
 	const [weekLabelSettings, setWeekLabelSettings] = useState<WeekLabelSettings>(
 		() => loadWeekLabelSettings(),
 	);
 	const hasHydratedWeekSettings = useRef(false);
 
-	// Loading state
-	const [isProcessing, setIsProcessing] = useState(false);
-
-	const [decliningEvent, setDecliningEvent] = useState<EventRequest | null>(
+	const [pendingAction, setPendingAction] = useState<PendingAction | null>(
 		null,
 	);
-	const [declineReason, setDeclineReason] = useState("");
-	const [declineError, setDeclineError] = useState("");
-	const [isDeclining, setIsDeclining] = useState(false);
+	const beginPendingAction = (action: PendingAction) => {
+		setPendingAction(action);
+		return () =>
+			setPendingAction((current) => (current === action ? null : current));
+	};
 
+	const [declineDialog, setDeclineDialog] =
+		useState<DeclineDialog>(declineDialogClosed);
+	const decliningEvent =
+		declineDialog.status === "closed" ? null : declineDialog.event;
+	const isDeclining = declineDialog.status === "submitting";
+	const declineError =
+		declineDialog.status === "open" ? (declineDialog.error ?? "") : "";
+
+	const immersive = isImmersiveSurface(surface);
 	useEffect(() => {
-		const immersive =
-			isWizardOpen ||
-			isDraftModalOpen ||
-			isViewModalOpen ||
-			isDraftViewModalOpen ||
-			isFileManagerOpen;
 		setHideTabBar(immersive);
 		return () => setHideTabBar(false);
-	}, [
-		isWizardOpen,
-		isDraftModalOpen,
-		isViewModalOpen,
-		isDraftViewModalOpen,
-		isFileManagerOpen,
-		setHideTabBar,
-	]);
+	}, [immersive, setHideTabBar]);
 
 	useEffect(() => {
 		if (!convexWeekLabelSettings || hasHydratedWeekSettings.current) return;
@@ -354,7 +360,7 @@ function ManageEventsPage() {
 	// Create event handler
 	const handleCreateRequest = async (data: EventFormData) => {
 		if (!logtoId) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("createRequest");
 		try {
 			await createEvent(EventRequestMapping.toCreateArgs(logtoId, data));
 			toast.success("Event request submitted successfully!");
@@ -385,13 +391,13 @@ function ManageEventsPage() {
 			);
 			throw error;
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
 	const handleSaveRequest = async (data: EventFormData) => {
 		if (!logtoId || !editingRequest) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("saveRequest");
 		try {
 			await updateEvent(
 				EventRequestMapping.toUpdateArgs(logtoId, editingRequest._id, data),
@@ -404,14 +410,14 @@ function ManageEventsPage() {
 			);
 			throw error;
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
 	// Update event handler
 	const handleUpdateRequest = async (data: EventFormData) => {
 		if (!logtoId || !editingRequest) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("updateRequest");
 		try {
 			const convertingDraft = editingRequest.status === "draft";
 			const eventId = editingRequest._id as any;
@@ -454,7 +460,7 @@ function ManageEventsPage() {
 			);
 			throw error;
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
@@ -470,29 +476,28 @@ function ManageEventsPage() {
 			}))
 		)
 			return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("delete");
 		try {
 			await removeEvent({
 				logtoId,
 				id: event._id as any,
 			});
 			toast.success("Event deleted successfully!");
-			setIsViewModalOpen(false);
-			setSelectedRequest(null);
+			dispatchSurface({ type: "eventDismissed", eventId: event._id });
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to delete event. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
 	// Convert to draft handler
 	const handleConvertToDraft = async (event: EventRequest) => {
 		if (!logtoId) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("convertToDraft");
 		try {
 			await updateEventStatus({
 				logtoId,
@@ -506,33 +511,30 @@ function ManageEventsPage() {
 					"Failed to convert to draft. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
 	// Decline handler
 	const handleDecline = (event: EventRequest) => {
 		if (!logtoId) return;
-		setDeclineReason("");
-		setDeclineError("");
-		setDecliningEvent(event);
+		setDeclineDialog((current) =>
+			transitionDeclineDialog(current, { type: "open", event }),
+		);
 	};
 
 	const closeDeclineDialog = () => {
-		if (isDeclining) return;
-		setDecliningEvent(null);
+		setDeclineDialog((current) =>
+			transitionDeclineDialog(current, { type: "close" }),
+		);
 	};
 
 	const submitDecline = async () => {
-		const event = decliningEvent;
-		if (!logtoId || !event) return;
-		const reason = declineReason;
-		if (!reason) {
-			setDeclineError("Enter a reason so the requester knows what to change.");
-			return;
-		}
-		setDeclineError("");
-		setIsDeclining(true);
+		if (!logtoId) return;
+		const next = transitionDeclineDialog(declineDialog, { type: "submit" });
+		setDeclineDialog(next);
+		if (next.status !== "submitting") return;
+		const { event, reason } = next;
 		try {
 			await updateEventStatus({
 				logtoId,
@@ -554,15 +556,18 @@ function ManageEventsPage() {
 				requestedUser: event.requestedUser,
 			});
 
-			setDecliningEvent(null);
-			setIsViewModalOpen(false);
+			setDeclineDialog((current) =>
+				transitionDeclineDialog(current, { type: "succeeded" }),
+			);
+			dispatchSurface({ type: "eventDismissed", eventId: event._id });
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to decline event. Check your connection and try again.",
 			);
-		} finally {
-			setIsDeclining(false);
+			setDeclineDialog((current) =>
+				transitionDeclineDialog(current, { type: "failed" }),
+			);
 		}
 	};
 
@@ -576,7 +581,7 @@ function ManageEventsPage() {
 			handleDecline(event);
 			return;
 		}
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("statusChange");
 		try {
 			const eventId = event._id as any;
 
@@ -605,16 +610,18 @@ function ManageEventsPage() {
 			});
 
 			// Update local state so the modal reflects the change
-			setSelectedRequest((prev) =>
-				prev && prev._id === event._id ? { ...prev, status: newStatus } : prev,
-			);
+			dispatchSurface({
+				type: "patchEvent",
+				eventId: event._id,
+				patch: { status: newStatus },
+			});
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to update status. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
@@ -624,7 +631,7 @@ function ManageEventsPage() {
 		shouldPublish: boolean,
 	) => {
 		if (!logtoId) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("togglePublish");
 		try {
 			await updateEventStatus({
 				logtoId,
@@ -632,18 +639,18 @@ function ManageEventsPage() {
 				status: shouldPublish ? "completed" : "approved",
 			});
 			toast.success(shouldPublish ? "Event published!" : "Event unpublished");
-			setSelectedRequest((prev) =>
-				prev && prev._id === event._id
-					? { ...prev, status: shouldPublish ? "published" : "approved" }
-					: prev,
-			);
+			dispatchSurface({
+				type: "patchEvent",
+				eventId: event._id,
+				patch: { status: shouldPublish ? "published" : "approved" },
+			});
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to toggle publish. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
@@ -652,7 +659,7 @@ function ManageEventsPage() {
 		updates: { flyersCompleted: boolean; graphicsUploadNote?: string },
 	) => {
 		if (!logtoId) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("updateGraphics");
 		try {
 			await updateEvent({
 				logtoId,
@@ -660,9 +667,11 @@ function ManageEventsPage() {
 				flyersCompleted: updates.flyersCompleted,
 				graphicsUploadNote: updates.graphicsUploadNote,
 			});
-			setSelectedRequest((prev) =>
-				prev && prev._id === event._id ? { ...prev, ...updates } : prev,
-			);
+			dispatchSurface({
+				type: "patchEvent",
+				eventId: event._id,
+				patch: updates,
+			});
 			toast.success("Graphics status updated");
 		} catch (error: any) {
 			toast.error(
@@ -670,61 +679,40 @@ function ManageEventsPage() {
 					"Failed to update graphics status. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
 	// Create draft handler
 	const handleCreateDraft = async (data: Partial<EventRequest>) => {
 		if (!logtoId) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("createDraft");
 		try {
 			await createEvent(EventRequestMapping.toDraftCreateArgs(logtoId, data));
 			toast.success("Draft event created!");
-			setIsDraftModalOpen(false);
+			dispatchSurface({ type: "close", kind: "draftCreate" });
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to create draft. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
-	// Calendar date click handler
-	const handleCalendarDateClick = (date: Date) => {
-		setEditingDraft(null);
-		setDraftDate(date);
-		setIsDraftModalOpen(true);
+	const viewEvent = (event: EventRequest) => {
+		dispatchSurface({ type: "view", event });
 	};
 
-	// Event click handler for calendar
-	const handleCalendarEventClick = (event: EventRequest) => {
-		setSelectedRequest(event);
-		if (event.status === "draft") {
-			setIsDraftViewModalOpen(true);
-		} else {
-			setIsViewModalOpen(true);
-		}
-	};
-
-	// Edit handler from view modal
-	const handleEditFromView = (event: EventRequest) => {
-		setIsViewModalOpen(false);
-		if (event.status === "draft") {
-			setEditingDraft(event);
-			setIsDraftModalOpen(true);
-		} else {
-			setEditingRequest(event);
-			setIsWizardOpen(true);
-		}
+	const editEvent = (event: EventRequest) => {
+		dispatchSurface({ type: "edit", event });
 	};
 
 	// Update draft handler
 	const handleUpdateDraft = async (data: Partial<EventRequest>) => {
 		if (!logtoId || !editingDraft) return;
-		setIsProcessing(true);
+		const endPendingAction = beginPendingAction("updateDraft");
 		try {
 			const eventId = editingDraft._id as any;
 			await updateEvent(
@@ -736,15 +724,14 @@ function ManageEventsPage() {
 				),
 			);
 			toast.success("Draft updated successfully!");
-			setIsDraftModalOpen(false);
-			setEditingDraft(null);
+			dispatchSurface({ type: "close", kind: "draftEdit" });
 		} catch (error: any) {
 			toast.error(
 				error.message ||
 					"Failed to update draft. Check your connection and try again.",
 			);
 		} finally {
-			setIsProcessing(false);
+			endPendingAction();
 		}
 	};
 
@@ -805,7 +792,9 @@ function ManageEventsPage() {
 				actions={
 					<>
 						{isMobile ? (
-							<Button onClick={() => setIsCreateSheetOpen(true)}>
+							<Button
+								onClick={() => dispatchSurface({ type: "openCreateSheet" })}
+							>
 								<Plus className="h-4 w-4 mr-2" />
 								Create Event
 							</Button>
@@ -813,15 +802,14 @@ function ManageEventsPage() {
 							<>
 								<Button
 									variant="outline"
-									onClick={() => {
-										setDraftDate(null);
-										setIsDraftModalOpen(true);
-									}}
+									onClick={() =>
+										dispatchSurface({ type: "newDraft", date: null })
+									}
 								>
 									<FilePlus className="h-4 w-4 mr-2" />
 									Quick Draft
 								</Button>
-								<Button onClick={() => setIsWizardOpen(true)}>
+								<Button onClick={() => dispatchSurface({ type: "newRequest" })}>
 									<Plus className="h-4 w-4 mr-2" />
 									New Event Request
 								</Button>
@@ -834,14 +822,22 @@ function ManageEventsPage() {
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem onSelect={() => setIsWeekSettingsOpen(true)}>
+								<DropdownMenuItem
+									onSelect={() => dispatchSurface({ type: "openWeekSettings" })}
+								>
 									Week Label Settings
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
 						<ResponsiveOverlay
-							open={isWeekSettingsOpen}
-							onOpenChange={setIsWeekSettingsOpen}
+							open={surface.kind === "weekSettings"}
+							onOpenChange={(open) =>
+								dispatchSurface(
+									open
+										? { type: "openWeekSettings" }
+										: { type: "close", kind: "weekSettings" },
+								)
+							}
 							title="Week Label Settings"
 							description="Set quarter starts once. Labels apply to both Manage Events and Officer Calendar."
 							variant="large-sheet"
@@ -849,7 +845,9 @@ function ManageEventsPage() {
 							footer={
 								<Button
 									className="h-11 w-full sm:h-9 sm:w-auto"
-									onClick={() => setIsWeekSettingsOpen(false)}
+									onClick={() =>
+										dispatchSurface({ type: "close", kind: "weekSettings" })
+									}
 								>
 									Done
 								</Button>
@@ -925,8 +923,14 @@ function ManageEventsPage() {
 
 			{/* Mobile create action sheet */}
 			<ResponsiveOverlay
-				open={isCreateSheetOpen}
-				onOpenChange={setIsCreateSheetOpen}
+				open={surface.kind === "createSheet"}
+				onOpenChange={(open) =>
+					dispatchSurface(
+						open
+							? { type: "openCreateSheet" }
+							: { type: "close", kind: "createSheet" },
+					)
+				}
 				title="Create Event"
 				variant="sheet"
 			>
@@ -934,10 +938,7 @@ function ManageEventsPage() {
 					<Button
 						variant="outline"
 						className="h-12 w-full justify-start gap-3"
-						onClick={() => {
-							setIsCreateSheetOpen(false);
-							setIsWizardOpen(true);
-						}}
+						onClick={() => dispatchSurface({ type: "newRequest" })}
 					>
 						<Plus className="size-4" />
 						New Event Request
@@ -945,11 +946,7 @@ function ManageEventsPage() {
 					<Button
 						variant="outline"
 						className="h-12 w-full justify-start gap-3"
-						onClick={() => {
-							setIsCreateSheetOpen(false);
-							setDraftDate(null);
-							setIsDraftModalOpen(true);
-						}}
+						onClick={() => dispatchSurface({ type: "newDraft", date: null })}
 					>
 						<FilePlus className="size-4" />
 						Quick Draft
@@ -1007,23 +1004,8 @@ function ManageEventsPage() {
 						events={paginatedEvents}
 						sortConfig={sortConfig}
 						onSort={handleSort}
-						onView={(event) => {
-							setSelectedRequest(event);
-							if (event.status === "draft") {
-								setIsDraftViewModalOpen(true);
-							} else {
-								setIsViewModalOpen(true);
-							}
-						}}
-						onEdit={(event) => {
-							if (event.status === "draft") {
-								setEditingDraft(event);
-								setIsDraftModalOpen(true);
-							} else {
-								setEditingRequest(event);
-								setIsWizardOpen(true);
-							}
-						}}
+						onView={viewEvent}
+						onEdit={editEvent}
 						onDelete={handleDelete}
 						onConvertToDraft={handleConvertToDraft}
 						pagination={{
@@ -1037,47 +1019,34 @@ function ManageEventsPage() {
 					<VcoPipelineView
 						events={allEvents}
 						weekLabelSettings={weekLabelSettings}
-						onView={(event) => {
-							setSelectedRequest(event);
-							if (event.status === "draft") {
-								setIsDraftViewModalOpen(true);
-							} else {
-								setIsViewModalOpen(true);
-							}
-						}}
+						onView={viewEvent}
 						onPipelineChange={handleVcoPipelineChange}
 					/>
 				) : (
 					<EventCalendar
 						events={sortedEvents}
-						onDateClick={handleCalendarDateClick}
-						onEventClick={handleCalendarEventClick}
+						onDateClick={(date) => dispatchSurface({ type: "newDraft", date })}
+						onEventClick={viewEvent}
 						getDayLabel={(date) => getWeekLabelForDate(date, weekLabelSettings)}
 					/>
 				))}
 
 			{/* Event Request Wizard Modal */}
 			<EventRequestWizardModal
-				isOpen={isWizardOpen}
-				onClose={() => {
-					setIsWizardOpen(false);
-					setEditingRequest(null);
-				}}
+				isOpen={surface.kind === "wizard"}
+				onClose={() => dispatchSurface({ type: "close", kind: "wizard" })}
 				onSubmit={editingRequest ? handleUpdateRequest : handleCreateRequest}
 				onSave={editingRequest ? handleSaveRequest : undefined}
-				initialData={editingRequest || undefined}
+				initialData={wizardInitialData}
 				aiEnabled={aiEnabled}
 			/>
 
 			{/* Event View Modal */}
 			<EventViewModal
-				isOpen={isViewModalOpen}
-				onClose={() => {
-					setIsViewModalOpen(false);
-					setSelectedRequest(null);
-				}}
-				event={selectedRequest}
-				onEdit={handleEditFromView}
+				isOpen={surface.kind === "view"}
+				onClose={() => dispatchSurface({ type: "close", kind: "view" })}
+				event={surface.kind === "view" ? surface.request : null}
+				onEdit={editEvent}
 				onDelete={handleDelete}
 				onDecline={hasAdminAccess ? handleDecline : undefined}
 				onStatusChange={hasAdminAccess ? handleStatusChange : undefined}
@@ -1088,74 +1057,52 @@ function ManageEventsPage() {
 
 			{/* Draft View Modal */}
 			<DraftViewModal
-				isOpen={isDraftViewModalOpen}
-				onClose={() => {
-					setIsDraftViewModalOpen(false);
-					setSelectedRequest(null);
-				}}
-				event={selectedRequest}
-				onEdit={(event) => {
-					setIsDraftViewModalOpen(false);
-					setEditingDraft(event);
-					setIsDraftModalOpen(true);
-				}}
+				isOpen={surface.kind === "draftView"}
+				onClose={() => dispatchSurface({ type: "close", kind: "draftView" })}
+				event={surface.kind === "draftView" ? surface.draft : null}
+				onEdit={editEvent}
 				onDelete={handleDelete}
 				onConvertToRequest={(event) => {
-					setIsDraftViewModalOpen(false);
-					setSelectedRequest(null);
-					setEditingRequest({
-						...event,
-						status: "draft",
-					} as EventRequest);
-					setIsWizardOpen(true);
+					dispatchSurface({
+						type: "convertToRequest",
+						request: {
+							...event,
+							status: "draft",
+						} as EventRequest,
+					});
 				}}
 			/>
 
 			{/* Draft Event Modal */}
 			<DraftEventModal
-				isOpen={isDraftModalOpen}
-				onClose={() => {
-					setIsDraftModalOpen(false);
-					setEditingDraft(null);
-					setDraftDate(null);
-				}}
-				onSubmit={editingDraft ? handleUpdateDraft : handleCreateDraft}
-				initialData={
-					editingDraft ||
-					(draftDate
-						? {
-								startDate: draftDate.getTime(),
-								endDate: draftDate.getTime() + 3600000,
-							}
-						: undefined)
+				isOpen={surface.kind === "draftCreate" || surface.kind === "draftEdit"}
+				onClose={() =>
+					dispatchSurface({
+						type: "close",
+						kind: editingDraft ? "draftEdit" : "draftCreate",
+					})
 				}
+				onSubmit={editingDraft ? handleUpdateDraft : handleCreateDraft}
+				initialData={draftInitialData}
 				onConvertToRequest={(data) => {
-					setIsDraftModalOpen(false);
-					setEditingDraft(null);
-					setDraftDate(null);
-					// Open wizard with draft data prefilled
-					setEditingRequest({
-						...data,
-						_id: editingDraft?._id,
-						_creationTime: editingDraft?._creationTime || Date.now(),
-						status: "draft",
-						createdBy: editingDraft?.createdBy || "Unknown",
-					} as EventRequest);
-					setIsWizardOpen(true);
+					if (!editingDraft) {
+						dispatchSurface({
+							type: "newRequest",
+							prefill: { ...data, status: "draft" },
+						});
+						return;
+					}
+					dispatchSurface({
+						type: "convertToRequest",
+						request: {
+							...editingDraft,
+							...data,
+							_id: editingDraft._id,
+							status: "draft",
+						},
+					});
 				}}
 			/>
-
-			{/* File Manager Modal */}
-			{selectedRequest && (
-				<FileManagerModal
-					isOpen={isFileManagerOpen}
-					onClose={() => setIsFileManagerOpen(false)}
-					eventId={selectedRequest._id}
-					files={[]}
-					onUpload={() => {}}
-					onDelete={() => {}}
-				/>
-			)}
 
 			<Dialog
 				open={!!decliningEvent}
@@ -1188,10 +1135,17 @@ function ManageEventsPage() {
 								name="declineReason"
 								autoComplete="off"
 								rows={4}
-								value={declineReason}
+								value={
+									declineDialog.status === "closed" ? "" : declineDialog.reason
+								}
 								onChange={(e) => {
-									setDeclineReason(e.target.value);
-									if (declineError) setDeclineError("");
+									const reason = e.target.value;
+									setDeclineDialog((current) =>
+										transitionDeclineDialog(current, {
+											type: "editReason",
+											reason,
+										}),
+									);
 								}}
 								placeholder="Explain why this event is being declined…"
 								aria-invalid={!!declineError}
@@ -1233,7 +1187,7 @@ function ManageEventsPage() {
 			</Dialog>
 
 			{/* Processing Overlay */}
-			{isProcessing && (
+			{pendingAction && (
 				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 					<output
 						aria-live="polite"

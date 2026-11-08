@@ -7,6 +7,7 @@ import {
 } from "./constitutionAudit";
 import { requireAdminAccess, requireOfficerAccess } from "./permissions";
 import { constitutionsToArchive } from "./constitutionPublication";
+import { transitionConstitutionStatus } from "./constitutionTransition";
 import type { MutationCtx } from "./_generated/server";
 
 async function archiveOtherPublished(
@@ -18,7 +19,7 @@ async function archiveOtherPublished(
     .withIndex("by_status", (q) => q.eq("status", "published"))
     .collect();
   for (const row of constitutionsToArchive(published, publishingId)) {
-    await ctx.db.patch(row._id, { status: "archived" });
+    await ctx.db.patch(row._id, { status: row.status });
   }
 }
 
@@ -136,7 +137,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const user = await requireAdminAccess(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
-    const { id, logtoId, authToken, ...updates } = args;
+    const { id, logtoId, authToken, status, ...updates } = args;
     const cleanUpdates: Record<string, unknown> = {
       lastModifiedBy: userId,
     };
@@ -145,8 +146,19 @@ export const update = mutation({
         cleanUpdates[key] = value;
       }
     }
-    if (cleanUpdates.status === "published") {
-      await archiveOtherPublished(ctx, id);
+    if (status !== undefined) {
+      const constitution = await ctx.db.get(id);
+      if (!constitution) {
+        throw new Error("Constitution not found");
+      }
+      const transition = transitionConstitutionStatus(constitution.status, {
+        kind: "update",
+        to: status,
+      });
+      cleanUpdates.status = transition.status;
+      if (transition.archiveOtherPublished) {
+        await archiveOtherPublished(ctx, id);
+      }
     }
     await ctx.db.patch(id, cleanUpdates);
     return id;
@@ -778,7 +790,6 @@ export const restoreVersion = mutation({
     if (targetVersion.constitutionId !== args.constitutionId) {
       throw new Error("Version does not belong to this constitution");
     }
-
     const backupSnapshot = await createVersionSnapshotInternal(ctx, {
       constitutionId: args.constitutionId,
       source: "auto_backup",
@@ -797,15 +808,11 @@ export const restoreVersion = mutation({
     await ctx.db.patch(args.constitutionId, {
       title: targetVersion.snapshotTitle,
       organizationName: targetVersion.snapshotOrganizationName,
-      status: targetVersion.snapshotStatus,
       sections: targetVersion.snapshotSections,
       version: targetVersion.versionNumber,
       lastModifiedBy: userId,
       lastModified: Date.now(),
     });
-    if (targetVersion.snapshotStatus === "published") {
-      await archiveOtherPublished(ctx, args.constitutionId);
-    }
 
     await createAuditEntryInternal(ctx, {
       constitutionId: args.constitutionId,

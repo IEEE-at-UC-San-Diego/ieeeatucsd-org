@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -397,5 +397,28 @@ export const resend = mutation({
       lastSentAt: now,
     });
     return args.id;
+  },
+});
+
+export const expireOverdue = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const pending = await ctx.db
+      .query("officerInvitations")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    let expired = 0;
+    for (const invitation of pending) {
+      const result = transitionOfficerInvitation(
+        invitationState(invitation),
+        { type: "expire" },
+        now,
+      );
+      if (!result.ok || !result.stamp) continue;
+      await ctx.db.patch(invitation._id, stampPatch(result.stamp));
+      expired += 1;
+    }
+    return { expired };
   },
 });
