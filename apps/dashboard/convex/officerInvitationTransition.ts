@@ -127,6 +127,9 @@ export function transitionOfficerInvitation(
       if (state.status !== "pending") {
         return fail(`Invitation has already been ${state.status}`);
       }
+      if (!clockExpired(state, now)) {
+        return fail("Invitation has not reached its expiry time");
+      }
       return { ok: true, stamp: expiredStamp(state) };
     }
     case "resend": {
