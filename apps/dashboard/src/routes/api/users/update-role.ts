@@ -182,6 +182,16 @@ export async function handle({ request }: { request: Request }) {
 			}
 		}
 
+		if (!convexUpdated && source === "manage-users") {
+			return new Response(
+				JSON.stringify({
+					error: "No matching Convex user found to update",
+					warnings,
+				}),
+				{ status: 404, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
 		if (targetUser) {
 			resolvedEmail = resolvedEmail || targetUser.email;
 			resolvedLogtoUserId = targetUser.logtoId || null;
@@ -227,16 +237,6 @@ export async function handle({ request }: { request: Request }) {
 			googleGroupUpdated = googleGroupResult.googleGroupUpdated;
 			googleGroup = googleGroupResult.googleGroup;
 			warnings.push(...googleGroupResult.warnings);
-		}
-
-		if (!convexUpdated && source === "manage-users") {
-			return new Response(
-				JSON.stringify({
-					error: "No matching Convex user found to update",
-					warnings,
-				}),
-				{ status: 404, headers: { "Content-Type": "application/json" } },
-			);
 		}
 
 		return new Response(
