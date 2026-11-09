@@ -52,6 +52,8 @@ import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -1403,6 +1405,10 @@ function ReceiptsStep({
 		{},
 	);
 	const receiptOperationTokenRef = useRef(0);
+	const receiptUploadLock = useRef(false);
+	const [receiptPickerMessage, setReceiptPickerMessage] = useState<
+		string | null
+	>(null);
 	const [mileageResult, setMileageResult] =
 		useState<MileageCalculationResult | null>(null);
 	const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
@@ -1937,6 +1943,27 @@ function ReceiptsStep({
 	);
 	const isActiveUploading = activeOperation.status === "uploading";
 	const isActiveParsing = activeOperation.status === "parsing";
+	const receiptPending = isActiveUploading || isActiveParsing;
+	const onReceiptFile = (list: FileList | null, accept: string) => {
+		if (receiptUploadLock.current || receiptPending) return;
+		const decision = filesForPicker(list, {
+			accept,
+			multiple: false,
+			maxBytes: 10 * 1024 * 1024,
+			sizeMessage: "File too large. Choose a file under 10\u00a0MB.",
+		});
+		if (decision.message || decision.files.length !== 1) {
+			setReceiptPickerMessage(decision.message);
+			return;
+		}
+		const file = decision.files[0];
+		if (!file) return;
+		setReceiptPickerMessage(null);
+		receiptUploadLock.current = true;
+		void handleFileUpload(activeReceipt.id, file).finally(() => {
+			receiptUploadLock.current = false;
+		});
+	};
 	const activeOperationOutcome =
 		activeOperation.status === "parsed" || activeOperation.status === "failed"
 			? activeOperation
@@ -2381,46 +2408,23 @@ function ReceiptsStep({
 										</a>
 									</div>
 									<div className="flex items-center gap-2">
-										<label>
-											<Input
-												type="file"
-												name="receiptFile"
-												aria-label="Replace Receipt File"
-												className="hidden"
-												accept={RECEIPT_FILE_ACCEPT}
-												onChange={(e) => {
-													const file = e.target.files?.[0];
-													if (file)
-														void handleFileUpload(activeReceipt.id, file);
-													e.target.value = "";
-												}}
-											/>
-											<Button
-												variant="outline"
-												size="sm"
-												asChild
-												disabled={isActiveUploading || isActiveParsing}
-											>
-												<span>
-													{activeReceipt.receiptFile
-														? "Replace Receipt"
-														: "Upload Receipt"}
-												</span>
-											</Button>
-										</label>
-										{isMobile && (
+										<FileDropTarget
+											disabled={receiptPending}
+											onFiles={(files) =>
+												onReceiptFile(files, RECEIPT_FILE_ACCEPT)
+											}
+											className="rounded-md"
+										>
 											<label>
-												<Input
+												<input
 													type="file"
-													name="receiptPhoto"
-													aria-label="Take Receipt Photo"
-													className="hidden"
-													accept="image/*"
-													capture="environment"
+													name="receiptFile"
+													aria-label="Replace Receipt File"
+													className="sr-only"
+													accept={RECEIPT_FILE_ACCEPT}
+													disabled={receiptPending}
 													onChange={(e) => {
-														const file = e.target.files?.[0];
-														if (file)
-															void handleFileUpload(activeReceipt.id, file);
+														onReceiptFile(e.target.files, RECEIPT_FILE_ACCEPT);
 														e.target.value = "";
 													}}
 												/>
@@ -2428,7 +2432,36 @@ function ReceiptsStep({
 													variant="outline"
 													size="sm"
 													asChild
-													disabled={isActiveUploading || isActiveParsing}
+													disabled={receiptPending}
+												>
+													<span>
+														{activeReceipt.receiptFile
+															? "Replace Receipt"
+															: "Upload Receipt"}
+													</span>
+												</Button>
+											</label>
+										</FileDropTarget>
+										{isMobile && (
+											<label>
+												<input
+													type="file"
+													name="receiptPhoto"
+													aria-label="Take Receipt Photo"
+													className="sr-only"
+													accept="image/*"
+													capture="environment"
+													disabled={receiptPending}
+													onChange={(e) => {
+														onReceiptFile(e.target.files, "image/*");
+														e.target.value = "";
+													}}
+												/>
+												<Button
+													variant="outline"
+													size="sm"
+													asChild
+													disabled={receiptPending}
 												>
 													<span>
 														<Camera className="h-3.5 w-3.5 mr-1.5" />
@@ -2465,6 +2498,14 @@ function ReceiptsStep({
 									>
 										<Loader2 className="h-3.5 w-3.5 animate-spin" />
 										Uploading receipt…
+									</output>
+								)}
+								{receiptPickerMessage && (
+									<output
+										aria-live="polite"
+										className="block text-xs text-tone-warning"
+									>
+										{receiptPickerMessage}
 									</output>
 								)}
 
@@ -2830,64 +2871,82 @@ function ReceiptsStep({
 						</div>
 					) : (
 						<div className="h-full flex items-center justify-center p-8">
-							<div className="w-full max-w-md rounded-md border-2 border-dashed bg-muted/20 p-8 text-center">
-								<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-									<Upload className="h-6 w-6 text-primary" />
-								</div>
-								<h3 className="text-base font-semibold text-balance">
-									Upload Receipt Before Entering Details
-								</h3>
-								<p className="mt-2 text-sm text-muted-foreground">
-									Fields will appear after upload. Supports PDF, PNG, JPG, JPEG,
-									WEBP, HEIC.
-								</p>
-								<div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-									<label className="w-full sm:w-auto">
-										<Input
-											type="file"
-											name="receiptFile"
-											aria-label="Select Receipt File"
-											className="hidden"
-											accept={RECEIPT_FILE_ACCEPT}
-											onChange={(e) => {
-												const file = e.target.files?.[0];
-												if (file) void handleFileUpload(activeReceipt.id, file);
-												e.target.value = "";
-											}}
-										/>
-										<Button asChild className="w-full sm:w-auto">
-											<span>Select File</span>
-										</Button>
-									</label>
-									{isMobile && (
+							<div className="w-full max-w-md text-center">
+								<FileDropTarget
+									disabled={receiptPending}
+									onFiles={(files) => onReceiptFile(files, RECEIPT_FILE_ACCEPT)}
+									className="rounded-md border-2 border-dashed bg-muted/20 p-8"
+								>
+									<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+										<Upload className="h-6 w-6 text-primary" />
+									</div>
+									<h3 className="text-base font-semibold text-balance">
+										Upload Receipt Before Entering Details
+									</h3>
+									<p className="mt-2 text-sm text-muted-foreground">
+										Fields will appear after upload. Supports PDF, PNG, JPG,
+										JPEG, WEBP, HEIC.
+									</p>
+									<div className="mt-4 flex flex-col items-center justify-center gap-2">
 										<label className="w-full sm:w-auto">
-											<Input
+											<input
 												type="file"
-												name="receiptPhoto"
-												aria-label="Take Receipt Photo"
-												className="hidden"
-												accept="image/*"
-												capture="environment"
+												name="receiptFile"
+												aria-label="Select Receipt File"
+												className="sr-only"
+												accept={RECEIPT_FILE_ACCEPT}
+												disabled={receiptPending}
 												onChange={(e) => {
-													const file = e.target.files?.[0];
-													if (file)
-														void handleFileUpload(activeReceipt.id, file);
+													onReceiptFile(e.target.files, RECEIPT_FILE_ACCEPT);
 													e.target.value = "";
 												}}
 											/>
 											<Button
-												variant="outline"
 												asChild
 												className="w-full sm:w-auto"
+												disabled={receiptPending}
 											>
-												<span>
-													<Camera className="h-4 w-4 mr-2" />
-													Take Photo
-												</span>
+												<span>Select File</span>
 											</Button>
 										</label>
-									)}
-								</div>
+									</div>
+								</FileDropTarget>
+								{isMobile && (
+									<label className="mt-2 inline-flex w-full sm:w-auto">
+										<input
+											type="file"
+											name="receiptPhoto"
+											aria-label="Take Receipt Photo"
+											className="sr-only"
+											accept="image/*"
+											capture="environment"
+											disabled={receiptPending}
+											onChange={(e) => {
+												onReceiptFile(e.target.files, "image/*");
+												e.target.value = "";
+											}}
+										/>
+										<Button
+											variant="outline"
+											asChild
+											className="w-full sm:w-auto"
+											disabled={receiptPending}
+										>
+											<span>
+												<Camera className="h-4 w-4 mr-2" />
+												Take Photo
+											</span>
+										</Button>
+									</label>
+								)}
+								{receiptPickerMessage && (
+									<output
+										aria-live="polite"
+										className="mt-4 block text-xs text-tone-warning"
+									>
+										{receiptPickerMessage}
+									</output>
+								)}
 								{(isActiveUploading || isActiveParsing) && (
 									<output
 										aria-live="polite"

@@ -46,6 +46,8 @@ import {
 import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
@@ -292,6 +294,9 @@ function ManageReimbursementsPage() {
 	const [paidModal, dispatchPaidModal] = useReducer(
 		paidModalReducer,
 		initialPaidModalState,
+	);
+	const [proofPickerMessage, setProofPickerMessage] = useState<string | null>(
+		null,
 	);
 	const extractionAttemptRef = useRef(0);
 	const extractionAbortRef = useRef<AbortController | null>(null);
@@ -881,6 +886,21 @@ function ManageReimbursementsPage() {
 			paidModalView?.status === "extracting"
 				? paidModalView.file
 				: null;
+		const onProofFiles = (list: FileList | null) => {
+			if (isPaidModalBusy) return;
+			const decision = filesForPicker(list, {
+				accept: "image/*,application/pdf",
+				multiple: false,
+			});
+			if (decision.message || decision.files.length !== 1) {
+				setProofPickerMessage(decision.message);
+				return;
+			}
+			const file = decision.files[0];
+			if (!file) return;
+			setProofPickerMessage(null);
+			dispatchPaidModal({ type: "proofSelected", file });
+		};
 
 		return (
 			<div className="flex flex-col h-full bg-muted/50 absolute inset-0 z-10 overflow-hidden">
@@ -1711,26 +1731,27 @@ function ManageReimbursementsPage() {
 						</div>
 					) : (
 						<div className="py-2">
-							<div
-								className={`border-2 border-dashed rounded-md p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
+							<FileDropTarget
+								disabled={isPaidModalBusy}
+								onFiles={onProofFiles}
+								className={`border-2 border-dashed rounded-md p-8 text-center ${
 									proofFile
 										? "border-ds-blue-700 bg-ds-blue-100"
 										: "border-border active:border-ds-gray-500 sm:hover:border-ds-gray-500 bg-muted"
 								}`}
 							>
-								<Input
+								<input
 									type="file"
 									id={`${formId}-payment-proof-upload`}
 									name="paymentProof"
+									aria-label="Upload proof of payment"
 									accept="image/*,application/pdf"
-									onChange={(e) =>
-										dispatchPaidModal({
-											type: "proofSelected",
-											file: e.target.files?.[0] ?? null,
-										})
-									}
+									onChange={(e) => {
+										onProofFiles(e.target.files);
+										e.target.value = "";
+									}}
 									disabled={isPaidModalBusy}
-									className="hidden"
+									className="sr-only"
 								/>
 
 								<label
@@ -1759,7 +1780,7 @@ function ManageReimbursementsPage() {
 													Upload Proof of Payment
 												</p>
 												<p className="text-sm text-muted-foreground">
-													Click to browse or paste screenshot (Ctrl+V)
+													Click to browse, drop a file, or paste a screenshot
 												</p>
 											</div>
 											<Badge variant="secondary" className="mt-4">
@@ -1772,15 +1793,24 @@ function ManageReimbursementsPage() {
 									<Button
 										className="mt-3 h-11 sm:h-9"
 										variant="outline"
-										onClick={() =>
-											dispatchPaidModal({ type: "proofSelected", file: null })
-										}
+										onClick={() => {
+											setProofPickerMessage(null);
+											dispatchPaidModal({ type: "proofSelected", file: null });
+										}}
 										disabled={isPaidModalBusy}
 									>
 										Remove File
 									</Button>
 								)}
-							</div>
+								{proofPickerMessage && (
+									<output
+										aria-live="polite"
+										className="mt-3 block text-sm text-tone-warning"
+									>
+										{proofPickerMessage}
+									</output>
+								)}
+							</FileDropTarget>
 
 							{/* Info about AI */}
 							<div className="mt-6 flex gap-3 p-3 bg-muted/50 rounded-lg border items-start">

@@ -17,13 +17,15 @@ import { useId, useState } from "react";
 import { MobileTaskStepper } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { LEGAL_VERSIONS } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useWizard } from "@/hooks/useWizard";
-import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
+import { MAX_RESUME_BYTES, uploadResumeToStorage } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/get-started")({
 	component: GetStartedPage,
@@ -305,34 +307,52 @@ function GetStartedPage() {
 						enterKeyHint="next"
 					/>
 				);
-			case "file":
+			case "file": {
+				const resumeAccept = question.accept ?? ".pdf,application/pdf";
+				const onResumePick = (list: FileList | null) => {
+					if (isSubmitting) return;
+					if (!list || list.length === 0) return;
+					const decision = filesForPicker(list, {
+						accept: resumeAccept,
+						multiple: false,
+						maxBytes: MAX_RESUME_BYTES,
+						typeMessage: "Resume must be a PDF file",
+						sizeMessage: "Resume must be 5MB or smaller",
+					});
+					if (decision.message || decision.files.length !== 1) {
+						handleInputChange(null);
+						setValidationError(decision.message);
+						return;
+					}
+					setValidationError(null);
+					handleInputChange(decision.files[0] ?? null);
+				};
 				return (
 					<div className="space-y-4">
-						<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
-							<Upload className="size-8 text-muted-foreground" />
-							<span className="text-sm font-medium">Tap to choose PDF</span>
-							<span className="text-xs text-muted-foreground">
-								Maximum 5&nbsp;MB
-							</span>
-							<input
-								{...fieldProps}
-								type="file"
-								accept={question.accept}
-								className="sr-only"
-								onChange={(e) => {
-									const file = e.target.files?.[0] || null;
-									if (file) {
-										const fileError = validateResumeFile(file);
-										if (fileError) {
-											setValidationError(fileError);
-											e.target.value = "";
-											return;
-										}
-									}
-									handleInputChange(file);
-								}}
-							/>
-						</label>
+						<FileDropTarget
+							disabled={isSubmitting}
+							onFiles={onResumePick}
+							className="rounded-md"
+						>
+							<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
+								<Upload className="size-8 text-muted-foreground" />
+								<span className="text-sm font-medium">Tap to choose PDF</span>
+								<span className="text-xs text-muted-foreground">
+									Maximum 5&nbsp;MB. Or drop a PDF here.
+								</span>
+								<input
+									{...fieldProps}
+									type="file"
+									accept={resumeAccept}
+									disabled={isSubmitting}
+									className="sr-only"
+									onChange={(e) => {
+										onResumePick(e.target.files);
+										e.target.value = "";
+									}}
+								/>
+							</label>
+						</FileDropTarget>
 						{value instanceof File && (
 							<output className="flex min-w-0 items-center gap-2 font-medium text-tone-success">
 								<CheckCircle className="w-4 h-4 shrink-0" />
@@ -346,6 +366,7 @@ function GetStartedPage() {
 						</p>
 					</div>
 				);
+			}
 			case "legal-acceptance": {
 				const legal = (value as { tos?: boolean; privacy?: boolean }) || {};
 				const tosAccepted = legal.tos || false;
