@@ -9,7 +9,10 @@ import {
 import { useId, useRef, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
-import { FileDropTarget } from "@/components/ui/file-drop-target";
+import {
+	FileDropTarget,
+	pasteShortcutHint,
+} from "@/components/ui/file-drop-target";
 import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -268,54 +271,62 @@ export function FundingSection({
 				<div className="space-y-4 pt-4 border-t">
 					<div className="flex items-center justify-between">
 						<h3 className="text-sm font-medium text-foreground">Invoices</h3>
-						<div className="flex gap-2">
-							<FileDropTarget
-								disabled={isUploading}
-								onFiles={onInvoiceFiles}
-								className="rounded-md"
-							>
+						<div className="flex flex-col items-end gap-1">
+							<div className="flex gap-2">
+								<FileDropTarget
+									disabled={isUploading}
+									acceptPaste
+									onFiles={onInvoiceFiles}
+									className="rounded-md"
+								>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										disabled={isUploading}
+										onClick={() => fileInputRef.current?.click()}
+									>
+										{isUploading ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												{aiEnabled ? "Scanning…" : "Uploading…"}
+											</>
+										) : (
+											<>
+												<Upload className="h-4 w-4 mr-2" />
+												Upload Invoice
+											</>
+										)}
+									</Button>
+									<input
+										ref={fileInputRef}
+										type="file"
+										name="invoiceFile"
+										aria-label="Upload invoice file"
+										accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+										disabled={isUploading}
+										className="sr-only"
+										onChange={(e) => {
+											onInvoiceFiles(e.target.files);
+											e.target.value = "";
+										}}
+									/>
+								</FileDropTarget>
 								<Button
 									type="button"
-									variant="outline"
+									variant="ghost"
 									size="sm"
-									disabled={isUploading}
-									onClick={() => fileInputRef.current?.click()}
+									onClick={addInvoiceManual}
 								>
-									{isUploading ? (
-										<>
-											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-											{aiEnabled ? "Scanning…" : "Uploading…"}
-										</>
-									) : (
-										<>
-											<Upload className="h-4 w-4 mr-2" />
-											Upload Invoice
-										</>
-									)}
+									<Plus className="h-4 w-4 mr-2" />
+									Manual Entry
 								</Button>
-								<input
-									ref={fileInputRef}
-									type="file"
-									name="invoiceFile"
-									aria-label="Upload invoice file"
-									accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
-									disabled={isUploading}
-									className="sr-only"
-									onChange={(e) => {
-										onInvoiceFiles(e.target.files);
-										e.target.value = "";
-									}}
-								/>
-							</FileDropTarget>
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								onClick={addInvoiceManual}
-							>
-								<Plus className="h-4 w-4 mr-2" />
-								Manual Entry
-							</Button>
+							</div>
+							{data.invoices.length > 0 ? (
+								<p className="text-xs text-muted-foreground">
+									{pasteShortcutHint}
+								</p>
+							) : null}
 						</div>
 					</div>
 
@@ -332,6 +343,7 @@ export function FundingSection({
 					{data.invoices.length === 0 ? (
 						<FileDropTarget
 							disabled={isUploading}
+							acceptPaste
 							onFiles={onInvoiceFiles}
 							className="rounded-lg"
 						>
@@ -352,6 +364,9 @@ export function FundingSection({
 								</span>
 								<span className="block text-xs text-muted-foreground mt-0.5">
 									PDF, JPG, PNG supported. Or drop a file here.
+								</span>
+								<span className="block text-xs text-muted-foreground mt-0.5">
+									{pasteShortcutHint}
 								</span>
 							</button>
 						</FileDropTarget>

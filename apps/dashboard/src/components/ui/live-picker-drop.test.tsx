@@ -100,6 +100,54 @@ function dropFiles(target: Element, files: File[]) {
 	fireEvent.drop(target, { dataTransfer: { files: fileList(files) } });
 }
 
+function clipboardItems(
+	entries: Array<{ kind: string; type: string; file?: File | null }>,
+) {
+	const items = entries.map((entry) => ({
+		kind: entry.kind,
+		type: entry.type,
+		getAsFile: () => entry.file ?? null,
+	}));
+	const list: Record<number | string, unknown> = {
+		length: items.length,
+		item: (index: number) => items[index] ?? null,
+		[Symbol.iterator]: function* iterator() {
+			yield* items;
+		},
+	};
+	items.forEach((item, index) => {
+		list[index] = item;
+	});
+	return list;
+}
+
+function pasteOn(
+	target: Element,
+	entries: Array<{ kind: string; type: string; file?: File | null }>,
+	files: File[] = [],
+) {
+	const event = new Event("paste", { bubbles: true, cancelable: true });
+	Object.defineProperty(event, "clipboardData", {
+		value: { items: clipboardItems(entries), files: fileList(files) },
+	});
+	target.dispatchEvent(event);
+	return event;
+}
+
+function fileEntry(file: File) {
+	return { kind: "file", type: file.type, file };
+}
+
+function png(name: string, bytes = 32): File {
+	const file = new File([new Uint8Array(Math.min(bytes, 64))], name, {
+		type: "image/png",
+	});
+	if (bytes !== file.size) {
+		Object.defineProperty(file, "size", { value: bytes });
+	}
+	return file;
+}
+
 function zoneFor(control: HTMLElement): HTMLElement {
 	const zone = control.closest("[data-drag-state]");
 	if (!(zone instanceof HTMLElement)) throw new Error("missing drop target");
@@ -261,7 +309,104 @@ describe("invoice drop", () => {
 		dropFiles(zone, [pdf("one.pdf")]);
 		dropFiles(zone, [pdf("two.pdf")]);
 		await waitFor(() => expect(generateUploadUrl).toHaveBeenCalledTimes(1));
+		pasteOn(zone, [fileEntry(png("shot.png"))]);
+		expect(generateUploadUrl).toHaveBeenCalledTimes(1);
 		release?.();
+		await waitFor(() => expect(screen.queryByText("Uploading…")).toBeNull());
+		pasteOn(zone, [fileEntry(png("retry.png"))]);
+		await waitFor(() => expect(generateUploadUrl).toHaveBeenCalledTimes(2));
+	});
+
+	it("pastes an image through the same checks as the picker", async () => {
+		const { generateUploadUrl } = renderInvoices();
+		expect(screen.getByText(/Paste with Cmd/)).toBeTruthy();
+		expect(screen.getByText(/Ctrl/)).toBeTruthy();
+		const empty = screen.getByRole("button", {
+			name: /Upload an invoice to get started/,
+		});
+		const zone = zoneFor(empty);
+		zone.focus();
+		expect(document.activeElement).toBe(zone);
+		expect(zone.className).toContain("focus-within:ring-2");
+
+		const textOnly = pasteOn(zone, [{ kind: "string", type: "text/plain" }]);
+		expect(textOnly.defaultPrevented).toBe(false);
+		expect(generateUploadUrl).not.toHaveBeenCalled();
+
+		pasteOn(zone, [
+			{ kind: "string", type: "text/plain" },
+			fileEntry(png("a.png")),
+			fileEntry(png("b.png")),
+		]);
+		expect(
+			await screen.findByText(
+				"Drop one file. These were not added: a.png, b.png.",
+			),
+		).toBeTruthy();
+		expect(generateUploadUrl).not.toHaveBeenCalled();
+
+		const unnamed = new File([new Uint8Array([1])], "", { type: "image/bmp" });
+		pasteOn(zone, [{ kind: "file", type: "image/bmp", file: unnamed }]);
+		expect(
+			await screen.findByText(/Pasted image 1\.bmp: Unsupported file type/),
+		).toBeTruthy();
+
+		pasteOn(zone, [fileEntry(png("huge.png", 10 * 1024 * 1024 + 1))]);
+		expect(await screen.findByText(/huge\.png: File too large/)).toBeTruthy();
+		expect(generateUploadUrl).not.toHaveBeenCalled();
+
+		pasteOn(zone, [fileEntry(png("invoice.png"))]);
+		expect(
+			await screen.findByText(
+				"Failed to upload file. Check your connection and try again.",
+			),
+		).toBeTruthy();
+		expect(generateUploadUrl).toHaveBeenCalledTimes(1);
+
+		fireEvent.click(screen.getByRole("button", { name: /Upload Invoice/ }));
+		dropFiles(zone, [pdf("still-drops.pdf")]);
+		await waitFor(() => expect(generateUploadUrl).toHaveBeenCalledTimes(2));
+	});
+
+	it("does not take a paste from the vendor field", async () => {
+		const generateUploadUrl = vi.fn(async () => "http://127.0.0.1:9/upload");
+		renderWithConfirm(
+			<FundingSection
+				aiEnabled={false}
+				data={{
+					needsASFunding: false,
+					asFundingRequired: false,
+					invoices: [
+						{
+							_id: "inv_1",
+							vendor: "Campus cafe",
+							items: [],
+							tax: 0,
+							tip: 0,
+							additionalFiles: [],
+							subtotal: 0,
+							total: 0,
+							amount: 0,
+							description: "",
+						},
+					],
+				}}
+				onChange={vi.fn()}
+				generateUploadUrl={generateUploadUrl}
+			/>,
+		);
+		expect(screen.getByText(/Paste with Cmd/)).toBeTruthy();
+		const vendor = screen.getByLabelText("Vendor");
+		vendor.focus();
+		const pasted = pasteOn(vendor, [fileEntry(png("shot.png"))]);
+		expect(pasted.defaultPrevented).toBe(false);
+		expect((vendor as HTMLInputElement).value).toBe("Campus cafe");
+		expect(generateUploadUrl).not.toHaveBeenCalled();
+		expect(
+			screen.queryByRole("button", {
+				name: /Upload an invoice to get started/,
+			}),
+		).toBeNull();
 	});
 });
 
@@ -315,6 +460,89 @@ describe("room booking drop", () => {
 		dropFiles(zone, [pdf("again.pdf")]);
 		await waitFor(() => expect(onUploadRoomBooking).toHaveBeenCalledTimes(2));
 	});
+
+	it("pastes images through the room booking control", async () => {
+		let release: (() => void) | undefined;
+		const onUploadRoomBooking = vi.fn(
+			(_files: File[]) =>
+				new Promise<void>((resolve) => {
+					release = resolve;
+				}),
+		);
+		renderWithConfirm(
+			<LogisticsSection
+				data={{
+					location: "Price Center",
+					startDate: Date.now(),
+					endDate: Date.now() + 3_600_000,
+					eventCode: "WS",
+					pointsToReward: 1,
+					hasFood: false,
+					willOrHaveRoomBooking: true,
+					roomBookingFiles: [],
+					foodDrinksBeingServed: false,
+				}}
+				onChange={vi.fn()}
+				onUploadRoomBooking={onUploadRoomBooking}
+			/>,
+		);
+		expect(screen.getByText(/Paste with Cmd/)).toBeTruthy();
+		const input = screen.getByLabelText("Room booking files");
+		const zone = zoneFor(input);
+		zone.focus();
+		expect(document.activeElement).toBe(zone);
+		expect(zone.className).toContain("focus-within:ring-2");
+
+		const textOnly = pasteOn(input, [{ kind: "string", type: "text/plain" }]);
+		expect(textOnly.defaultPrevented).toBe(false);
+		expect(onUploadRoomBooking).not.toHaveBeenCalled();
+
+		pasteOn(zone, [
+			fileEntry(new File(["g"], "shot.gif", { type: "image/gif" })),
+		]);
+		expect(
+			await screen.findByText(
+				"shot.gif: Use a PDF, JPG, PNG, DOC, or DOCX file.",
+			),
+		).toBeTruthy();
+		expect(onUploadRoomBooking).not.toHaveBeenCalled();
+
+		const location = screen.getByLabelText(/Location/);
+		location.focus();
+		const inField = pasteOn(location, [fileEntry(png("shot.png"))]);
+		expect(inField.defaultPrevented).toBe(false);
+		expect(onUploadRoomBooking).not.toHaveBeenCalled();
+
+		pasteOn(zone, [
+			{ kind: "string", type: "text/plain" },
+			fileEntry(png("room.png")),
+			fileEntry(new File(["x"], "notes.txt", { type: "text/plain" })),
+		]);
+		expect(
+			await screen.findByText(
+				"notes.txt: Use a PDF, JPG, PNG, DOC, or DOCX file.",
+			),
+		).toBeTruthy();
+		await waitFor(() => expect(onUploadRoomBooking).toHaveBeenCalledTimes(1));
+		expect(onUploadRoomBooking.mock.calls[0]?.[0]).toHaveLength(1);
+
+		pasteOn(zone, [fileEntry(png("other.png"))]);
+		expect(onUploadRoomBooking).toHaveBeenCalledTimes(1);
+		release?.();
+		await waitFor(() =>
+			expect(screen.queryByText("Uploading room booking files…")).toBeNull(),
+		);
+		pasteOn(zone, [fileEntry(png("again.png"))]);
+		await waitFor(() => expect(onUploadRoomBooking).toHaveBeenCalledTimes(2));
+		release?.();
+		await waitFor(() =>
+			expect(screen.queryByText("Uploading room booking files…")).toBeNull(),
+		);
+
+		fireEvent.click(input);
+		dropFiles(zone, [pdf("dropped.pdf")]);
+		await waitFor(() => expect(onUploadRoomBooking).toHaveBeenCalledTimes(3));
+	});
 });
 
 describe("graphics drop", () => {
@@ -355,6 +583,10 @@ describe("graphics drop", () => {
 		input.focus();
 		expect(document.activeElement).toBe(input);
 		const zone = zoneFor(input);
+		expect(screen.queryByText(/Paste with Cmd/)).toBeNull();
+		const graphicsPaste = pasteOn(input, [fileEntry(pdf("poster.pdf"))]);
+		expect(graphicsPaste.defaultPrevented).toBe(false);
+		expect(screen.queryByText(/Upload failed/)).toBeNull();
 		dropFiles(zone, [pdf("a.pdf"), pdf("b.pdf")]);
 		expect(
 			await screen.findByText(
@@ -407,6 +639,15 @@ describe("settings resume drop", () => {
 		);
 		input.focus();
 		expect(document.activeElement).toBe(input);
+		expect(screen.queryByText(/Paste with Cmd/)).toBeNull();
+		pasteOn(input, [
+			fileEntry(
+				new File(["x"], "resume.docx", {
+					type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				}),
+			),
+		]);
+		expect(screen.queryByText(/Resume must be a PDF file/)).toBeNull();
 		dropFiles(zoneFor(input), [
 			new File(["x"], "resume.docx", {
 				type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -510,6 +751,13 @@ describe("member receipt drop", () => {
 		input.focus();
 		expect(document.activeElement).toBe(input);
 		expect(screen.queryByLabelText("Take Receipt Photo")).toBeNull();
+		expect(screen.queryByText(/Paste with Cmd/)).toBeNull();
+		const receiptPaste = pasteOn(input, [
+			fileEntry(pdf("a.pdf")),
+			fileEntry(pdf("b.pdf")),
+		]);
+		expect(receiptPaste.defaultPrevented).toBe(false);
+		expect(screen.queryByText(/Drop one file/)).toBeNull();
 		dropFiles(zoneFor(input), [pdf("a.pdf"), pdf("b.pdf")]);
 		expect(
 			await screen.findByText(
@@ -600,5 +848,8 @@ describe("payment proof drop", () => {
 		]);
 		expect(await screen.findByText(/not an accepted file type/)).toBeTruthy();
 		expect(screen.getByText("proof.pdf")).toBeTruthy();
+		expect(screen.queryByText(/Paste with Cmd/)).toBeNull();
+		pasteOn(input, [fileEntry(png("shot.png"))]);
+		expect(await screen.findByText("shot.png")).toBeTruthy();
 	});
 });

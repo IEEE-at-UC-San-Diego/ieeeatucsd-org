@@ -4,7 +4,10 @@ import { useId, useRef, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileDropTarget } from "@/components/ui/file-drop-target";
+import {
+	FileDropTarget,
+	pasteShortcutHint,
+} from "@/components/ui/file-drop-target";
 import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -337,13 +340,17 @@ export function LogisticsSection({
 							)}
 							<FileDropTarget
 								disabled={roomUploadPending}
+								acceptPaste
 								onFiles={onRoomFiles}
 								className="rounded-lg"
 							>
 								<label className="flex min-h-11 items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-[background-color,border-color,opacity] duration-150 ease-[ease] motion-reduce:transition-none">
-									<Upload className="h-4 w-4 text-muted-foreground" />
-									<span className="text-sm text-muted-foreground">
+									<Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
+									<span className="text-center text-sm text-muted-foreground">
 										Upload room booking confirmation, or drop files here
+										<span className="mt-1 block text-xs">
+											{pasteShortcutHint}
+										</span>
 									</span>
 									<input
 										type="file"
