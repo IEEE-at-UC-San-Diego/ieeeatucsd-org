@@ -38,7 +38,7 @@ function getConvexClient() {
 	return new ConvexHttpClient(url);
 }
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		if (request.method !== "POST") {
 			return new Response(JSON.stringify({ error: "Method not allowed" }), {
