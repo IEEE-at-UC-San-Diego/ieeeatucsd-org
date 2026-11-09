@@ -28,6 +28,8 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +41,7 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { formatDateDisplay } from "@/lib/formatters";
 import {
 	downloadFileFromUrl,
+	MAX_RESUME_BYTES,
 	uploadResumeToStorage,
 	validateResumeFile,
 } from "@/lib/resumeUpload";
@@ -175,6 +178,25 @@ function SettingsPage() {
 
 		setResumeFile(file);
 		setError(null);
+	};
+
+	const onResumeFiles = (list: FileList | null) => {
+		if (uploadingResume) return;
+		if (!list || list.length === 0) return;
+		const decision = filesForPicker(list, {
+			accept: ".pdf,application/pdf",
+			multiple: false,
+			maxBytes: MAX_RESUME_BYTES,
+			typeMessage: "Resume must be a PDF file",
+			sizeMessage: "Resume must be 5MB or smaller",
+		});
+		if (decision.message || decision.files.length !== 1) {
+			setResumeFile(null);
+			setError(decision.message);
+			if (decision.message) toast.error(decision.message);
+			return;
+		}
+		handleResumeFileChange(decision.files[0] ?? null);
 	};
 
 	const handleResumeUpload = async () => {
@@ -715,7 +737,11 @@ function SettingsPage() {
 								<div className="border-t pt-4">
 									<h3 className="font-medium mb-2">Replace Resume</h3>
 									{isMobile ? (
-										<div className="space-y-3">
+										<FileDropTarget
+											disabled={uploadingResume}
+											onFiles={onResumeFiles}
+											className="space-y-3 rounded-md border-2 border-dashed border-border p-3"
+										>
 											{resumeFile && (
 												<p className="text-sm text-muted-foreground truncate">
 													Selected: {resumeFile.name}
@@ -739,17 +765,23 @@ function SettingsPage() {
 													{uploadingResume ? "Uploading…" : "Replace"}
 												</Button>
 											</div>
-										</div>
+										</FileDropTarget>
 									) : (
-										<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+										<FileDropTarget
+											disabled={uploadingResume}
+											onFiles={onResumeFiles}
+											className="flex flex-col gap-3 rounded-md sm:flex-row sm:items-center"
+										>
 											<Input
 												type="file"
 												name="resume"
 												aria-label="Resume PDF"
 												accept=".pdf,application/pdf"
-												onChange={(e) =>
-													handleResumeFileChange(e.target.files?.[0] || null)
-												}
+												disabled={uploadingResume}
+												onChange={(e) => {
+													onResumeFiles(e.target.files);
+													e.target.value = "";
+												}}
 												className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-tone-info hover:file:bg-ds-blue-200"
 											/>
 											<Button
@@ -759,13 +791,17 @@ function SettingsPage() {
 												<Upload className="h-4 w-4 mr-2" />
 												{uploadingResume ? "Uploading…" : "Replace"}
 											</Button>
-										</div>
+										</FileDropTarget>
 									)}
 								</div>
 							</div>
 						) : (
 							<div className="space-y-4">
-								<div className="border-2 border-dashed rounded-lg p-8 text-center">
+								<FileDropTarget
+									disabled={uploadingResume}
+									onFiles={onResumeFiles}
+									className="border-2 border-dashed rounded-lg p-8 text-center"
+								>
 									<Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
 									<p className="text-muted-foreground mb-4">
 										No resume uploaded. Upload your resume for networking
@@ -804,9 +840,11 @@ function SettingsPage() {
 												name="resume"
 												aria-label="Resume PDF"
 												accept=".pdf,application/pdf"
-												onChange={(e) =>
-													handleResumeFileChange(e.target.files?.[0] || null)
-												}
+												disabled={uploadingResume}
+												onChange={(e) => {
+													onResumeFiles(e.target.files);
+													e.target.value = "";
+												}}
 												className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-tone-info hover:file:bg-ds-blue-200"
 											/>
 											<Button
@@ -818,7 +856,7 @@ function SettingsPage() {
 											</Button>
 										</div>
 									)}
-								</div>
+								</FileDropTarget>
 								<p className="text-xs text-muted-foreground">
 									PDF only, maximum 5&nbsp;MB
 								</p>
@@ -836,19 +874,31 @@ function SettingsPage() {
 						variant="sheet"
 					>
 						<div className="space-y-3 pb-2">
-							<label className="motion-press flex h-12 w-full cursor-pointer items-center justify-center rounded-md border bg-card text-sm font-medium">
-								Choose PDF from Files
-								<input
-									type="file"
-									name="resume"
-									accept=".pdf,application/pdf"
-									className="sr-only"
-									onChange={(e) => {
-										handleResumeFileChange(e.target.files?.[0] || null);
-										setResumePickerOpen(false);
-									}}
-								/>
-							</label>
+							<FileDropTarget
+								disabled={uploadingResume}
+								onFiles={(files) => {
+									onResumeFiles(files);
+									setResumePickerOpen(false);
+								}}
+								className="rounded-md"
+							>
+								<label className="motion-press flex h-12 w-full cursor-pointer items-center justify-center rounded-md border bg-card text-sm font-medium">
+									Choose PDF from Files
+									<input
+										type="file"
+										name="resume"
+										aria-label="Resume PDF"
+										accept=".pdf,application/pdf"
+										disabled={uploadingResume}
+										className="sr-only"
+										onChange={(e) => {
+											onResumeFiles(e.target.files);
+											setResumePickerOpen(false);
+											e.target.value = "";
+										}}
+									/>
+								</label>
+							</FileDropTarget>
 							<p className="text-xs text-muted-foreground text-center">
 								Camera and photo library are not used — resumes must be PDF.
 							</p>
