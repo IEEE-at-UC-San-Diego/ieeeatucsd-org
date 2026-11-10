@@ -133,7 +133,7 @@ Rules:
 					"X-Title": "IEEE UCSD Event Management",
 				},
 				body: JSON.stringify({
-					model: "deepseek/deepseek-v4.1-flash",
+					model: "google/gemini-3.8-flash",
 					messages: [
 						{ role: "system", content: systemPrompt },
 						{ role: "user", content: contentParts },
