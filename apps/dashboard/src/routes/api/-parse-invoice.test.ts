@@ -245,7 +245,10 @@ describe("POST /api/parse-invoice", () => {
 			user: { aiFeaturesEnabled: true },
 		});
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(
-			new DOMException("The operation was aborted due to timeout", "TimeoutError"),
+			new DOMException(
+				"The operation was aborted due to timeout",
+				"TimeoutError",
+			),
 		);
 
 		const { handle } = await import("./parse-invoice");
