@@ -13,8 +13,9 @@ vi.mock("./permissions", async (importOriginal) => {
   };
 });
 
+import type { Doc, Id } from "./_generated/dataModel";
 import { remove, update } from "./events";
-import { requireCurrentUser } from "./permissions";
+import { requireCurrentUser, type UserRole } from "./permissions";
 
 type MutationHandler = {
   handler: (ctx: unknown, args: Record<string, unknown>) => Promise<unknown>;
@@ -24,6 +25,23 @@ const requireUser = vi.mocked(requireCurrentUser);
 
 function asMutation(value: unknown): MutationHandler {
   return value as MutationHandler;
+}
+
+function actor(role: UserRole, logtoId: string): Doc<"users"> {
+  return {
+    _id: "users:actor" as Id<"users">,
+    _creationTime: 0,
+    email: "actor@example.com",
+    emailVisibility: false,
+    verified: true,
+    name: "Test user",
+    signedUp: true,
+    requestedEmail: false,
+    role,
+    status: "active",
+    joinDate: 0,
+    logtoId,
+  };
 }
 
 function draftEvent(ownerId: string) {
@@ -56,7 +74,7 @@ describe("events.remove", () => {
 
   it("lets the owner delete their own draft", async () => {
     const ownerId = "logto|owner";
-    requireUser.mockResolvedValue({ role: "Member", logtoId: ownerId });
+    requireUser.mockResolvedValue(actor("Member", ownerId));
     const ctx = eventCtx(draftEvent(ownerId));
 
     await expect(
@@ -72,10 +90,7 @@ describe("events.remove", () => {
 
   it("lets a general officer delete a draft they can already edit", async () => {
     const officerId = "logto|officer";
-    requireUser.mockResolvedValue({
-      role: "General Officer",
-      logtoId: officerId,
-    });
+    requireUser.mockResolvedValue(actor("General Officer", officerId));
     const ctx = eventCtx(draftEvent("logto|organizer"));
     const args = {
       logtoId: officerId,
@@ -95,7 +110,7 @@ describe("events.remove", () => {
 
   it("rejects a delete from someone who cannot edit the event", async () => {
     const memberId = "logto|member";
-    requireUser.mockResolvedValue({ role: "Member", logtoId: memberId });
+    requireUser.mockResolvedValue(actor("Member", memberId));
     const ctx = eventCtx(draftEvent("logto|organizer"));
     const args = {
       logtoId: memberId,
