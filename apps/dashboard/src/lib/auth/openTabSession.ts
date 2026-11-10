@@ -48,6 +48,24 @@ export function planBridgeRefresh(freshness: BridgeFreshness): RefreshPlan {
 	}
 }
 
+export function joinOpenTabRefresh(input: {
+	cancelled: () => boolean;
+	plan: RefreshPlan;
+	inFlight: Promise<unknown> | null;
+	start: () => Promise<unknown>;
+	stillNeedsRefresh: () => boolean;
+	scheduleRetry: () => void;
+}): Promise<unknown> | undefined {
+	if (input.cancelled()) return;
+	if (input.plan === "keep") return;
+	const refresh = input.inFlight ?? input.start();
+	return refresh.finally(() => {
+		if (input.cancelled()) return;
+		if (!input.stillNeedsRefresh()) return;
+		input.scheduleRetry();
+	});
+}
+
 export function shouldSendBridgeToken(
 	expiresAt: number | null,
 	now: number,

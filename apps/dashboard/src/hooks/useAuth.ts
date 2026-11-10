@@ -17,6 +17,7 @@ import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
 import {
 	bridgeFreshness,
 	isPersistentSessionGone,
+	joinOpenTabRefresh,
 	planBridgeRefresh,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
@@ -388,18 +389,25 @@ function useAuthClient() {
 		expiresAtRef.current = convexSessionExpiresAt;
 
 		const refreshIfNeeded = () => {
-			if (cancelled || refreshInFlightRef.current) return;
 			const plan = planBridgeRefresh(
 				bridgeFreshness(expiresAtRef.current, Date.now()),
 			);
-			if (plan === "keep") return;
-			void requestSessionRefresh(plan).finally(() => {
-				if (cancelled) return;
-				const after = planBridgeRefresh(
-					bridgeFreshness(expiresAtRef.current, Date.now()),
-				);
-				if (after === "keep") return;
-				retryTimer = window.setTimeout(refreshIfNeeded, REFRESH_RETRY_MS);
+			void joinOpenTabRefresh({
+				cancelled: () => cancelled,
+				plan,
+				inFlight: refreshInFlightRef.current,
+				start: () => {
+					if (plan === "keep") return Promise.resolve(null);
+					return requestSessionRefresh(plan);
+				},
+				stillNeedsRefresh: () =>
+					planBridgeRefresh(
+						bridgeFreshness(expiresAtRef.current, Date.now()),
+					) !== "keep",
+				scheduleRetry: () => {
+					if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+					retryTimer = window.setTimeout(refreshIfNeeded, REFRESH_RETRY_MS);
+				},
 			});
 		};
 

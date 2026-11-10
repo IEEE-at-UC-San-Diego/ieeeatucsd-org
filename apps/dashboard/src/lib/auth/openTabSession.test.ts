@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	bridgeFreshness,
 	isPersistentSessionGone,
+	joinOpenTabRefresh,
 	recoverOpenTabQuery,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
@@ -78,6 +79,29 @@ describe("open tab bridge refresh", () => {
 		});
 
 		expect(result).toEqual({ status: "sign-in" });
+	});
+
+	it("retries after joining an in-flight refresh that fails transiently", async () => {
+		let settle: (value: null) => void = () => {};
+		const inFlight = new Promise<null>((resolve) => {
+			settle = resolve;
+		});
+		const start = vi.fn(async () => null);
+		const scheduleRetry = vi.fn();
+
+		const joined = joinOpenTabRefresh({
+			cancelled: () => false,
+			plan: "hold-and-refresh",
+			inFlight,
+			start,
+			stillNeedsRefresh: () => true,
+			scheduleRetry,
+		});
+
+		expect(start).not.toHaveBeenCalled();
+		settle(null);
+		await joined;
+		expect(scheduleRetry).toHaveBeenCalledOnce();
 	});
 
 	it("keeps the session when refresh fails transiently", async () => {
