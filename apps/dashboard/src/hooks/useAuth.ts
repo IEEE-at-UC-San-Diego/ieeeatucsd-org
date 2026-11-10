@@ -15,11 +15,13 @@ import { AuthFlow } from "@/lib/auth/AuthFlow";
 import { type AuthBootstrapResult, AuthSession } from "@/lib/auth/AuthSession";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
 import {
+	type BridgeCredentials,
 	bridgeFreshness,
 	isPersistentSessionGone,
 	joinOpenTabRefresh,
 	planBridgeRefresh,
 	planNullUserRetry,
+	readBridgeCredentials,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
 } from "@/lib/auth/openTabSession";
@@ -110,7 +112,16 @@ function useAuthClient() {
 		null,
 	);
 	const sessionEpochRef = useRef(0);
-	const expiresAtRef = useRef<number | null>(null);
+	const bridgeCredentialsRef = useRef<BridgeCredentials>({
+		logtoId: null,
+		authToken: null,
+		expiresAt: null,
+	});
+	bridgeCredentialsRef.current = {
+		logtoId,
+		authToken: convexSessionToken,
+		expiresAt: convexSessionExpiresAt,
+	};
 	const nullRetryRef = useRef(false);
 	const authInitializedRef = useRef(false);
 	const recoveryTriggeredRef = useRef(false);
@@ -129,7 +140,11 @@ function useAuthClient() {
 	clearAllTokensRef.current = clearAllTokens;
 
 	const applySession = useCallback((session: AuthBootstrapResult) => {
-		expiresAtRef.current = session.expiresAt;
+		bridgeCredentialsRef.current = {
+			logtoId: session.logtoId,
+			authToken: session.sessionToken,
+			expiresAt: session.expiresAt,
+		};
 		setLogtoId(session.logtoId);
 		setAccessToken(session.accessToken);
 		setConvexSessionToken(session.sessionToken);
@@ -146,7 +161,11 @@ function useAuthClient() {
 		setLogtoId(null);
 		setAccessToken(null);
 		setConvexSessionToken(null);
-		expiresAtRef.current = null;
+		bridgeCredentialsRef.current = {
+			logtoId: null,
+			authToken: null,
+			expiresAt: null,
+		};
 		setConvexSessionExpiresAt(null);
 		setHoldBridgeQueries(false);
 		nullRetryRef.current = false;
@@ -361,19 +380,20 @@ function useAuthClient() {
 	);
 
 	const ensureBridgeSession = useCallback(async () => {
-		const plan = planBridgeRefresh(
-			bridgeFreshness(expiresAtRef.current, Date.now()),
+		const decision = readBridgeCredentials(
+			bridgeCredentialsRef.current,
+			Date.now(),
 		);
-		if (plan === "keep") {
-			if (!logtoId || !convexSessionToken) {
-				throw new Error("Authentication required");
-			}
-			return { logtoId, authToken: convexSessionToken };
+		if (decision.status === "missing") {
+			throw new Error("Authentication required");
 		}
-		const next = await requestSessionRefresh(plan);
+		if (decision.status === "current") {
+			return { logtoId: decision.logtoId, authToken: decision.authToken };
+		}
+		const next = await requestSessionRefresh(decision.plan);
 		if (!next) throw new Error("Authentication required");
 		return { logtoId: next.logtoId, authToken: next.sessionToken };
-	}, [convexSessionToken, logtoId, requestSessionRefresh]);
+	}, [requestSessionRefresh]);
 
 	useEffect(() => {
 		if (
@@ -387,11 +407,9 @@ function useAuthClient() {
 
 		let cancelled = false;
 		let retryTimer: number | undefined;
-		expiresAtRef.current = convexSessionExpiresAt;
-
 		const refreshIfNeeded = () => {
 			const plan = planBridgeRefresh(
-				bridgeFreshness(expiresAtRef.current, Date.now()),
+				bridgeFreshness(bridgeCredentialsRef.current.expiresAt, Date.now()),
 			);
 			void joinOpenTabRefresh({
 				cancelled: () => cancelled,
@@ -403,7 +421,7 @@ function useAuthClient() {
 				},
 				stillNeedsRefresh: () =>
 					planBridgeRefresh(
-						bridgeFreshness(expiresAtRef.current, Date.now()),
+						bridgeFreshness(bridgeCredentialsRef.current.expiresAt, Date.now()),
 					) !== "keep",
 				scheduleRetry: () => {
 					if (retryTimer !== undefined) window.clearTimeout(retryTimer);

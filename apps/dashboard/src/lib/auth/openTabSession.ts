@@ -4,6 +4,17 @@ export type BridgeFreshness = "fresh" | "due" | "expired" | "missing";
 
 export type RefreshPlan = "keep" | "refresh" | "hold-and-refresh";
 
+export type BridgeCredentials = {
+	logtoId: string | null;
+	authToken: string | null;
+	expiresAt: number | null;
+};
+
+export type CurrentBridgeSession =
+	| { status: "current"; logtoId: string; authToken: string }
+	| { status: "refresh"; plan: Exclude<RefreshPlan, "keep"> }
+	| { status: "missing" };
+
 export type HeldBridge = {
 	token: string;
 	expiresAt: number;
@@ -64,6 +75,22 @@ export function joinOpenTabRefresh(input: {
 		if (!input.stillNeedsRefresh()) return;
 		input.scheduleRetry();
 	});
+}
+
+export function readBridgeCredentials(
+	current: BridgeCredentials,
+	now: number,
+): CurrentBridgeSession {
+	const plan = planBridgeRefresh(bridgeFreshness(current.expiresAt, now));
+	if (plan === "keep") {
+		if (!current.logtoId || !current.authToken) return { status: "missing" };
+		return {
+			status: "current",
+			logtoId: current.logtoId,
+			authToken: current.authToken,
+		};
+	}
+	return { status: "refresh", plan };
 }
 
 export function planNullUserRetry(input: {

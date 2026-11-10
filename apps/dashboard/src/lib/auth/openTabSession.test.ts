@@ -4,6 +4,7 @@ import {
 	isPersistentSessionGone,
 	joinOpenTabRefresh,
 	planNullUserRetry,
+	readBridgeCredentials,
 	recoverOpenTabQuery,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
@@ -103,6 +104,30 @@ describe("open tab bridge refresh", () => {
 		settle(null);
 		await joined;
 		expect(scheduleRetry).toHaveBeenCalledOnce();
+	});
+
+	it("returns the current bridge token with its own expiry", () => {
+		const now = 500_000;
+		const captured = {
+			logtoId: "logto|daniel",
+			authToken: "expired-token",
+			expiresAt: 1_000,
+		};
+		const current = {
+			logtoId: "logto|daniel",
+			authToken: "fresh-token",
+			expiresAt: now + FIVE_MINUTES_MS,
+		};
+
+		expect(readBridgeCredentials(current, now)).toEqual({
+			status: "current",
+			logtoId: "logto|daniel",
+			authToken: "fresh-token",
+		});
+		expect(readBridgeCredentials(captured, now)).toEqual({
+			status: "refresh",
+			plan: "hold-and-refresh",
+		});
 	});
 
 	it("retries a later null after getMe returns a user", () => {
