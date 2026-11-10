@@ -66,6 +66,22 @@ export function joinOpenTabRefresh(input: {
 	});
 }
 
+export function planNullUserRetry(input: {
+	convexUser: unknown;
+	latched: boolean;
+	hasPreviousUser: boolean;
+	hasSessionToken: boolean;
+}): { latched: boolean; refresh: boolean } {
+	if (input.convexUser != null) return { latched: false, refresh: false };
+	if (input.convexUser !== null)
+		return { latched: input.latched, refresh: false };
+	if (!input.hasSessionToken || !input.hasPreviousUser) {
+		return { latched: input.latched, refresh: false };
+	}
+	if (input.latched) return { latched: true, refresh: false };
+	return { latched: true, refresh: true };
+}
+
 export function shouldSendBridgeToken(
 	expiresAt: number | null,
 	now: number,

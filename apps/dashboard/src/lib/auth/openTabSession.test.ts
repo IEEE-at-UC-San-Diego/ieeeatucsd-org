@@ -3,6 +3,7 @@ import {
 	bridgeFreshness,
 	isPersistentSessionGone,
 	joinOpenTabRefresh,
+	planNullUserRetry,
 	recoverOpenTabQuery,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
@@ -102,6 +103,40 @@ describe("open tab bridge refresh", () => {
 		settle(null);
 		await joined;
 		expect(scheduleRetry).toHaveBeenCalledOnce();
+	});
+
+	it("retries a later null after getMe returns a user", () => {
+		const firstNull = planNullUserRetry({
+			convexUser: null,
+			latched: false,
+			hasPreviousUser: true,
+			hasSessionToken: true,
+		});
+		expect(firstNull).toEqual({ latched: true, refresh: true });
+
+		const stillMissing = planNullUserRetry({
+			convexUser: null,
+			latched: firstNull.latched,
+			hasPreviousUser: true,
+			hasSessionToken: true,
+		});
+		expect(stillMissing).toEqual({ latched: true, refresh: false });
+
+		const signedIn = planNullUserRetry({
+			convexUser: { name: "Daniel" },
+			latched: stillMissing.latched,
+			hasPreviousUser: true,
+			hasSessionToken: true,
+		});
+		expect(signedIn).toEqual({ latched: false, refresh: false });
+
+		const laterNull = planNullUserRetry({
+			convexUser: null,
+			latched: signedIn.latched,
+			hasPreviousUser: true,
+			hasSessionToken: true,
+		});
+		expect(laterNull).toEqual({ latched: true, refresh: true });
 	});
 
 	it("keeps the session when refresh fails transiently", async () => {

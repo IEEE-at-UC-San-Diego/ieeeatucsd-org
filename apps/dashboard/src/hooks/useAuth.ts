@@ -19,6 +19,7 @@ import {
 	isPersistentSessionGone,
 	joinOpenTabRefresh,
 	planBridgeRefresh,
+	planNullUserRetry,
 	sessionRefreshDelay,
 	shouldSendBridgeToken,
 } from "@/lib/auth/openTabSession";
@@ -465,11 +466,14 @@ function useAuthClient() {
 			: convexUser;
 
 	useEffect(() => {
-		if (convexUser !== null || !convexSessionToken || !previousResolvedUser) {
-			return;
-		}
-		if (nullRetryRef.current) return;
-		nullRetryRef.current = true;
+		const next = planNullUserRetry({
+			convexUser,
+			latched: nullRetryRef.current,
+			hasPreviousUser: previousResolvedUser != null,
+			hasSessionToken: Boolean(convexSessionToken),
+		});
+		nullRetryRef.current = next.latched;
+		if (!next.refresh) return;
 		void requestSessionRefresh("hold-and-refresh");
 	}, [
 		convexSessionToken,
