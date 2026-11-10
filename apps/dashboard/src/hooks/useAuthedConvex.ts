@@ -1,10 +1,12 @@
 import { type RequestForQueries, useMutation, useQueries } from "convex/react";
-import type { FunctionReference } from "convex/server";
-import { useMemo } from "react";
+import { type FunctionReference, getFunctionName } from "convex/server";
+import { useRef } from "react";
 import { shouldSendBridgeToken } from "@/lib/auth/openTabSession";
 import { useAuth } from "./useAuth";
 
 type GenericArgs = Record<string, unknown>;
+
+const EMPTY_REQUESTS: RequestForQueries = {};
 
 function isRetryableAuthError(error: Error) {
 	return (
@@ -31,19 +33,34 @@ export function useAuthedQuery<QueryRef extends FunctionReference<"query">>(
 	const skip =
 		args === "skip" || !logtoId || !convexSessionToken || !bridgeReady;
 	const argKey = args === "skip" ? "skip" : JSON.stringify(args ?? {});
-	const requests = useMemo((): RequestForQueries => {
-		if (skip || !logtoId || !convexSessionToken || args === "skip") return {};
-		return {
-			query: {
-				query: queryRef,
-				args: {
-					...((args ?? {}) as GenericArgs),
-					logtoId,
-					authToken: convexSessionToken,
-				},
-			},
-		};
-	}, [argKey, convexSessionToken, logtoId, queryRef, skip]);
+	const queryName = getFunctionName(queryRef);
+	const requestKey =
+		skip || !logtoId || !convexSessionToken
+			? "skip"
+			: `${queryName}\0${argKey}\0${logtoId}\0${convexSessionToken}`;
+	const requestsRef = useRef<{ key: string; requests: RequestForQueries }>({
+		key: "",
+		requests: EMPTY_REQUESTS,
+	});
+	if (requestsRef.current.key !== requestKey) {
+		requestsRef.current =
+			requestKey === "skip" || !logtoId || !convexSessionToken
+				? { key: requestKey, requests: EMPTY_REQUESTS }
+				: {
+						key: requestKey,
+						requests: {
+							query: {
+								query: queryRef,
+								args: {
+									...((args ?? {}) as GenericArgs),
+									logtoId,
+									authToken: convexSessionToken,
+								},
+							},
+						},
+					};
+	}
+	const requests = requestsRef.current.requests;
 	const result = useQueries(requests).query as
 		| QueryRef["_returnType"]
 		| undefined
