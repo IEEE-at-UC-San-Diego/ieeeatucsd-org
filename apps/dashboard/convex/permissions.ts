@@ -66,7 +66,11 @@ async function signHex(input: string, secret: string) {
   return toHex(new Uint8Array(signature));
 }
 
-async function verifySessionToken(authToken: string): Promise<SessionPayload> {
+type BridgeSession =
+  | { status: "valid"; payload: SessionPayload }
+  | { status: "expired" };
+
+async function readBridgeSession(authToken: string): Promise<BridgeSession> {
   const parts = authToken.split(".");
   if (parts.length !== 2) {
     throw new Error("Invalid auth token format");
@@ -91,10 +95,10 @@ async function verifySessionToken(authToken: string): Promise<SessionPayload> {
   }
 
   if (Date.now() >= payload.exp * 1000) {
-    throw new Error("Auth token expired");
+    return { status: "expired" };
   }
 
-  return payload;
+  return { status: "valid", payload };
 }
 
 async function getNativeIdentity(ctx: AuthContext) {
@@ -132,8 +136,9 @@ export async function getCurrentUser(
       throw new Error("Missing auth token");
     }
 
-    const claims = await verifySessionToken(authToken);
-    if (claims.sub !== resolvedLogtoId) {
+    const session = await readBridgeSession(authToken);
+    if (session.status === "expired") return null;
+    if (session.payload.sub !== resolvedLogtoId) {
       throw new Error("Auth token subject mismatch");
     }
   }

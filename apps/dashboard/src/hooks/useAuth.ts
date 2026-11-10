@@ -10,9 +10,17 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { flushSync } from "react-dom";
 import { AuthFlow } from "@/lib/auth/AuthFlow";
 import { type AuthBootstrapResult, AuthSession } from "@/lib/auth/AuthSession";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
+import {
+	bridgeFreshness,
+	isPersistentSessionGone,
+	planBridgeRefresh,
+	sessionRefreshDelay,
+	shouldSendBridgeToken,
+} from "@/lib/auth/openTabSession";
 import { resolveLogtoRedirectUri } from "@/lib/auth/redirectUri";
 import { buildLogtoSignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
@@ -28,8 +36,7 @@ export type AuthFailureReason =
 
 const isServer = typeof window === "undefined";
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 15_000;
-const REFRESH_INTERVAL_MS = 30_000;
-const TOKEN_REFRESH_GRACE_MS = 60_000;
+const REFRESH_RETRY_MS = 15_000;
 const RECOVERY_REASON = "session-init";
 
 type AuthContextValue = ReturnType<typeof useAuthClient>;
@@ -45,9 +52,14 @@ const ssrDefaults = {
 	logtoId: null as string | null,
 	accessToken: null as string | null,
 	convexSessionToken: null as string | null,
+	convexSessionExpiresAt: null as number | null,
+	holdBridgeQueries: false,
 	getAuthHeaders: (): Record<string, string> => ({}),
 	signIn: () => {},
 	signOut: () => {},
+	ensureBridgeSession: async () => {
+		throw new Error("Authentication required");
+	},
 };
 
 const AuthContext = createContext<AuthContextValue>(ssrDefaults);
@@ -87,11 +99,17 @@ function useAuthClient() {
 	const [convexSessionExpiresAt, setConvexSessionExpiresAt] = useState<
 		number | null
 	>(null);
+	const [holdBridgeQueries, setHoldBridgeQueries] = useState(false);
 	const [isProvisioningUser, setIsProvisioningUser] = useState(false);
 	const [authFailureReason, setAuthFailureReason] =
 		useState<AuthFailureReason>(null);
 	const lastProvisioningAttemptRef = useRef<string | null>(null);
-	const refreshInFlightRef = useRef(false);
+	const refreshInFlightRef = useRef<Promise<AuthBootstrapResult | null> | null>(
+		null,
+	);
+	const sessionEpochRef = useRef(0);
+	const expiresAtRef = useRef<number | null>(null);
+	const nullRetryRef = useRef(false);
 	const authInitializedRef = useRef(false);
 	const recoveryTriggeredRef = useRef(false);
 	const lastResolvedUserRef = useRef<{ logtoId: string; user: unknown } | null>(
@@ -109,6 +127,7 @@ function useAuthClient() {
 	clearAllTokensRef.current = clearAllTokens;
 
 	const applySession = useCallback((session: AuthBootstrapResult) => {
+		expiresAtRef.current = session.expiresAt;
 		setLogtoId(session.logtoId);
 		setAccessToken(session.accessToken);
 		setConvexSessionToken(session.sessionToken);
@@ -125,10 +144,14 @@ function useAuthClient() {
 		setLogtoId(null);
 		setAccessToken(null);
 		setConvexSessionToken(null);
+		expiresAtRef.current = null;
 		setConvexSessionExpiresAt(null);
+		setHoldBridgeQueries(false);
+		nullRetryRef.current = false;
 		setIsProvisioningUser(false);
 		lastProvisioningAttemptRef.current = null;
-		refreshInFlightRef.current = false;
+		refreshInFlightRef.current = null;
+		sessionEpochRef.current += 1;
 		authInitializedRef.current = false;
 		lastResolvedUserRef.current = null;
 		setAuthTokens(null);
@@ -201,12 +224,13 @@ function useAuthClient() {
 
 	const refreshSession = useCallback(async () => {
 		return AuthSession.load({
-			getIdTokenClaims: async () => getIdTokenClaims?.(),
-			getAccessToken: async () => getAccessToken?.(),
+			getIdTokenClaims: async () => getIdTokenClaimsRef.current?.(),
+			getAccessToken: async () => getAccessTokenRef.current?.(),
+			currentAccessToken: accessToken,
 			maxAttempts: 3,
 			baseDelayMs: 750,
 		});
-	}, [getAccessToken, getIdTokenClaims]);
+	}, [accessToken]);
 
 	useEffect(() => {
 		if (!isAuthenticated) {
@@ -281,65 +305,174 @@ function useAuthClient() {
 		markAuthFailure,
 	]);
 
-	useEffect(() => {
-		if (
-			!isAuthenticated ||
-			!accessToken ||
-			!convexSessionToken ||
-			authFailureReason
-		)
-			return;
+	const quietSignIn = useCallback(() => {
+		window.location.replace(`${origin}/signin`);
+	}, [origin]);
 
-		const timer = window.setInterval(() => {
-			const shouldRefresh =
-				!convexSessionExpiresAt ||
-				Date.now() + TOKEN_REFRESH_GRACE_MS >= convexSessionExpiresAt;
-			if (!shouldRefresh || refreshInFlightRef.current) return;
-
-			refreshInFlightRef.current = true;
-			void (async () => {
+	const requestSessionRefresh = useCallback(
+		(
+			plan: "refresh" | "hold-and-refresh",
+		): Promise<AuthBootstrapResult | null> => {
+			const existing = refreshInFlightRef.current;
+			if (existing) return existing;
+			const epoch = sessionEpochRef.current;
+			const run = (async (): Promise<AuthBootstrapResult | null> => {
+				if (plan === "hold-and-refresh") {
+					flushSync(() => {
+						setHoldBridgeQueries(true);
+					});
+				}
 				try {
 					const nextSession = await refreshSession();
+					if (sessionEpochRef.current !== epoch) return null;
 					applySession(nextSession);
 					AuthFlow.clearRecoveryLatches();
 					logAuthEvent("auth_refresh_succeeded", {
 						logtoId: nextSession.logtoId,
 						expiresAt: nextSession.expiresAt,
 					});
+					return nextSession;
 				} catch (error) {
-					const isExpired =
-						!convexSessionExpiresAt || Date.now() >= convexSessionExpiresAt;
 					logAuthEvent("auth_refresh_failed", {
-						isExpired,
 						error: errorMessage(error),
 					});
+					if (
+						sessionEpochRef.current === epoch &&
+						isPersistentSessionGone(error)
+					) {
+						quietSignIn();
+					}
+					return null;
 				} finally {
-					refreshInFlightRef.current = false;
+					if (sessionEpochRef.current === epoch) setHoldBridgeQueries(false);
 				}
 			})();
-		}, REFRESH_INTERVAL_MS);
+			refreshInFlightRef.current = run;
+			void run.finally(() => {
+				if (refreshInFlightRef.current === run) {
+					refreshInFlightRef.current = null;
+				}
+			});
+			return run;
+		},
+		[applySession, quietSignIn, refreshSession],
+	);
 
-		return () => window.clearInterval(timer);
+	const ensureBridgeSession = useCallback(async () => {
+		const plan = planBridgeRefresh(
+			bridgeFreshness(expiresAtRef.current, Date.now()),
+		);
+		if (plan === "keep") {
+			if (!logtoId || !convexSessionToken) {
+				throw new Error("Authentication required");
+			}
+			return { logtoId, authToken: convexSessionToken };
+		}
+		const next = await requestSessionRefresh(plan);
+		if (!next) throw new Error("Authentication required");
+		return { logtoId: next.logtoId, authToken: next.sessionToken };
+	}, [convexSessionToken, logtoId, requestSessionRefresh]);
+
+	useEffect(() => {
+		if (
+			!isAuthenticated ||
+			!accessToken ||
+			!convexSessionToken ||
+			authFailureReason
+		) {
+			return;
+		}
+
+		let cancelled = false;
+		let retryTimer: number | undefined;
+		expiresAtRef.current = convexSessionExpiresAt;
+
+		const refreshIfNeeded = () => {
+			if (cancelled || refreshInFlightRef.current) return;
+			const plan = planBridgeRefresh(
+				bridgeFreshness(expiresAtRef.current, Date.now()),
+			);
+			if (plan === "keep") return;
+			void requestSessionRefresh(plan).finally(() => {
+				if (cancelled) return;
+				const after = planBridgeRefresh(
+					bridgeFreshness(expiresAtRef.current, Date.now()),
+				);
+				if (after === "keep") return;
+				retryTimer = window.setTimeout(refreshIfNeeded, REFRESH_RETRY_MS);
+			});
+		};
+
+		const dueDelay =
+			convexSessionExpiresAt == null
+				? 0
+				: sessionRefreshDelay(convexSessionExpiresAt, Date.now());
+		const dueTimer = window.setTimeout(refreshIfNeeded, dueDelay);
+
+		const onVisible = () => {
+			if (document.visibilityState === "visible") refreshIfNeeded();
+		};
+		window.addEventListener("focus", refreshIfNeeded);
+		window.addEventListener("pageshow", refreshIfNeeded);
+		document.addEventListener("visibilitychange", onVisible);
+
+		return () => {
+			cancelled = true;
+			window.clearTimeout(dueTimer);
+			if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+			window.removeEventListener("focus", refreshIfNeeded);
+			window.removeEventListener("pageshow", refreshIfNeeded);
+			document.removeEventListener("visibilitychange", onVisible);
+		};
 	}, [
 		accessToken,
-		applySession,
 		authFailureReason,
 		convexSessionExpiresAt,
 		convexSessionToken,
 		isAuthenticated,
-		refreshSession,
+		requestSessionRefresh,
 	]);
+
+	const sendBridgeToken = shouldSendBridgeToken(
+		convexSessionExpiresAt,
+		Date.now(),
+		holdBridgeQueries,
+	);
 
 	const convexUser = useQuery(
 		api.users.getMe,
-		isAuthenticated && logtoId && convexSessionToken
+		isAuthenticated && logtoId && convexSessionToken && sendBridgeToken
 			? { logtoId, authToken: convexSessionToken }
 			: "skip",
 	);
 
+	const previousResolvedUser = lastResolvedUserRef.current;
+	const retryingNull =
+		convexUser === null &&
+		previousResolvedUser != null &&
+		(!nullRetryRef.current || holdBridgeQueries || refreshInFlightRef.current);
+	const visibleConvexUser =
+		retryingNull || (holdBridgeQueries && convexUser == null)
+			? undefined
+			: convexUser;
+
+	useEffect(() => {
+		if (convexUser !== null || !convexSessionToken || !previousResolvedUser) {
+			return;
+		}
+		if (nullRetryRef.current) return;
+		nullRetryRef.current = true;
+		void requestSessionRefresh("hold-and-refresh");
+	}, [
+		convexSessionToken,
+		convexUser,
+		previousResolvedUser,
+		requestSessionRefresh,
+	]);
+
 	const stableAuthUser = AuthFlow.resolveStableUser({
 		logtoId,
-		convexUser,
+		convexUser: visibleConvexUser,
 		lastResolvedUser: lastResolvedUserRef.current as {
 			logtoId: string;
 			user: NonNullable<typeof convexUser>;
@@ -507,7 +640,10 @@ function useAuthClient() {
 			logtoId,
 			accessToken,
 			convexSessionToken,
+			convexSessionExpiresAt,
+			holdBridgeQueries,
 			getAuthHeaders,
+			ensureBridgeSession,
 			signIn: () => {
 				void triggerSignIn();
 			},
@@ -516,7 +652,10 @@ function useAuthClient() {
 		[
 			accessToken,
 			authFailureReason,
+			convexSessionExpiresAt,
 			convexSessionToken,
+			ensureBridgeSession,
+			holdBridgeQueries,
 			stableConvexUser,
 			getAuthHeaders,
 			isAuthenticated,
