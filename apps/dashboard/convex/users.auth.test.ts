@@ -74,6 +74,7 @@ function createMockDb(seedUsers: Record<string, unknown>[] = []) {
     query: (table: string) => queryHandle(table),
     insert: async (table: string, doc: Record<string, unknown>) => {
       const _id = `${table}_${nextId++}`;
+      tables[table] ??= [];
       tables[table].push({ ...doc, _id, _creationTime: Date.now() });
       return _id;
     },
@@ -90,6 +91,16 @@ function createMockDb(seedUsers: Record<string, unknown>[] = []) {
         if (row) return row;
       }
       return null;
+    },
+    delete: async (id: string) => {
+      for (const rows of Object.values(tables)) {
+        const index = rows.findIndex((entry) => entry._id === id);
+        if (index >= 0) rows.splice(index, 1);
+      }
+    },
+    system: {
+      normalizeId: (_table: string, id: string) =>
+        /^[0-9a-z]+$/.test(id) ? id : null,
     },
     _tables: tables,
   };

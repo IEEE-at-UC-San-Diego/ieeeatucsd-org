@@ -1,5 +1,5 @@
-import { query } from "./_generated/server";
-import { mutation } from "./storageReferences";
+import { mutation, query } from "./_generated/server";
+import { syncRecordStorage } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -90,7 +90,7 @@ export const create = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
     const { logtoId, authToken, ...data } = args;
-    return await ctx.db.insert("reimbursements", {
+    const reimbursementId = await ctx.db.insert("reimbursements", {
       ...data,
       status: "submitted",
       submittedBy: userId,
@@ -102,6 +102,8 @@ export const create = mutation({
         },
       ],
     });
+    await syncRecordStorage(ctx, "reimbursements", reimbursementId);
+    return reimbursementId;
   },
 });
 
@@ -156,6 +158,7 @@ export const updateStatus = mutation({
       auditLogs,
       ...(args.status === "declined" && reason ? { auditNotes } : {}),
     });
+    await syncRecordStorage(ctx, "reimbursements", args.id);
     return args.id;
   },
 });
@@ -192,6 +195,7 @@ export const updatePaymentDetails = mutation({
       paymentDetails: args.paymentDetails,
       auditLogs,
     });
+    await syncRecordStorage(ctx, "reimbursements", args.id);
     return args.id;
   },
 });
@@ -208,6 +212,7 @@ export const remove = mutation({
     if (!reimbursement) throw new Error("Reimbursement not found");
     assertReimbursementDeletable(reimbursement.status);
     await ctx.db.delete(args.id);
+    await syncRecordStorage(ctx, "reimbursements", args.id);
     return args.id;
   },
 });

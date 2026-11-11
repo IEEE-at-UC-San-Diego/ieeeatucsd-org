@@ -6,8 +6,7 @@ import {
   runStorageReferenceBackfill,
   STORAGE_REFERENCE_PAGE_SIZE,
   STORAGE_TABLES,
-  storageIdsInValue,
-  syncStorageReferences,
+  syncRecordStorage,
 } from "./storageReferences";
 
 const SOURCE_TABLES = new Set<string>(STORAGE_TABLES);
@@ -107,20 +106,6 @@ function resumeCtx(options: {
     },
   } as unknown as MutationCtx;
 }
-
-describe("storageIdsInValue", () => {
-  it("keeps an id stored as a url path segment", () => {
-    const ids = storageIdsInValue(
-      {
-        graphicsFiles: [
-          "https://files.example/api/storage/storage_event?token=1",
-        ],
-      },
-      (candidate) => candidate === "storage_event",
-    );
-    expect(ids).toEqual(["storage_event"]);
-  });
-});
 
 describe("validateAndBuildResume", () => {
   it("rejects another record's storage id and does not delete the file", async () => {
@@ -237,8 +222,8 @@ describe("validateAndBuildResume", () => {
   });
 });
 
-describe("syncStorageReferences", () => {
-  it("writes one indexed row per storage id and deletes a stale row", async () => {
+describe("syncRecordStorage", () => {
+  it("indexes a file-field url and drops a stale row", async () => {
     const rows: ReferenceRow[] = [
       { _id: "ref_old", storageId: "kg2old", recordId: "event_1" },
     ];
@@ -283,13 +268,16 @@ describe("syncStorageReferences", () => {
       },
     };
 
-    await syncStorageReferences(
-      db as unknown as MutationCtx["db"],
-      "event_1",
+    const doc = {
+      graphicsFiles: ["https://files.example/api/storage/kg2kept"],
+      eventDescription: "kg2other",
+    };
+    await syncRecordStorage(
       {
-        graphicsFiles: ["https://files.example/api/storage/kg2kept"],
-        eventDescription: "kg2other",
-      },
+        db: { ...db, get: async () => doc },
+      } as unknown as MutationCtx,
+      "events",
+      "event_1" as Id<"events">,
     );
 
     expect(rows.map((row) => row.storageId)).toEqual(["kg2kept"]);

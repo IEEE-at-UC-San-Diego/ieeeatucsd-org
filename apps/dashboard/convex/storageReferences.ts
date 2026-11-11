@@ -1,4 +1,4 @@
-import { mutation as rawMutation } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 export const STORAGE_TABLES = [
@@ -12,72 +12,101 @@ export const STORAGE_TABLES = [
 // A document is at most 1 MiB, and a mutation can read 16 MiB.
 export const STORAGE_REFERENCE_PAGE_SIZE = 8;
 
-const STORAGE_ID_CANDIDATE = /^[0-9a-z]+$/;
+const STORAGE_ID_PATTERN = /^[0-9a-z]+$/;
 
 type StorageTable = (typeof STORAGE_TABLES)[number];
 type DatabaseWriter = MutationCtx["db"];
 
-function isStorageTable(table: string): table is StorageTable {
-  return (STORAGE_TABLES as readonly string[]).includes(table);
+function storageToken(value: string): string | undefined {
+  const path = value.split(/[?#]/, 1)[0] ?? value;
+  const parts = path.split("/").filter((part) => part.length > 0);
+  const token = parts[parts.length - 1];
+  if (!token || !STORAGE_ID_PATTERN.test(token)) return undefined;
+  return token;
 }
 
-export function collectStorageIdCandidates(
-  value: unknown,
-  out: Set<string>,
-): void {
-  if (typeof value === "string") {
-    if (value.length > 0) out.add(value);
-    const path = value.split(/[?#]/, 1)[0] ?? value;
-    for (const segment of path.split("/")) {
-      if (segment.length > 0) out.add(segment);
-    }
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectStorageIdCandidates(item, out);
-    return;
-  }
-  if (value !== null && typeof value === "object") {
-    for (const item of Object.values(value)) {
-      collectStorageIdCandidates(item, out);
-    }
-  }
-}
-
-export function storageIdsInValue(
-  value: unknown,
-  isStorageId: (candidate: string) => boolean,
-): string[] {
-  const candidates = new Set<string>();
-  collectStorageIdCandidates(value, candidates);
-  return [...candidates].filter(isStorageId);
-}
-
-function isStorageDocumentId(db: DatabaseWriter, candidate: string): boolean {
-  if (!STORAGE_ID_CANDIDATE.test(candidate)) return false;
-  return db.system.normalizeId("_storage", candidate) !== null;
-}
-
-export async function syncStorageReferences(
+function confirmedStorageIds(
   db: DatabaseWriter,
-  recordId: string,
-  doc: unknown | null,
+  values: ReadonlyArray<string | undefined>,
+): string[] {
+  const ids: string[] = [];
+  for (const value of values) {
+    if (!value) continue;
+    const token = storageToken(value);
+    if (!token) continue;
+    if (db.system.normalizeId("_storage", token) === null) continue;
+    ids.push(token);
+  }
+  return ids;
+}
+
+function storageIdsFrom(
+  db: DatabaseWriter,
+  table: StorageTable,
+  doc: unknown,
+): string[] {
+  switch (table) {
+    case "users": {
+      const user = doc as Doc<"users">;
+      return confirmedStorageIds(db, [user.resume?.storageId]);
+    }
+    case "events": {
+      const event = doc as Doc<"events">;
+      return confirmedStorageIds(db, [
+        ...(event.files ?? []),
+        ...(event.roomBookingFiles ?? []),
+        ...(event.graphicsFiles ?? []),
+        ...(event.invoices ?? []).flatMap((invoice) => [
+          invoice.invoiceFile,
+          ...invoice.additionalFiles,
+        ]),
+      ]);
+    }
+    case "reimbursements": {
+      const reimbursement = doc as Doc<"reimbursements">;
+      return confirmedStorageIds(db, [
+        ...(reimbursement.receipts ?? []).map((receipt) => receipt.receiptFile),
+        reimbursement.paymentDetails?.proofFileUrl,
+      ]);
+    }
+    case "fundDeposits": {
+      const deposit = doc as Doc<"fundDeposits">;
+      return confirmedStorageIds(db, [
+        ...(deposit.receiptFiles ?? []),
+        ...(deposit.bankTransferFiles ?? []),
+      ]);
+    }
+    case "fundRequests": {
+      const request = doc as Doc<"fundRequests">;
+      return confirmedStorageIds(db, [
+        ...(request.attachments ?? []).map((attachment) => attachment.url),
+      ]);
+    }
+    default: {
+      const unreachable: never = table;
+      return unreachable;
+    }
+  }
+}
+
+export async function syncRecordStorage<T extends StorageTable>(
+  ctx: MutationCtx,
+  table: T,
+  id: Id<T>,
 ): Promise<void> {
-  const next = new Set(
-    doc === null
-      ? []
-      : storageIdsInValue(doc, (candidate) => isStorageDocumentId(db, candidate)),
-  );
-  const existing = await db
+  const doc = await ctx.db.get(id);
+  const next = new Set(doc ? storageIdsFrom(ctx.db, table, doc) : []);
+  const recordId = String(id);
+  const existing = await ctx.db
     .query("storageReferences")
     .withIndex("by_recordId", (q) => q.eq("recordId", recordId))
     .collect();
   for (const row of existing) {
     if (next.has(row.storageId)) next.delete(row.storageId);
-    else await db.delete(row._id);
+    else await ctx.db.delete(row._id);
   }
   for (const storageId of next) {
-    await db.insert("storageReferences", { storageId, recordId });
+    await ctx.db.insert("storageReferences", { storageId, recordId });
   }
 }
 
@@ -102,72 +131,6 @@ export async function otherRecordHoldsStorageId(
     .collect();
   return matches.some((row) => row.recordId !== callerUserId);
 }
-
-function trackedTable(db: DatabaseWriter, id: string): StorageTable | null {
-  if (typeof db.normalizeId !== "function") return null;
-  for (const table of STORAGE_TABLES) {
-    if (db.normalizeId(table, id)) return table;
-  }
-  return null;
-}
-
-export function wrapMutationCtx(ctx: MutationCtx): MutationCtx {
-  const db = ctx.db;
-  const wrappedDb = Object.create(db) as DatabaseWriter;
-
-  const insert = async (table: string, value: object) => {
-    const id = await db.insert(table as never, value as never);
-    if (isStorageTable(table)) {
-      await syncStorageReferences(db, String(id), value);
-    }
-    return id;
-  };
-  wrappedDb.insert = insert as DatabaseWriter["insert"];
-
-  const patch = async (id: string, value: object) => {
-    await db.patch(id as never, value as never);
-    if (trackedTable(db, id)) {
-      const updated = await db.get(id as never);
-      await syncStorageReferences(db, String(id), updated);
-    }
-  };
-  wrappedDb.patch = patch as DatabaseWriter["patch"];
-
-  const replace = async (id: string, value: object) => {
-    await db.replace(id as never, value as never);
-    if (trackedTable(db, id)) {
-      await syncStorageReferences(db, String(id), value);
-    }
-  };
-  wrappedDb.replace = replace as DatabaseWriter["replace"];
-
-  const remove = async (id: string) => {
-    const tracked = trackedTable(db, id);
-    await db.delete(id as never);
-    if (tracked) await syncStorageReferences(db, String(id), null);
-  };
-  wrappedDb.delete = remove as DatabaseWriter["delete"];
-
-  return new Proxy(ctx, {
-    get(target, prop, receiver) {
-      if (prop === "db") return wrappedDb;
-      const value = Reflect.get(target, prop, receiver);
-      if (typeof value === "function") return value.bind(target);
-      return value;
-    },
-  });
-}
-
-type MutationDefinition = {
-  handler: (ctx: MutationCtx, ...args: never[]) => unknown;
-};
-
-export const mutation = ((definition: MutationDefinition) =>
-  rawMutation({
-    ...definition,
-    handler: (ctx: MutationCtx, ...args: never[]) =>
-      definition.handler(wrapMutationCtx(ctx), ...args),
-  } as never)) as typeof rawMutation;
 
 export async function runStorageReferenceBackfill(
   ctx: MutationCtx,
@@ -198,7 +161,7 @@ export async function runStorageReferenceBackfill(
     cursor: existing?.cursor ?? null,
   });
   for (const doc of page.page) {
-    await syncStorageReferences(ctx.db, String(doc._id), doc);
+    await syncRecordStorage(ctx, table, doc._id);
   }
 
   const nextTableIndex = page.isDone ? tableIndex + 1 : tableIndex;

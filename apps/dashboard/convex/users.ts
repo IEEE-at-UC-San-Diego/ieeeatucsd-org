@@ -1,5 +1,5 @@
-import { query } from "./_generated/server";
-import { mutation } from "./storageReferences";
+import { mutation, query } from "./_generated/server";
+import { syncRecordStorage } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -182,6 +182,7 @@ export const completeOnboarding = mutation({
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
       ...(resume && { resume }),
     });
+    await syncRecordStorage(ctx, "users", user._id);
 
     // Create/update public profile
     const existingProfile = await ctx.db
@@ -238,6 +239,7 @@ export const updateProfile = mutation({
     };
 
     await ctx.db.patch(user._id, updateData);
+    await syncRecordStorage(ctx, "users", user._id);
 
     // Sync public profile if requested and name/major/graduationYear changed
     if (syncPublicProfile) {
@@ -292,6 +294,7 @@ export const setIEEEEmail = mutation({
       ieeeEmailCreatedAt: Date.now(),
       lastUpdated: Date.now(),
     });
+    await syncRecordStorage(ctx, "users", user._id);
     return user._id;
   },
 });
@@ -308,6 +311,7 @@ export const acceptPolicyUpdate = mutation({
     const now = Date.now();
 
     await ctx.db.patch(user._id, serverPolicyAcceptance(now));
+    await syncRecordStorage(ctx, "users", user._id);
 
     return user._id;
   },
@@ -342,6 +346,7 @@ export const setResume = mutation({
     }
 
     await ctx.db.patch(user._id, { resume, lastUpdated: Date.now() });
+    await syncRecordStorage(ctx, "users", user._id);
     return user._id;
   },
 });
@@ -356,6 +361,7 @@ export const deleteResume = mutation({
     }
 
     await ctx.db.patch(user._id, { resume: undefined, lastUpdated: Date.now() });
+    await syncRecordStorage(ctx, "users", user._id);
     return user._id;
   },
 });
@@ -442,6 +448,7 @@ export const updateRole = mutation({
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });
+    await syncRecordStorage(ctx, "users", args.userId);
 
     return args.userId;
   },
@@ -475,7 +482,7 @@ export const createPlaceholder = mutation({
       return existingUser._id;
     }
 
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       email: normalizedEmail,
       emailVisibility: true,
       verified: true,
@@ -496,6 +503,8 @@ export const createPlaceholder = mutation({
       eventsAttended: 0,
       points: 0,
     });
+    await syncRecordStorage(ctx, "users", userId);
+    return userId;
   },
 });
 
@@ -521,6 +530,7 @@ export const updateStatus = mutation({
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });
+    await syncRecordStorage(ctx, "users", args.userId);
 
     return args.userId;
   },
@@ -550,6 +560,7 @@ export const updateProfileForAdmin = mutation({
     };
 
     await ctx.db.patch(args.userId, updateData);
+    await syncRecordStorage(ctx, "users", args.userId);
 
     const existingProfile = await ctx.db
       .query("publicProfiles")
@@ -624,6 +635,7 @@ export const deleteUser = mutation({
 
     // Delete the user
     await ctx.db.delete(args.userId);
+    await syncRecordStorage(ctx, "users", args.userId);
 
     return { success: true, deletedUserId: args.userId };
   },

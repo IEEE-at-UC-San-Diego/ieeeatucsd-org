@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server";
+import { syncRecordStorage } from "../storageReferences";
 
 /**
  * One-time migration: clears legacy string `resume` values before the object schema.
@@ -15,6 +16,7 @@ export const clearLegacyResumeStrings = internalMutation({
       const resume = user.resume as unknown;
       if (resume !== undefined && typeof resume === "string") {
         await ctx.db.patch(user._id, { resume: undefined });
+        await syncRecordStorage(ctx, "users", user._id);
         cleared += 1;
       }
     }

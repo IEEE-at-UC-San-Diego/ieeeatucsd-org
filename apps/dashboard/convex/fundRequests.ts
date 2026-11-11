@@ -1,5 +1,5 @@
-import { query } from "./_generated/server";
-import { mutation } from "./storageReferences";
+import { mutation, query } from "./_generated/server";
+import { syncRecordStorage } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -175,7 +175,7 @@ export const create = mutation({
       },
     ];
 
-    return await ctx.db.insert("fundRequests", {
+    const requestId = await ctx.db.insert("fundRequests", {
       ...data,
       status: "submitted" as const,
       requestedBy: userId,
@@ -187,6 +187,8 @@ export const create = mutation({
       updatedAt: now,
       auditLogs,
     });
+    await syncRecordStorage(ctx, "fundRequests", requestId);
+    return requestId;
   },
 });
 
@@ -278,6 +280,7 @@ export const update = mutation({
       auditLogs: auditLogs as any,
       submittedAt: now,
     });
+    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -335,6 +338,7 @@ export const updateStatus = mutation({
       infoRequestNotes,
       auditLogs: auditLogs as any,
     });
+    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -361,6 +365,7 @@ export const updateFundSource = mutation({
       fundSource,
       updatedAt: now,
     });
+    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -388,6 +393,7 @@ export const deleteRequest = mutation({
     assertFundRequestWithdrawable(request.status);
 
     await ctx.db.delete(args.id);
+    await syncRecordStorage(ctx, "fundRequests", args.id);
     return args.id;
   },
 });

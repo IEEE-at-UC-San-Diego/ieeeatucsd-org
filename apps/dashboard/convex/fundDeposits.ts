@@ -1,5 +1,5 @@
-import { query } from "./_generated/server";
-import { mutation } from "./storageReferences";
+import { mutation, query } from "./_generated/server";
+import { syncRecordStorage } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireOfficerAccess,
@@ -176,7 +176,7 @@ export const create = mutation({
       note: "Deposit submitted for review",
     };
 
-    return await ctx.db.insert("fundDeposits", {
+    const depositId = await ctx.db.insert("fundDeposits", {
       ...data,
       depositedBy: userId,
       depositedByName: user.name || user.email,
@@ -185,6 +185,8 @@ export const create = mutation({
       submittedAt: Date.now(),
       auditLogs: [initialAuditLog],
     });
+    await syncRecordStorage(ctx, "fundDeposits", depositId);
+    return depositId;
   },
 });
 
@@ -284,6 +286,7 @@ export const update = mutation({
       editedAt: Date.now(),
       auditLogs: [...(deposit.auditLogs || []), editAuditLog],
     });
+    await syncRecordStorage(ctx, "fundDeposits", args.id);
 
     return args.id;
   },
@@ -340,6 +343,7 @@ export const updateStatus = mutation({
         next.status === "rejected" ? args.rejectionReason : undefined,
       auditLogs: [...(deposit.auditLogs || []), statusAuditLog],
     });
+    await syncRecordStorage(ctx, "fundDeposits", args.id);
 
     return args.id;
   },
@@ -370,6 +374,7 @@ export const deleteRequest = mutation({
 
     // Delete the deposit
     await ctx.db.delete(args.id);
+    await syncRecordStorage(ctx, "fundDeposits", args.id);
 
     return args.id;
   },
@@ -405,6 +410,7 @@ export const addReceiptFile = mutation({
     await ctx.db.patch(args.id, {
       receiptFiles: [...(deposit.receiptFiles || []), args.fileUrl],
     });
+    await syncRecordStorage(ctx, "fundDeposits", args.id);
 
     return args.id;
   },
@@ -442,6 +448,7 @@ export const removeReceiptFile = mutation({
         (url) => url !== args.fileUrl
       ),
     });
+    await syncRecordStorage(ctx, "fundDeposits", args.id);
 
     return args.id;
   },

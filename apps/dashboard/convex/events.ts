@@ -1,6 +1,6 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
-import { mutation } from "./storageReferences";
+import { syncRecordStorage } from "./storageReferences";
 import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
@@ -501,7 +501,7 @@ export const create = mutation({
       canPublish: hasOfficerAccess(user.role),
     });
 
-    return await ctx.db.insert("events", {
+    const eventId = await ctx.db.insert("events", {
       ...data,
       pointsToReward,
       ...(normalizedEventCode ? { eventCode: normalizedEventCode } : {}),
@@ -512,6 +512,8 @@ export const create = mutation({
       flyersCompleted: data.flyersCompleted ?? false,
       createdAt: Date.now(),
     });
+    await syncRecordStorage(ctx, "events", eventId);
+    return eventId;
   },
 });
 
@@ -667,6 +669,7 @@ export const update = mutation({
       Boolean(event.published) && nextListing.published === false;
 
     await ctx.db.patch(id, { ...cleanUpdates, ...listingPatch });
+    await syncRecordStorage(ctx, "events", id);
 
     if (shouldQueueCalendarDeletion) {
       await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
@@ -711,6 +714,7 @@ export const updateVcoPipeline = mutation({
       Date.now(),
     );
     await ctx.db.patch(id, { ...cleanUpdates, ...donePatch });
+    await syncRecordStorage(ctx, "events", id);
     return id;
   },
 });
@@ -726,6 +730,7 @@ export const remove = mutation({
 
     if (hasOfficerAccess(user.role)) {
       await ctx.db.delete(args.id);
+      await syncRecordStorage(ctx, "events", args.id);
       if (event.published) {
         await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
       }
@@ -741,6 +746,7 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+    await syncRecordStorage(ctx, "events", args.id);
     if (event.published) {
       await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
     }
@@ -798,6 +804,7 @@ export const updateStatus = mutation({
       ...(args.declinedReason && { declinedReason: args.declinedReason }),
       ...(args.reviewFeedback && { reviewFeedback: args.reviewFeedback }),
     });
+    await syncRecordStorage(ctx, "events", args.id);
     if (event.published && !nextListing.published) {
       await enqueuePublishedEventGoogleCalendarDeletion(
         ctx,
@@ -932,6 +939,7 @@ export const checkIn = mutation({
       points: (user.points || 0) + pts,
       eventsAttended: (user.eventsAttended || 0) + 1,
     });
+    await syncRecordStorage(ctx, "users", user._id);
 
     return { points: pts };
   },

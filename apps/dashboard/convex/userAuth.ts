@@ -8,6 +8,7 @@ import { hasOfficerAccess, requireCurrentUser } from "./permissions";
 import type { AuthUpsertResult } from "./userProvisioning";
 import { buildAuthUpsertResult } from "./userProvisioning";
 import { transitionOfficerInvitation } from "./officerInvitationTransition";
+import { syncRecordStorage } from "./storageReferences";
 
 export type VerifiedAuthUpsertArgs = {
   logtoId: string;
@@ -81,6 +82,7 @@ export class UserAuth {
         ...(args.signInMethod && { signInMethod: args.signInMethod }),
         ...(args.avatar && { avatar: args.avatar }),
       });
+      await syncRecordStorage(ctx, "users", existing._id);
       return buildAuthUpsertResult(
         existing._id,
         existing.signedUp ?? false,
@@ -130,6 +132,7 @@ export class UserAuth {
         ...(args.signInMethod && { signInMethod: args.signInMethod }),
         ...(args.avatar && { avatar: args.avatar }),
       });
+      await syncRecordStorage(ctx, "users", bestMatch._id);
 
       return buildAuthUpsertResult(
         bestMatch._id,
@@ -240,6 +243,7 @@ export class UserAuth {
         inviteAccepted: Date.now(),
       }),
     });
+    await syncRecordStorage(ctx, "users", userId);
 
     return buildAuthUpsertResult(userId, false, role);
   }

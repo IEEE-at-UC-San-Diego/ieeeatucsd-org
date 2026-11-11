@@ -63,6 +63,14 @@ function eventCtx(event: ReturnType<typeof draftEvent>) {
       delete: vi.fn(async () => undefined),
       patch: vi.fn(async () => undefined),
       insert: vi.fn(async () => "googleCalendarDeletionQueue:1"),
+      query: () => ({
+        withIndex: () => ({
+          collect: async () => [],
+        }),
+      }),
+      system: {
+        normalizeId: () => null,
+      },
     },
   };
 }
