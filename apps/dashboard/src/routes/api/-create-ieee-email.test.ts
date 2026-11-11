@@ -5,6 +5,8 @@ const createIEEEEmailMock = vi.fn();
 const migrationGateMock = vi.fn();
 const steps: string[] = [];
 const bindings = new Map<string, string>();
+let claimCount = 0;
+let onSecondClaim: (() => void) | undefined;
 
 vi.mock("@/server/auth", () => ({
 	requireApiAuth: (...args: unknown[]) => requireApiAuthMock(...args),
@@ -31,7 +33,9 @@ vi.mock("convex/browser", () => ({
 			const name = String(fn);
 			steps.push(name);
 			if (name.endsWith("setIEEEEmail") && args.logtoId && args.ieeeEmail) {
+				claimCount += 1;
 				bindings.set(args.logtoId, args.ieeeEmail);
+				if (claimCount === 2) onSecondClaim?.();
 			}
 			if (name.endsWith("releaseIEEEEmail") && args.logtoId) {
 				if (bindings.get(args.logtoId) === args.ieeeEmail) {
@@ -55,6 +59,8 @@ describe("POST /api/create-ieee-email", () => {
 		vi.clearAllMocks();
 		steps.length = 0;
 		bindings.clear();
+		claimCount = 0;
+		onSecondClaim = undefined;
 		vi.stubEnv("MXROUTE_EMAIL_DOMAIN", "ieeeatucsd.org");
 		vi.stubEnv("CONVEX_URL", "http://127.0.0.1:3210");
 		createIEEEEmailMock.mockImplementation(async () => {
@@ -142,5 +148,42 @@ describe("POST /api/create-ieee-email", () => {
 		expect(response.status).toBe(500);
 		expect(bindings.get("ada")).toBe("ada@ieeeatucsd.org");
 		expect(steps).toEqual(["users:setIEEEEmail", "provision"]);
+	});
+
+	it("keeps the binding when an overlapping create fails", async () => {
+		let provisions = 0;
+		let markFirstProvisionWaiting: () => void = () => {};
+		const firstProvisionWaiting = new Promise<void>((resolve) => {
+			markFirstProvisionWaiting = resolve;
+		});
+		let markSecondClaimed: () => void = () => {};
+		const secondClaimed = new Promise<void>((resolve) => {
+			markSecondClaimed = resolve;
+		});
+		onSecondClaim = markSecondClaimed;
+		createIEEEEmailMock.mockImplementation(async () => {
+			provisions += 1;
+			if (provisions === 1) {
+				markFirstProvisionWaiting();
+				await secondClaimed;
+				throw new Error("Failed to create email account");
+			}
+			return { success: true, ieeeEmail: "ada@ieeeatucsd.org" };
+		});
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "ada",
+			body: { username: "ada", password: "new-secret" },
+			user: { role: "Member", email: "ada@ucsd.edu" },
+		});
+
+		const { handle } = await import("./create-ieee-email");
+		const first = handle({ request: post("ada") });
+		await firstProvisionWaiting;
+		const second = handle({ request: post("ada") });
+		const [failed, created] = await Promise.all([first, second]);
+
+		expect(failed.status).toBe(500);
+		expect(created.status).toBe(200);
+		expect(bindings.get("ada")).toBe("ada@ieeeatucsd.org");
 	});
 });
