@@ -1,6 +1,5 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
 import { Loader2 } from "lucide-react";
 import ConstitutionPreview from "@/components/constitution-builder/ConstitutionPreview";
 import { exportConstitutionToPdf } from "@/components/constitution-builder/utils/pdfExport";
@@ -24,7 +23,7 @@ function ConstitutionPreviewPage() {
 		logtoId ? { logtoId } : "skip",
 	);
 
-	const sectionsFromQuery = useQuery(
+	const sectionsFromQuery = useAuthedQuery(
 		api.constitutions.getSections,
 		constitution ? { constitutionId: constitution._id } : "skip",
 	);

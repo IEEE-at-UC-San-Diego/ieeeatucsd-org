@@ -1,6 +1,5 @@
 import { api } from "@convex/_generated/api";
 import type { Doc } from "@convex/_generated/dataModel";
-import { useQuery } from "convex/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
@@ -64,11 +63,7 @@ export function useConstitutionData() {
 	lastConstitutionRef.current = stableConstitution.lastResolved;
 	const constitution = stableConstitution.value;
 
-	// Get sections - only when we have a valid constitution ID.
-	// getSections is a public query with no auth args, so once the constitution
-	// has resolved it keeps receiving updates while the authed query above
-	// re-subscribes.
-	const rawSections = useQuery(
+	const rawSections = useAuthedQuery(
 		api.constitutions.getSections,
 		constitution ? { constitutionId: constitution._id } : "skip",
 	);
