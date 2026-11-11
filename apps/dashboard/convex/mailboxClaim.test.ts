@@ -3,9 +3,14 @@ import {
   decideMailboxClaim,
   loadMailboxHolders,
   matchingMailboxHolderIds,
+  nextMailboxMigrationPhase,
+  nonOfficerMailboxAccess,
+  patchMailboxPage,
+  scanMailboxPage,
   storedIeeeEmailAfterBackfill,
   type IeeeEmailIndexedUsers,
   type MailboxIndexRow,
+  type MailboxMigrationPhase,
 } from "./mailboxClaim";
 
 function exactIeeeEmailIndex(rows: readonly MailboxIndexRow[]) {
@@ -155,5 +160,88 @@ describe("loadMailboxHolders", () => {
     expect(holders.map((holder) => holder.id)).toEqual(["owner"]);
     expect(index.queried()).toEqual(["ada@ieeeatucsd.org"]);
     expect(index.fullTableCollects()).toBe(0);
+  });
+});
+
+describe("mailbox migration", () => {
+  it("keeps a non-officer closed until the migration is done, then opens", () => {
+    expect(
+      nonOfficerMailboxAccess({ migrationDone: false, collision: false }),
+    ).toBe("closed");
+    expect(
+      nonOfficerMailboxAccess({ migrationDone: true, collision: false }),
+    ).toBe("open");
+    expect(
+      nonOfficerMailboxAccess({ migrationDone: true, collision: true }),
+    ).toBe("collision");
+  });
+
+  it("does not rewrite rows that collapse to one mailbox, and records the collision", () => {
+    const rows = [
+      { id: "mixed", ieeeEmail: "Ada@ieeeatucsd.org" },
+      { id: "lower", ieeeEmail: "ada@ieeeatucsd.org" },
+      { id: "unique", ieeeEmail: "President@ieeeatucsd.org" },
+    ];
+    const planned = patchMailboxPage(rows, (canon) =>
+      canon === "ada@ieeeatucsd.org" ? 2 : 1,
+    );
+
+    expect(planned.patches).toEqual([
+      { id: "unique", ieeeEmail: "president@ieeeatucsd.org" },
+    ]);
+    expect(planned.collisions).toEqual(["ada@ieeeatucsd.org"]);
+  });
+
+  it("pages past the first page and records done only on the last patch page", () => {
+    const rows = [
+      { id: "mixed", ieeeEmail: "Ada@ieeeatucsd.org" },
+      { id: "lower", ieeeEmail: "ada@ieeeatucsd.org" },
+      { id: "unique", ieeeEmail: "President@ieeeatucsd.org" },
+    ];
+    const pageSize = 2;
+    const holders = new Map<string, string>();
+    let phase: MailboxMigrationPhase = "scan";
+    let cursor = 0;
+    const seen: { phase: MailboxMigrationPhase; recordDone: boolean }[] = [];
+    const patches: { id: string; ieeeEmail: string }[] = [];
+    const collisions = new Set<string>();
+
+    while (phase !== "done") {
+      const page = rows.slice(cursor, cursor + pageSize);
+      const isLastPage = cursor + pageSize >= rows.length;
+      if (phase === "scan") {
+        for (const note of scanMailboxPage(page)) {
+          holders.set(note.userId, note.canon);
+        }
+      } else {
+        const counts = new Map<string, number>();
+        for (const canon of holders.values()) {
+          counts.set(canon, (counts.get(canon) ?? 0) + 1);
+        }
+        const planned = patchMailboxPage(
+          page,
+          (canon) => counts.get(canon) ?? 0,
+        );
+        patches.push(...planned.patches);
+        for (const canon of planned.collisions) collisions.add(canon);
+      }
+      const step = nextMailboxMigrationPhase(phase, isLastPage);
+      seen.push({ phase, recordDone: step.recordDone });
+      cursor = isLastPage ? 0 : cursor + pageSize;
+      phase = step.phase;
+    }
+
+    expect(seen.map((step) => step.phase)).toEqual([
+      "scan",
+      "scan",
+      "patch",
+      "patch",
+    ]);
+    expect(seen.slice(0, -1).every((step) => !step.recordDone)).toBe(true);
+    expect(seen.at(-1)?.recordDone).toBe(true);
+    expect(patches).toEqual([
+      { id: "unique", ieeeEmail: "president@ieeeatucsd.org" },
+    ]);
+    expect([...collisions]).toEqual(["ada@ieeeatucsd.org"]);
   });
 });

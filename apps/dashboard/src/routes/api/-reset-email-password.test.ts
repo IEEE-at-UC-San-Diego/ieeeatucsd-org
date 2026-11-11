@@ -210,6 +210,55 @@ describe("POST /api/reset-email-password", () => {
 		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
 	});
 
+	it("refuses a collided mailbox after the migration is done", async () => {
+		migrationGateMock.mockResolvedValue({ done: true, collision: true });
+		mailboxTakenMock.mockResolvedValue(false);
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "ada-lovelace",
+			body: { email: "ada@ieeeatucsd.org", password: "new-secret" },
+			user: {
+				role: "Member",
+				email: "ada@ucsd.edu",
+				ieeeEmail: "ada@ieeeatucsd.org",
+			},
+		});
+
+		const { handle } = await import("./reset-email-password");
+		const response = await handle({
+			request: post("ada@ieeeatucsd.org"),
+		});
+
+		expect(response.status).toBe(403);
+		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
+	});
+
+	it("allows the same owner reset once the mailbox migration is done", async () => {
+		migrationGateMock.mockResolvedValueOnce({ done: false, collision: false });
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "ada-lovelace",
+			body: { email: "adalovelace@ieeeatucsd.org", password: "new-secret" },
+			user: {
+				role: "Member",
+				email: "Ada.Lovelace@ucsd.edu",
+				ieeeEmail: "adalovelace@ieeeatucsd.org",
+			},
+		});
+
+		const { handle } = await import("./reset-email-password");
+		const closed = await handle({
+			request: post("adalovelace@ieeeatucsd.org"),
+		});
+		expect(closed.status).toBe(403);
+		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
+
+		migrationGateMock.mockResolvedValueOnce({ done: true, collision: false });
+		const open = await handle({
+			request: post("adalovelace@ieeeatucsd.org"),
+		});
+		expect(open.status).toBe(200);
+		expect(resetEmailPasswordMock).toHaveBeenCalledOnce();
+	});
+
 	it("lets an officer reset a mailbox they do not own", async () => {
 		requireApiAuthMock.mockResolvedValue({
 			body: { email: "president@ieeeatucsd.org", password: "new-secret" },
@@ -226,6 +275,7 @@ describe("POST /api/reset-email-password", () => {
 		});
 
 		expect(response.status).toBe(200);
+		expect(migrationGateMock).not.toHaveBeenCalled();
 		expect(mailboxTakenMock).not.toHaveBeenCalled();
 		expect(resetEmailPasswordMock).toHaveBeenCalledOnce();
 	});

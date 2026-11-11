@@ -82,6 +82,78 @@ export function storedIeeeEmailAfterBackfill(
   return { changed: true, ieeeEmail };
 }
 
+const MAILBOX_OFFICER_ROLES = new Set([
+  "Administrator",
+  "Executive Officer",
+  "General Officer",
+]);
+
+export function isMailboxOfficer(role: string): boolean {
+  return MAILBOX_OFFICER_ROLES.has(role);
+}
+
+export type NonOfficerMailboxAccess = "closed" | "collision" | "open";
+
+export function nonOfficerMailboxAccess(args: {
+  migrationDone: boolean;
+  collision: boolean;
+}): NonOfficerMailboxAccess {
+  if (!args.migrationDone) return "closed";
+  if (args.collision) return "collision";
+  return "open";
+}
+
+export const DEFAULT_MAILBOX_MIGRATION_PAGE_SIZE = 64;
+
+export type MailboxMigrationPhase = "scan" | "patch" | "done";
+
+export function nextMailboxMigrationPhase(
+  phase: "scan" | "patch",
+  isLastPage: boolean,
+): { phase: MailboxMigrationPhase; recordDone: boolean } {
+  if (!isLastPage) return { phase, recordDone: false };
+  if (phase === "scan") return { phase: "patch", recordDone: false };
+  return { phase: "done", recordDone: true };
+}
+
+export function scanMailboxPage(
+  rows: readonly { id: string; ieeeEmail?: string }[],
+): { userId: string; canon: string }[] {
+  const notes: { userId: string; canon: string }[] = [];
+  for (const row of rows) {
+    if (!row.ieeeEmail) continue;
+    const canon = canonicalMailbox(row.ieeeEmail);
+    if (!canon) continue;
+    notes.push({ userId: row.id, canon });
+  }
+  return notes;
+}
+
+export function patchMailboxPage(
+  rows: readonly { id: string; ieeeEmail?: string }[],
+  countFor: (canon: string) => number,
+): { patches: { id: string; ieeeEmail: string }[]; collisions: string[] } {
+  const patches: { id: string; ieeeEmail: string }[] = [];
+  const collisions: string[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!row.ieeeEmail) continue;
+    const canon = canonicalMailbox(row.ieeeEmail);
+    if (!canon) continue;
+    if (countFor(canon) >= 2) {
+      if (!seen.has(canon)) {
+        seen.add(canon);
+        collisions.push(canon);
+      }
+      continue;
+    }
+    if (row.ieeeEmail !== canon) {
+      patches.push({ id: row.id, ieeeEmail: canon });
+    }
+  }
+  return { patches, collisions };
+}
+
 export function decideMailboxClaim(args: {
   callerId: string;
   callerEmail: string;

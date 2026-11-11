@@ -3,10 +3,15 @@ import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 import { requireApiAuth } from "@/server/auth";
 import { createConvexSessionToken } from "@/server/convex-session";
+import { mailboxMigrationGate } from "@/server/mailbox-binding";
 import { createIEEEEmail } from "@/server/mxroute";
 import type { UserRole } from "@/types/roles";
+import {
+	isMailboxOfficer,
+	nonOfficerMailboxAccess,
+} from "../../../convex/mailboxClaim";
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -27,12 +32,7 @@ async function handle({ request }: { request: Request }) {
 		}
 
 		const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, "");
-		const privilegedRoles = new Set([
-			"Administrator",
-			"Executive Officer",
-			"General Officer",
-		]);
-		const isPrivileged = privilegedRoles.has(String(user.role || ""));
+		const isPrivileged = isMailboxOfficer(String(user.role || ""));
 		const requesterEmail = String(user.email || "");
 		const requesterUsername = requesterEmail
 			.split("@")[0]
@@ -51,6 +51,31 @@ async function handle({ request }: { request: Request }) {
 				}),
 				{ status: 403, headers: { "Content-Type": "application/json" } },
 			);
+		}
+
+		if (!isPrivileged) {
+			const domain = (
+				process.env.MXROUTE_EMAIL_DOMAIN || "ieeeatucsd.org"
+			).toLowerCase();
+			const gate = await mailboxMigrationGate({
+				logtoId,
+				role: user.role as UserRole | undefined,
+				ieeeEmail: `${normalizedUsername}@${domain}`,
+			});
+			if (
+				nonOfficerMailboxAccess({
+					migrationDone: gate.done,
+					collision: gate.collision,
+				}) !== "open"
+			) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error: "Forbidden: mailbox ownership mismatch",
+					}),
+					{ status: 403, headers: { "Content-Type": "application/json" } },
+				);
+			}
 		}
 
 		const result = await createIEEEEmail({ username, password });

@@ -854,4 +854,22 @@ export default defineSchema({
     createdByName: v.optional(v.string()),
   })
     .index("by_department", ["department"]),
+
+  mailboxMigrationState: defineTable({
+    name: v.string(),
+    phase: v.union(v.literal("scan"), v.literal("patch"), v.literal("done")),
+    cursor: v.optional(v.string()),
+    pageSize: v.optional(v.number()),
+  }).index("by_name", ["name"]),
+
+  mailboxCanonHolders: defineTable({
+    canon: v.string(),
+    userId: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_canon", ["canon"]),
+
+  mailboxCollisions: defineTable({
+    canon: v.string(),
+  }).index("by_canon", ["canon"]),
 });

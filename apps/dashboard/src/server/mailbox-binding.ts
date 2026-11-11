@@ -39,3 +39,31 @@ export async function isMailboxBoundToAnotherAccount(args: {
 	}
 	return taken;
 }
+
+export async function mailboxMigrationGate(args: {
+	logtoId: string;
+	role?: UserRole;
+	ieeeEmail: string;
+}) {
+	const client = convexClient();
+	const fn =
+		"migrations/lowercaseIeeeEmails:getMailboxMigrationGate" as unknown as FunctionReference<"query">;
+	const { token } = createConvexSessionToken({
+		sub: args.logtoId,
+		role: args.role,
+	});
+	const gate = await client.query(fn, {
+		logtoId: args.logtoId,
+		authToken: token,
+		ieeeEmail: args.ieeeEmail,
+	});
+	if (
+		typeof gate !== "object" ||
+		gate === null ||
+		typeof (gate as { done?: unknown }).done !== "boolean" ||
+		typeof (gate as { collision?: unknown }).collision !== "boolean"
+	) {
+		throw new Error("Invalid mailbox migration gate");
+	}
+	return gate as { done: boolean; collision: boolean };
+}

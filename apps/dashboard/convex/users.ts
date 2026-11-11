@@ -13,8 +13,11 @@ import {
 import {
   canonicalMailbox,
   decideMailboxClaim,
+  isMailboxOfficer,
   loadMailboxHolders,
+  nonOfficerMailboxAccess,
 } from "./mailboxClaim";
+import { readMailboxGate } from "./migrations/lowercaseIeeeEmails";
 import { UserAuth } from "./userAuth";
 import {
   UserRoleAssignment,
@@ -290,6 +293,25 @@ export const setIEEEEmail = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const mailbox = canonicalMailbox(args.ieeeEmail);
+    if (!isMailboxOfficer(user.role)) {
+      const gate = await readMailboxGate(ctx, mailbox);
+      const access = nonOfficerMailboxAccess({
+        migrationDone: gate.done,
+        collision: gate.collision,
+      });
+      switch (access) {
+        case "open":
+          break;
+        case "closed":
+          throw new Error("Mailbox migration is not finished");
+        case "collision":
+          throw new Error("Mailbox collision must be resolved");
+        default: {
+          const unexpected: never = access;
+          throw new Error(`Unexpected mailbox access: ${unexpected}`);
+        }
+      }
+    }
     const holders = await loadMailboxHolders(ctx.db, mailbox, [args.ieeeEmail]);
     const holderIds = holders.map((holder) => holder.id);
     const decision = decideMailboxClaim({

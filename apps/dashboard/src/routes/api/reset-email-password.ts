@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireApiAuth } from "@/server/auth";
-import { isMailboxBoundToAnotherAccount } from "@/server/mailbox-binding";
+import {
+	isMailboxBoundToAnotherAccount,
+	mailboxMigrationGate,
+} from "@/server/mailbox-binding";
 import { resetEmailPassword } from "@/server/mxroute";
+import {
+	isMailboxOfficer,
+	nonOfficerMailboxAccess,
+} from "../../../convex/mailboxClaim";
 
 function ownershipMismatch() {
 	return new Response(
@@ -27,12 +34,7 @@ export async function handle({ request }: { request: Request }) {
 			);
 		}
 
-		const privilegedRoles = new Set([
-			"Administrator",
-			"Executive Officer",
-			"General Officer",
-		]);
-		const isPrivileged = privilegedRoles.has(String(user.role || ""));
+		const isPrivileged = isMailboxOfficer(String(user.role || ""));
 		if (!isPrivileged) {
 			const requesterEmail = String(user.email || "");
 			const requesterUsername = requesterEmail
@@ -51,6 +53,20 @@ export async function handle({ request }: { request: Request }) {
 				!expectedEmail ||
 				email.toLowerCase() !== expectedEmail ||
 				boundEmail !== expectedEmail
+			) {
+				return ownershipMismatch();
+			}
+
+			const gate = await mailboxMigrationGate({
+				logtoId,
+				role: user.role,
+				ieeeEmail: expectedEmail,
+			});
+			if (
+				nonOfficerMailboxAccess({
+					migrationDone: gate.done,
+					collision: gate.collision,
+				}) !== "open"
 			) {
 				return ownershipMismatch();
 			}
