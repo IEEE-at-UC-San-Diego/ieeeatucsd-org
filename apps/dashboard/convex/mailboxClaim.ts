@@ -19,6 +19,69 @@ export function matchingMailboxHolderIds(
     .map((holder) => holder.id);
 }
 
+export type MailboxIndexRow = { _id: string; ieeeEmail?: string };
+
+export type IeeeEmailIndexedUsers<Range = unknown> = {
+  query: (table: "users") => {
+    withIndex: (
+      indexName: "by_ieeeEmail",
+      indexRange?: (q: {
+        eq: (field: "ieeeEmail", value: string) => Range;
+      }) => Range,
+    ) => {
+      collect: () => Promise<ReadonlyArray<MailboxIndexRow>>;
+    };
+  };
+};
+
+export function mailboxIndexKeys(
+  mailbox: string,
+  rawValues: readonly string[] = [],
+): string[] {
+  const canonical = canonicalMailbox(mailbox);
+  if (!canonical) return [];
+  const keys = new Set<string>([canonical]);
+  for (const raw of rawValues) {
+    const trimmed = raw.trim();
+    if (!trimmed || canonicalMailbox(trimmed) !== canonical) continue;
+    keys.add(trimmed);
+  }
+  return [...keys];
+}
+
+export async function loadMailboxHolders<Range>(
+  db: IeeeEmailIndexedUsers<Range>,
+  mailbox: string,
+  rawValues: readonly string[] = [],
+): Promise<{ id: string; ieeeEmail?: string }[]> {
+  const canonical = canonicalMailbox(mailbox);
+  const seen = new Set<string>();
+  const holders: { id: string; ieeeEmail?: string }[] = [];
+  for (const key of mailboxIndexKeys(mailbox, rawValues)) {
+    const rows = await db
+      .query("users")
+      .withIndex("by_ieeeEmail", (q) => q.eq("ieeeEmail", key))
+      .collect();
+    for (const row of rows) {
+      if (row.ieeeEmail === undefined) continue;
+      if (canonicalMailbox(row.ieeeEmail) !== canonical) continue;
+      if (seen.has(row._id)) continue;
+      seen.add(row._id);
+      holders.push({ id: row._id, ieeeEmail: row.ieeeEmail });
+    }
+  }
+  return holders;
+}
+
+export function storedIeeeEmailAfterBackfill(
+  value: string | undefined,
+): { changed: false } | { changed: true; ieeeEmail: string } {
+  if (value === undefined) return { changed: false };
+  const ieeeEmail = canonicalMailbox(value);
+  if (ieeeEmail === value) return { changed: false };
+  return { changed: true, ieeeEmail };
+}
+
 export function decideMailboxClaim(args: {
   callerId: string;
   callerEmail: string;

@@ -59,6 +59,7 @@ export async function handle({ request }: { request: Request }) {
 				logtoId,
 				role: user.role,
 				ieeeEmail: expectedEmail,
+				rawValues: [email, String(user.ieeeEmail || "")],
 			});
 			if (taken) return ownershipMismatch();
 		}

@@ -76,6 +76,7 @@ describe("POST /api/reset-email-password", () => {
 			logtoId: "ada-lovelace",
 			role: "Member",
 			ieeeEmail: "adalovelace@ieeeatucsd.org",
+			rawValues: ["AdaLovelace@IEEEATUCSD.org", "adalovelace@ieeeatucsd.org"],
 		});
 		expect(resetEmailPasswordMock).toHaveBeenCalledWith({
 			email: "AdaLovelace@IEEEATUCSD.org",
@@ -145,6 +146,7 @@ describe("POST /api/reset-email-password", () => {
 			logtoId: "ada-smith-plain",
 			role: "Member",
 			ieeeEmail: "adasmith@ieeeatucsd.org",
+			rawValues: ["adasmith@ieeeatucsd.org", "adasmith@ieeeatucsd.org"],
 		});
 		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
 	});
@@ -174,6 +176,12 @@ describe("POST /api/reset-email-password", () => {
 		});
 
 		expect(response.status).toBe(403);
+		expect(mailboxTakenMock).toHaveBeenCalledWith({
+			logtoId: "intruder",
+			role: "Member",
+			ieeeEmail: "ada@ieeeatucsd.org",
+			rawValues: ["Ada@ieeeatucsd.org", "ada@ieeeatucsd.org"],
+		});
 		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
 	});
 

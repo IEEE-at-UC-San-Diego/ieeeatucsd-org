@@ -13,7 +13,7 @@ import {
 import {
   canonicalMailbox,
   decideMailboxClaim,
-  matchingMailboxHolderIds,
+  loadMailboxHolders,
 } from "./mailboxClaim";
 import { UserAuth } from "./userAuth";
 import {
@@ -290,11 +290,8 @@ export const setIEEEEmail = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const mailbox = canonicalMailbox(args.ieeeEmail);
-    const rows = await ctx.db.query("users").collect();
-    const holderIds = matchingMailboxHolderIds(
-      mailbox,
-      rows.map((row) => ({ id: row._id, ieeeEmail: row.ieeeEmail })),
-    );
+    const holders = await loadMailboxHolders(ctx.db, mailbox, [args.ieeeEmail]);
+    const holderIds = holders.map((holder) => holder.id);
     const decision = decideMailboxClaim({
       callerId: user._id,
       callerEmail: user.email,
@@ -329,6 +326,7 @@ export const isMailboxBoundToAnotherAccount = query({
     logtoId: v.string(),
     authToken: v.string(),
     ieeeEmail: v.string(),
+    rawValues: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
@@ -342,11 +340,11 @@ export const isMailboxBoundToAnotherAccount = query({
     if (shape !== "allow") {
       throw new Error("Mailbox does not belong to this account");
     }
-    const rows = await ctx.db.query("users").collect();
-    return matchingMailboxHolderIds(
-      mailbox,
-      rows.map((row) => ({ id: row._id, ieeeEmail: row.ieeeEmail })),
-    ).some((holderId) => holderId !== user._id);
+    const holders = await loadMailboxHolders(ctx.db, mailbox, [
+      args.ieeeEmail,
+      ...(args.rawValues ?? []),
+    ]);
+    return holders.some((holder) => holder.id !== user._id);
   },
 });
 

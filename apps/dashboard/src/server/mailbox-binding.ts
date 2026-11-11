@@ -19,6 +19,7 @@ export async function isMailboxBoundToAnotherAccount(args: {
 	logtoId: string;
 	role?: UserRole;
 	ieeeEmail: string;
+	rawValues?: string[];
 }) {
 	const client = convexClient();
 	const fn =
@@ -31,6 +32,7 @@ export async function isMailboxBoundToAnotherAccount(args: {
 		logtoId: args.logtoId,
 		authToken: token,
 		ieeeEmail: args.ieeeEmail,
+		...(args.rawValues ? { rawValues: args.rawValues } : {}),
 	});
 	if (typeof taken !== "boolean") {
 		throw new Error("Invalid mailbox binding lookup");

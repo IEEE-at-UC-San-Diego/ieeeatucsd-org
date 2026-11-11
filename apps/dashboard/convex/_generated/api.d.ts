@@ -31,6 +31,7 @@ import type * as internalEvents from "../internalEvents.js";
 import type * as links from "../links.js";
 import type * as logs from "../logs.js";
 import type * as migrations_clearLegacyResumes from "../migrations/clearLegacyResumes.js";
+import type * as migrations_lowercaseIeeeEmails from "../migrations/lowercaseIeeeEmails.js";
 import type * as notifications from "../notifications.js";
 import type * as officerInvitations from "../officerInvitations.js";
 import type * as officerRejections from "../officerRejections.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   links: typeof links;
   logs: typeof logs;
   "migrations/clearLegacyResumes": typeof migrations_clearLegacyResumes;
+  "migrations/lowercaseIeeeEmails": typeof migrations_lowercaseIeeeEmails;
   notifications: typeof notifications;
   officerInvitations: typeof officerInvitations;
   officerRejections: typeof officerRejections;

@@ -200,6 +200,7 @@ export default defineSchema({
   })
     .index("by_logtoId", ["logtoId"])
     .index("by_email", ["email"])
+    .index("by_ieeeEmail", ["ieeeEmail"])
     .index("by_role", ["role"])
     .index("by_points", ["points"]),
 
