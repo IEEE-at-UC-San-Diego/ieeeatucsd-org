@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { LogOut, Settings, Sparkles } from "lucide-react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { OfficerAiChat } from "@/components/dashboard/shared/OfficerAiChat";
 import { UserAvatarFallback } from "@/components/dashboard/UserAvatarFallback";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +33,7 @@ export function MobileMoreDrawer({
 	currentPath,
 }: MobileMoreDrawerProps) {
 	const { user, userRole, signOut } = useAuth();
+	const confirm = useConfirm();
 
 	const canAccessCategory = (category: NavigationCategory) => {
 		if (!category.requiresRole || !userRole) return true;
@@ -176,8 +178,17 @@ export function MobileMoreDrawer({
 							<li>
 								<button
 									type="button"
-									onClick={() => {
+									onClick={async () => {
 										close();
+										if (
+											!(await confirm({
+												title: "Sign Out?",
+												description:
+													"You’ll need to sign in again to use the dashboard.",
+												confirmLabel: "Sign Out",
+											}))
+										)
+											return;
 										void signOut();
 									}}
 									className="flex w-full min-h-[52px] items-center gap-3 px-3.5 py-2.5 text-destructive active:bg-muted"

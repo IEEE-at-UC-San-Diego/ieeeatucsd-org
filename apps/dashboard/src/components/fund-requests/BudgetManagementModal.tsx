@@ -1,8 +1,16 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Briefcase, Calendar, DollarSign, Loader2, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+	Briefcase,
+	Calendar,
+	DollarSign,
+	Loader2,
+	Plus,
+	Trash2,
+} from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { formatCurrencyUSD, formatDate } from "@/lib/formatters";
 
 const DEPARTMENTS = [
 	{ value: "events", label: "Events" },
@@ -17,13 +26,6 @@ const DEPARTMENTS = [
 	{ value: "internal", label: "Internal" },
 	{ value: "other", label: "Other" },
 ] as const;
-
-const formatCurrency = (amount: number): string => {
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: "USD",
-	}).format(amount);
-};
 
 const formatDateForInput = (timestamp: number): string => {
 	return new Date(timestamp).toISOString().split("T")[0];
@@ -40,6 +42,8 @@ export default function BudgetManagementModal({
 	onClose,
 	logtoId,
 }: BudgetManagementModalProps) {
+	const formId = useId();
+	const confirm = useConfirm();
 	const [selectedDepartment, setSelectedDepartment] =
 		useState<(typeof DEPARTMENTS)[number]["value"]>("events");
 	const [budgetAmount, setBudgetAmount] = useState("");
@@ -87,11 +91,11 @@ export default function BudgetManagementModal({
 		if (!logtoId) return;
 		const amount = parseFloat(budgetAmount);
 		if (!amount || amount <= 0) {
-			toast.error("Please enter a valid budget amount");
+			toast.error("Enter a budget amount greater than $0.");
 			return;
 		}
 		if (!startDate) {
-			toast.error("Please select a start date");
+			toast.error("Select a budget start date to continue.");
 			return;
 		}
 
@@ -107,7 +111,7 @@ export default function BudgetManagementModal({
 				`${DEPARTMENTS.find((d) => d.value === selectedDepartment)?.label} budget updated`,
 			);
 		} catch (error: any) {
-			toast.error("Failed to save budget configuration");
+			toast.error("Failed to save budget configuration. Please try again.");
 		} finally {
 			setIsSavingBudget(false);
 		}
@@ -117,11 +121,11 @@ export default function BudgetManagementModal({
 		if (!logtoId) return;
 		const amount = parseFloat(newAdjustmentAmount);
 		if (!amount || amount <= 0) {
-			toast.error("Please enter a valid adjustment amount");
+			toast.error("Enter an adjustment amount greater than $0.");
 			return;
 		}
 		if (!newAdjustmentDescription.trim()) {
-			toast.error("Please enter a description for the adjustment");
+			toast.error("Add a description for the adjustment.");
 			return;
 		}
 
@@ -137,19 +141,31 @@ export default function BudgetManagementModal({
 			setNewAdjustmentDescription("");
 			toast.success("Budget adjustment added");
 		} catch (error: any) {
-			toast.error("Failed to add budget adjustment");
+			toast.error("Failed to add budget adjustment. Please try again.");
 		} finally {
 			setIsAddingAdjustment(false);
 		}
 	};
 
-	const handleDeleteAdjustment = async (id: Id<"budgetAdjustments">) => {
+	const handleDeleteAdjustment = async (
+		id: Id<"budgetAdjustments">,
+		description: string,
+	) => {
 		if (!logtoId) return;
+		if (
+			!(await confirm({
+				title: "Delete Adjustment?",
+				description: `“${description}” will be removed from this budget. This can’t be undone.`,
+				confirmLabel: "Delete Adjustment",
+				destructive: true,
+			}))
+		)
+			return;
 		try {
 			await deleteBudgetAdjustment({ logtoId, id });
 			toast.success("Adjustment deleted");
 		} catch (error: any) {
-			toast.error("Failed to delete adjustment");
+			toast.error("Failed to delete adjustment. Please try again.");
 		}
 	};
 
@@ -188,8 +204,8 @@ export default function BudgetManagementModal({
 					}
 					className="w-full"
 				>
-					<TabsList className="grid w-full grid-cols-3">
-						{DEPARTMENTS.slice(0, 3).map((dept) => (
+					<TabsList className="grid w-full grid-cols-4">
+						{DEPARTMENTS.map((dept) => (
 							<TabsTrigger
 								key={dept.value}
 								value={dept.value}
@@ -203,32 +219,38 @@ export default function BudgetManagementModal({
 
 				<div className="space-y-4">
 					<div className="space-y-2">
-						<h3 className="text-sm font-semibold mb-3">Budget Configuration</h3>
+						<h3 className="text-sm font-semibold mb-3 text-balance">
+							Budget Configuration
+						</h3>
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<div className="space-y-2">
-								<Label htmlFor="budgetAmount">Total Budget</Label>
+								<Label htmlFor={`${formId}-budgetAmount`}>Total Budget</Label>
 								<div className="relative">
 									<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 									<Input
-										id="budgetAmount"
+										id={`${formId}-budgetAmount`}
+										name="budgetAmount"
 										type="number"
+										inputMode="decimal"
 										step="0.01"
+										autoComplete="off"
 										placeholder="5000.00"
 										value={budgetAmount}
 										onChange={(e) => {
 											const sanitized = e.target.value.replace(/[^0-9.]/g, "");
 											setBudgetAmount(sanitized);
 										}}
-										className="pl-9"
+										className="pl-9 tabular-nums"
 									/>
 								</div>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="startDate">Budget Start Date</Label>
+								<Label htmlFor={`${formId}-startDate`}>Budget Start Date</Label>
 								<div className="relative">
 									<Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 									<Input
-										id="startDate"
+										id={`${formId}-startDate`}
+										name="startDate"
 										type="date"
 										value={startDate}
 										onChange={(e) => setStartDate(e.target.value)}
@@ -250,34 +272,55 @@ export default function BudgetManagementModal({
 					<div className="border-t pt-4 space-y-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<h3 className="text-sm font-semibold">Manual Adjustments</h3>
+								<h3 className="text-sm font-semibold text-balance">
+									Manual Adjustments
+								</h3>
 								<p className="text-xs text-muted-foreground">
 									External expenses counting against budget
 								</p>
 							</div>
 							{totalAdjustments > 0 && (
-								<span className="text-sm font-semibold text-tone-warning">
-									Total: {formatCurrency(totalAdjustments)}
+								<span className="text-sm font-semibold text-tone-warning tabular-nums">
+									Total: {formatCurrencyUSD(totalAdjustments)}
 								</span>
 							)}
 						</div>
 
 						<div className="flex flex-col gap-2 sm:flex-row sm:items-start">
 							<div className="relative w-full sm:w-32">
+								<Label
+									htmlFor={`${formId}-adjustmentAmount`}
+									className="sr-only"
+								>
+									Adjustment Amount
+								</Label>
 								<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 								<Input
+									id={`${formId}-adjustmentAmount`}
+									name="adjustmentAmount"
 									type="number"
+									inputMode="decimal"
 									step="0.01"
+									autoComplete="off"
 									placeholder="0.00"
 									value={newAdjustmentAmount}
 									onChange={(e) => {
 										const sanitized = e.target.value.replace(/[^0-9.]/g, "");
 										setNewAdjustmentAmount(sanitized);
 									}}
-									className="pl-9"
+									className="pl-9 tabular-nums"
 								/>
 							</div>
+							<Label
+								htmlFor={`${formId}-adjustmentDescription`}
+								className="sr-only"
+							>
+								Adjustment Description
+							</Label>
 							<Input
+								id={`${formId}-adjustmentDescription`}
+								name="adjustmentDescription"
+								autoComplete="off"
 								placeholder="e.g. Catering for Fall GBM"
 								value={newAdjustmentDescription}
 								onChange={(e) => setNewAdjustmentDescription(e.target.value)}
@@ -288,11 +331,12 @@ export default function BudgetManagementModal({
 								disabled={isAddingAdjustment}
 								className="w-full sm:w-9 sm:shrink-0"
 								size="icon"
+								aria-label="Add Adjustment"
 							>
 								{isAddingAdjustment ? (
 									<Loader2 className="h-4 w-4 animate-spin" />
 								) : (
-									<span className="text-lg">+</span>
+									<Plus className="h-4 w-4" />
 								)}
 							</Button>
 						</div>
@@ -308,20 +352,28 @@ export default function BudgetManagementModal({
 												</p>
 												<div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
 													<span className="bg-muted px-2 py-0.5 rounded">
-														{formatDateForInput(adj.createdAt)}
+														{formatDate(adj.createdAt)}
 													</span>
-													<span>by {adj.createdByName || "Unknown"}</span>
+													<span className="truncate">
+														by {adj.createdByName || "Unknown"}
+													</span>
 												</div>
 											</div>
 											<div className="flex items-center gap-3 ml-4">
-												<span className="font-semibold text-tone-warning">
-													{formatCurrency(adj.amount)}
+												<span className="font-semibold text-tone-warning tabular-nums">
+													{formatCurrencyUSD(adj.amount)}
 												</span>
 												<Button
 													variant="ghost"
 													size="icon"
 													className="text-muted-foreground hover:text-tone-danger"
-													onClick={() => handleDeleteAdjustment(adj._id)}
+													onClick={() =>
+														void handleDeleteAdjustment(
+															adj._id,
+															adj.description,
+														)
+													}
+													aria-label={`Delete adjustment: ${adj.description}`}
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>

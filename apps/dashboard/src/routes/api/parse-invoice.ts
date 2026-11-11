@@ -8,10 +8,20 @@ import {
 	INVOICE_SCAN_EMPTY,
 	INVOICE_SCAN_NOT_CONFIGURED,
 	INVOICE_SCAN_REJECTED,
+	INVOICE_SCAN_TIMEOUT,
 	INVOICE_SCAN_UNREADABLE,
 	invoiceUserContent,
 } from "@/server/invoice-parse";
 import { validateExternalFileUrl } from "@/server/url-guard";
+
+const OPENROUTER_REQUEST_TIMEOUT_MS = 60_000;
+
+function isInvoiceScanTimeoutError(error: unknown) {
+	return (
+		error instanceof Error &&
+		(error.name === "TimeoutError" || error.name === "AbortError")
+	);
+}
 
 export async function handle({ request }: { request: Request }) {
 	try {
@@ -126,6 +136,7 @@ Rules:
 			"https://openrouter.ai/api/v1/chat/completions",
 			{
 				method: "POST",
+				signal: AbortSignal.timeout(OPENROUTER_REQUEST_TIMEOUT_MS),
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
@@ -133,7 +144,7 @@ Rules:
 					"X-Title": "IEEE UCSD Event Management",
 				},
 				body: JSON.stringify({
-					model: "google/gemini-3-flash-preview",
+					model: "google/gemini-3.8-flash",
 					messages: [
 						{ role: "system", content: systemPrompt },
 						{ role: "user", content: contentParts },
@@ -141,7 +152,7 @@ Rules:
 					...(plugins ? { plugins } : {}),
 					response_format: { type: "json_object" },
 					temperature: 0.0,
-					reasoning: { effort: "high", exclude: true },
+					reasoning: { effort: "low", exclude: true },
 				}),
 			},
 		);
@@ -238,6 +249,13 @@ Rules:
 			},
 		);
 	} catch (error) {
+		if (isInvoiceScanTimeoutError(error)) {
+			console.error("OpenRouter invoice scan timed out:", error);
+			return new Response(JSON.stringify({ error: INVOICE_SCAN_TIMEOUT }), {
+				status: 504,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
 		console.error("Error in parse-invoice API:", error);
 		return new Response(
 			JSON.stringify({

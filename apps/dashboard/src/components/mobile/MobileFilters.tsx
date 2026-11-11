@@ -59,6 +59,8 @@ export function MobileFilters({
 						value={searchValue}
 						onChange={(e) => onSearchChange(e.target.value)}
 						placeholder={searchPlaceholder}
+						aria-label={searchPlaceholder.replace(/…$/, "")}
+						name="search"
 						className="h-11 text-base md:h-9 md:text-sm"
 						type="search"
 						enterKeyHint="search"
@@ -77,7 +79,7 @@ export function MobileFilters({
 							>
 								<SlidersHorizontal className="size-4" />
 								{activeFilterCount > 0 && (
-									<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold text-on-accent">
+									<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold tabular-nums text-on-accent">
 										{activeFilterCount}
 									</span>
 								)}
@@ -87,7 +89,7 @@ export function MobileFilters({
 							<DrawerHeader className="text-left">
 								<DrawerTitle>{sheetTitle}</DrawerTitle>
 							</DrawerHeader>
-							<div className="max-h-[60dvh] overflow-y-auto px-4 pb-2">
+							<div className="max-h-[60dvh] overflow-y-auto overscroll-contain px-4 pb-2">
 								{sheetContent}
 							</div>
 							<DrawerFooter className="flex-row gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -99,7 +101,7 @@ export function MobileFilters({
 											onReset();
 										}}
 									>
-										Reset
+										Reset Filters
 									</Button>
 								)}
 								<DrawerClose asChild>
@@ -110,7 +112,7 @@ export function MobileFilters({
 											setOpen(false);
 										}}
 									>
-										Apply
+										Apply Filters
 									</Button>
 								</DrawerClose>
 							</DrawerFooter>
@@ -126,7 +128,8 @@ export function MobileFilters({
 							key={chip.id}
 							type="button"
 							onClick={chip.onClear}
-							className="motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-tone-link"
+							aria-label={`Remove filter: ${chip.label}`}
+							className="motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-tone-link transition-colors hover:bg-ds-blue-100"
 						>
 							{chip.label}
 							<X className="size-3" />
@@ -138,7 +141,7 @@ export function MobileFilters({
 							onClick={onClearAll}
 							className="shrink-0 px-2 text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
 						>
-							Clear all
+							Clear All
 						</button>
 					)}
 				</div>

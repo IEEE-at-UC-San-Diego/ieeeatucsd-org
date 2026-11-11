@@ -1,8 +1,10 @@
 import { Eye, File, Lock, Trash2, Unlock, Upload, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDate, formatFileSize } from "@/lib/formatters";
 import type { EventFile } from "../types";
 
 interface FileManagerModalProps {
@@ -26,6 +28,21 @@ export function FileManagerModal({
 }: FileManagerModalProps) {
 	const [isDragging, setIsDragging] = useState(false);
 	const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const confirm = useConfirm();
+
+	const handleDelete = async (file: EventFile) => {
+		if (
+			!(await confirm({
+				title: "Delete File?",
+				description: `“${file.name}” will be permanently deleted. This can’t be undone.`,
+				confirmLabel: "Delete File",
+				destructive: true,
+			}))
+		)
+			return;
+		onDelete(file._id);
+	};
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -56,22 +73,6 @@ export function FileManagerModal({
 			onUpload(selectedFiles);
 			setSelectedFiles(null);
 		}
-	};
-
-	const formatFileSize = (bytes: number) => {
-		if (bytes === 0) return "0 Bytes";
-		const k = 1024;
-		const sizes = ["Bytes", "KB", "MB", "GB"];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-	};
-
-	const formatDate = (timestamp: number) => {
-		return new Date(timestamp).toLocaleDateString("en-US", {
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		});
 	};
 
 	return (
@@ -105,25 +106,32 @@ export function FileManagerModal({
 					<Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
 					<p className="text-sm text-muted-foreground mb-2">
 						Drag and drop files here, or{" "}
-						<label className="text-tone-info hover:text-tone-info cursor-pointer font-medium">
+						<button
+							type="button"
+							className="text-tone-info hover:underline cursor-pointer font-medium"
+							onClick={() => fileInputRef.current?.click()}
+						>
 							browse
-							<Input
-								type="file"
-								multiple
-								className="hidden"
-								onChange={handleFileSelect}
-							/>
-						</label>
+						</button>
+						<Input
+							ref={fileInputRef}
+							type="file"
+							name="files"
+							aria-label="Choose files to upload"
+							multiple
+							className="hidden"
+							onChange={handleFileSelect}
+						/>
 					</p>
 					<p className="text-xs text-muted-foreground">
-						Supports images, documents, and PDFs up to 50MB
+						Supports images, documents, and PDFs up to 50&nbsp;MB
 					</p>
 				</div>
 
 				{selectedFiles && selectedFiles.length > 0 && (
 					<div className="bg-ds-blue-100 rounded-lg p-4">
 						<div className="flex items-center justify-between">
-							<span className="text-sm text-ds-blue-1000">
+							<span className="text-sm text-ds-blue-1000 tabular-nums">
 								{selectedFiles.length} file
 								{selectedFiles.length !== 1 ? "s" : ""} selected
 							</span>
@@ -134,11 +142,11 @@ export function FileManagerModal({
 									onClick={() => setSelectedFiles(null)}
 								>
 									<X className="h-4 w-4 mr-1" />
-									Clear
+									Clear Selection
 								</Button>
 								<Button size="sm" onClick={handleUpload}>
 									<Upload className="h-4 w-4 mr-1" />
-									Upload
+									Upload Files
 								</Button>
 							</div>
 						</div>
@@ -146,10 +154,12 @@ export function FileManagerModal({
 							{Array.from(selectedFiles).map((file, idx) => (
 								<div
 									key={idx}
-									className="text-xs text-tone-info flex items-center gap-2"
+									className="text-xs text-tone-info flex min-w-0 items-center gap-2"
 								>
-									<File className="h-3 w-3" />
-									{file.name} ({formatFileSize(file.size)})
+									<File className="h-3 w-3 shrink-0" />
+									<span className="min-w-0 truncate">
+										{file.name} ({formatFileSize(file.size)})
+									</span>
 								</div>
 							))}
 						</div>
@@ -157,14 +167,14 @@ export function FileManagerModal({
 				)}
 
 				<div className="border rounded-lg overflow-hidden">
-					<div className="bg-muted px-4 py-2 border-b text-xs font-medium text-muted-foreground">
+					<div className="bg-muted px-4 py-2 border-b text-xs font-medium text-muted-foreground tabular-nums">
 						{files.length} file{files.length !== 1 ? "s" : ""}
 					</div>
 
 					{files.length === 0 ? (
 						<div className="p-8 text-center text-muted-foreground">
 							<File className="h-12 w-12 mx-auto mb-2 opacity-50" />
-							<p>No files uploaded yet</p>
+							<p>No files uploaded yet.</p>
 							<p className="text-xs text-muted-foreground mt-1">
 								Upload files to share with event attendees
 							</p>
@@ -207,9 +217,16 @@ export function FileManagerModal({
 											variant="ghost"
 											size="sm"
 											className="h-8 w-8 p-0"
-											onClick={() => window.open(file.url, "_blank")}
+											asChild
 										>
-											<Eye className="h-4 w-4" />
+											<a
+												href={file.url}
+												target="_blank"
+												rel="noopener noreferrer"
+												aria-label={`View ${file.name}`}
+											>
+												<Eye className="h-4 w-4" />
+											</a>
 										</Button>
 										{onToggleVisibility && (
 											<Button
@@ -220,6 +237,11 @@ export function FileManagerModal({
 													onToggleVisibility(file._id, !file.isPublic)
 												}
 												title={file.isPublic ? "Make private" : "Make public"}
+												aria-label={
+													file.isPublic
+														? `Make ${file.name} private`
+														: `Make ${file.name} public`
+												}
 											>
 												{file.isPublic ? (
 													<Unlock className="h-4 w-4" />
@@ -232,7 +254,8 @@ export function FileManagerModal({
 											variant="ghost"
 											size="sm"
 											className="h-8 w-8 p-0 text-muted-foreground hover:text-tone-danger"
-											onClick={() => onDelete(file._id)}
+											onClick={() => void handleDelete(file)}
+											aria-label={`Delete ${file.name}`}
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>

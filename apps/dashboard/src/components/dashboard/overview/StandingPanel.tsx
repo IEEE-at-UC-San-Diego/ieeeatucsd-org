@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { formatNumber, formatShortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 type StandingPanelProps = {
@@ -36,13 +37,6 @@ function Supporting({ children }: { children: React.ReactNode }) {
 	return <p className="text-xs leading-4 text-muted-foreground">{children}</p>;
 }
 
-function shortDate(timestamp: number) {
-	return new Date(timestamp).toLocaleDateString(undefined, {
-		month: "short",
-		day: "numeric",
-	});
-}
-
 export function StandingPanel({
 	points,
 	pointsLast30Days,
@@ -64,13 +58,13 @@ export function StandingPanel({
 		>
 			<Metric label="Points" className="col-span-2">
 				<p className="text-[32px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-foreground lg:text-[40px]">
-					{points.toLocaleString()}
+					{formatNumber(points)}
 				</p>
 				<Supporting>
 					{pointsLast30Days > 0 ? (
 						<>
 							<span className="font-medium text-tone-info tabular-nums">
-								+{pointsLast30Days.toLocaleString()}
+								+{formatNumber(pointsLast30Days)}
 							</span>{" "}
 							in the last 30 days
 						</>
@@ -85,7 +79,7 @@ export function StandingPanel({
 					{hasRank ? `#${rank}` : "—"}
 					{hasRank && (
 						<span className="ml-1.5 text-xs font-normal text-muted-foreground">
-							of {totalMembers?.toLocaleString()}
+							of {formatNumber(totalMembers)}
 						</span>
 					)}
 				</p>
@@ -94,12 +88,14 @@ export function StandingPanel({
 				</Supporting>
 			</Metric>
 
-			<Metric label="Events attended">
+			<Metric label="Events Attended">
 				<p className="text-[22px] font-semibold leading-none tabular-nums text-foreground">
-					{eventsAttended.toLocaleString()}
+					{formatNumber(eventsAttended)}
 				</p>
 				<Supporting>
-					{lastEventAt ? `Most recent ${shortDate(lastEventAt)}` : "None yet"}
+					{lastEventAt
+						? `Most recent ${formatShortDate(lastEventAt)}`
+						: "None yet"}
 				</Supporting>
 			</Metric>
 		</section>

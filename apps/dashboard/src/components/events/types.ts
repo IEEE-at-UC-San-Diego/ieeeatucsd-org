@@ -1,3 +1,5 @@
+import { formatTime } from "@/lib/formatters";
+
 export interface Event {
 	_id: string;
 	eventName: string;
@@ -38,19 +40,18 @@ export function getEventStatus(event: Event): EventStatus {
 	return "ended";
 }
 
+const eventDateFormatter = new Intl.DateTimeFormat("en-US", {
+	weekday: "short",
+	month: "short",
+	day: "numeric",
+});
+
 export function formatEventDate(timestamp: number): string {
-	return new Date(timestamp).toLocaleDateString(undefined, {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	});
+	return eventDateFormatter.format(timestamp);
 }
 
 export function formatEventTime(timestamp: number): string {
-	return new Date(timestamp).toLocaleTimeString([], {
-		hour: "numeric",
-		minute: "2-digit",
-	});
+	return formatTime(timestamp);
 }
 
 export const EVENT_TYPE_LABELS: Record<Event["eventType"], string> = {

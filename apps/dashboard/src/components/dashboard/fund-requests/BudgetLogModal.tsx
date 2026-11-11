@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatLongDate } from "@/lib/formatters";
 import {
 	DEPARTMENT_LABELS,
 	type FundRequestDepartment,
@@ -103,12 +104,7 @@ export function BudgetLogModal({
 	const description = budgetStartDate ? (
 		<span className="flex items-center gap-1 text-sm text-muted-foreground">
 			<Calendar className="w-3.5 h-3.5" />
-			Since{" "}
-			{budgetStartDate.toLocaleDateString("en-US", {
-				year: "numeric",
-				month: "long",
-				day: "numeric",
-			})}
+			Since {formatLongDate(budgetStartDate)}
 		</span>
 	) : undefined;
 
@@ -133,9 +129,13 @@ export function BudgetLogModal({
 			}
 		>
 			{isLoading ? (
-				<div className="flex items-center justify-center min-h-[300px]">
+				<output
+					className="flex items-center justify-center min-h-[300px]"
+					aria-live="polite"
+				>
 					<Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-				</div>
+					<span className="sr-only">Loading budget log…</span>
+				</output>
 			) : (
 				<div className="space-y-6">
 					{/* Summary Stats */}
@@ -145,7 +145,7 @@ export function BudgetLogModal({
 								<User className="w-4 h-4" />
 								<span className="text-xs font-medium">Approved</span>
 							</div>
-							<p className="text-2xl font-bold text-tone-success">
+							<p className="text-2xl font-bold text-tone-success tabular-nums">
 								{formatCurrency(stats.approved)}
 							</p>
 						</div>
@@ -154,7 +154,7 @@ export function BudgetLogModal({
 								<Loader2 className="w-4 h-4" />
 								<span className="text-xs font-medium">Pending</span>
 							</div>
-							<p className="text-2xl font-bold text-tone-warning">
+							<p className="text-2xl font-bold text-tone-warning tabular-nums">
 								{formatCurrency(stats.pending)}
 							</p>
 						</div>
@@ -163,7 +163,7 @@ export function BudgetLogModal({
 								<DollarSign className="w-4 h-4" />
 								<span className="text-xs font-medium">Total</span>
 							</div>
-							<p className="text-2xl font-bold text-foreground">
+							<p className="text-2xl font-bold text-foreground tabular-nums">
 								{formatCurrency(stats.total)}
 							</p>
 						</div>
@@ -224,7 +224,7 @@ export function BudgetLogModal({
 													subtitle={request.submittedByName || "Unknown"}
 													meta={formatDate(request._creationTime)}
 													trailing={
-														<span className="text-tone-success">
+														<span className="text-tone-success tabular-nums">
 															{formatCurrency(request.amount)}
 														</span>
 													}
@@ -282,7 +282,7 @@ export function BudgetLogModal({
 																</div>
 															</TableCell>
 															<TableCell className="text-right">
-																<span className="font-bold text-tone-success">
+																<span className="font-bold text-tone-success tabular-nums">
 																	{formatCurrency(request.amount)}
 																</span>
 															</TableCell>
@@ -343,7 +343,7 @@ export function BudgetLogModal({
 															subtitle={adjustment.createdByName || "Unknown"}
 															meta={formatDate(adjustment.createdAt)}
 															trailing={
-																<span className="text-tone-warning">
+																<span className="text-tone-warning tabular-nums">
 																	{formatCurrency(adjustment.amount)}
 																</span>
 															}
@@ -377,7 +377,7 @@ export function BudgetLogModal({
 																	className="hover:bg-muted/50"
 																>
 																	<TableCell>
-																		<p className="font-semibold text-sm text-foreground">
+																		<p className="font-semibold text-sm text-foreground break-words">
 																			{adjustment.description}
 																		</p>
 																	</TableCell>
@@ -392,7 +392,7 @@ export function BudgetLogModal({
 																		</div>
 																	</TableCell>
 																	<TableCell className="text-right">
-																		<span className="font-bold text-tone-warning">
+																		<span className="font-bold text-tone-warning tabular-nums">
 																			{formatCurrency(adjustment.amount)}
 																		</span>
 																	</TableCell>

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { Calendar, Clock, Download, ExternalLink, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
 	DashboardPage,
 	EmptyState,
@@ -38,7 +39,16 @@ import {
 } from "@/lib/calendarLinks";
 import { prefetchQuery } from "@/lib/prefetch/prefetch";
 
+const searchSchema = z.object({
+	q: z.string().default("").catch(""),
+	tab: z.enum(["upcoming", "past"]).default("upcoming").catch("upcoming"),
+	page: z.number().int().min(1).default(1).catch(1),
+});
+
+type EventsSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/events")({
+	validateSearch: searchSchema,
 	loader: (ctx) => prefetchQuery(api.events.listPublished, undefined, ctx),
 	component: EventsPage,
 });
@@ -57,9 +67,16 @@ function EventsPage() {
 	);
 	const checkIn = useAuthedMutation(api.events.checkIn);
 
-	const [search, setSearch] = useState("");
-	const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
-	const [pastPage, setPastPage] = useState(1);
+	const { q, tab: activeTab, page: pastPage } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearchParams = (patch: Partial<EventsSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const [search, setSearchInput] = useState(q);
+	const setSearch = (value: string) => {
+		setSearchInput(value);
+		setSearchParams({ q: value, page: 1 });
+	};
+	const setPastPage = (page: number) => setSearchParams({ page });
 
 	// Modal states
 	const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
@@ -133,7 +150,7 @@ function EventsPage() {
 	const handleCheckInSubmit = async (code: string, foodPreference?: string) => {
 		if (!logtoId) return;
 		if (!isOnline) {
-			toast.error("You're offline. Reconnect to check in.");
+			toast.error("You’re offline. Reconnect to check in.");
 			return;
 		}
 		setIsCheckingIn(true);
@@ -150,8 +167,10 @@ function EventsPage() {
 			setIsCheckInModalOpen(false);
 			setCheckInEvent(null);
 		} catch (error: any) {
-			const msg = error?.data ?? error?.message ?? "Failed to check in";
-			toast.error(typeof msg === "string" ? msg : "Failed to check in");
+			const fallback =
+				"Failed to check in. Check the event code and try again.";
+			const msg = error?.data ?? error?.message ?? fallback;
+			toast.error(typeof msg === "string" ? msg : fallback);
 		} finally {
 			setIsCheckingIn(false);
 		}
@@ -213,7 +232,7 @@ function EventsPage() {
 									variant="outline"
 									className="h-11 w-full sm:h-9 sm:w-auto"
 								>
-									<Calendar /> Add to calendar
+									<Calendar /> Add to Calendar
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
@@ -223,7 +242,7 @@ function EventsPage() {
 										target="_blank"
 										rel="noreferrer"
 									>
-										<ExternalLink /> Subscribe to public calendar
+										<ExternalLink /> Subscribe to Public Calendar
 									</a>
 								</DropdownMenuItem>
 								<DropdownMenuItem asChild>
@@ -232,7 +251,7 @@ function EventsPage() {
 										target="_blank"
 										rel="noreferrer"
 									>
-										<Download /> Add calendar via ICS
+										<Download /> Add Calendar via ICS
 									</a>
 								</DropdownMenuItem>
 							</DropdownMenuContent>
@@ -257,7 +276,10 @@ function EventsPage() {
 				<div className="relative min-w-0 flex-1 sm:max-w-xs">
 					<Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 					<Input
-						placeholder="Search events..."
+						placeholder="Search events…"
+						aria-label="Search events"
+						name="q"
+						autoComplete="off"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						className="h-11 pl-9 text-base sm:h-9 sm:text-sm"
@@ -268,8 +290,8 @@ function EventsPage() {
 				<Tabs
 					value={activeTab}
 					onValueChange={(value) => {
-						setActiveTab(value as "upcoming" | "past");
-						if (value === "past") setPastPage(1);
+						const tab = value as EventsSearch["tab"];
+						setSearchParams(tab === "past" ? { tab, page: 1 } : { tab });
 					}}
 					className="w-full sm:w-auto"
 				>
@@ -318,7 +340,7 @@ function EventsPage() {
 				) : (
 					<EmptyState
 						icon={<Calendar />}
-						title="No upcoming events"
+						title="No Upcoming Events"
 						description="Check back later for upcoming IEEE UCSD events."
 					/>
 				)
@@ -345,7 +367,7 @@ function EventsPage() {
 				<div className="text-center py-16 text-muted-foreground">
 					<Clock className="mx-auto h-10 w-10 mb-3 opacity-30" />
 					<p className="text-sm font-medium">No past events</p>
-					<p className="text-xs mt-1">Events you've missed will appear here.</p>
+					<p className="text-xs mt-1">Events you’ve missed will appear here.</p>
 				</div>
 			)}
 

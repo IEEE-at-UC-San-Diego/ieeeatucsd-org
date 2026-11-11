@@ -57,60 +57,67 @@ export function MobileDataListItem({
 	...props
 }: MobileDataListItemProps) {
 	const interactive = Boolean(onClick);
+	const rowPadding = "px-4 py-3 sm:px-6 md:px-4";
+
+	const body = (
+		<>
+			{leading && <span className="shrink-0">{leading}</span>}
+			<span className="block min-w-0 flex-1 space-y-0.5">
+				<span className="flex items-start justify-between gap-2">
+					<span className="line-clamp-2 text-sm font-medium leading-5 break-words text-foreground">
+						{title}
+					</span>
+					{trailing && (
+						<span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+							{trailing}
+						</span>
+					)}
+				</span>
+				{(subtitle || meta || status) && (
+					<span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+						{status}
+						{subtitle && <span className="min-w-0 truncate">{subtitle}</span>}
+						{meta && <span className="min-w-0 truncate">{meta}</span>}
+					</span>
+				)}
+			</span>
+			{showChevron && interactive && !actions && (
+				<ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+			)}
+		</>
+	);
 
 	return (
 		<li className={cn("relative min-w-0", className)} {...props}>
 			<div
 				className={cn(
-					"flex min-h-[52px] items-center gap-3 px-4 py-3 sm:px-6 md:px-4",
+					"flex min-h-[52px] items-center gap-3",
+					!interactive && rowPadding,
 					interactive &&
-						"motion-press cursor-pointer transition-colors active:bg-muted/60 md:hover:bg-muted/40",
+						"transition-colors has-[>button:active]:bg-muted/60 md:hover:bg-muted/40",
 				)}
-				onClick={onClick}
-				onKeyDown={
-					interactive
-						? (e) => {
-								if (e.key === "Enter" || e.key === " ") {
-									e.preventDefault();
-									onClick?.();
-								}
-							}
-						: undefined
-				}
-				role={interactive ? "button" : undefined}
-				tabIndex={interactive ? 0 : undefined}
 			>
-				{leading && <div className="shrink-0">{leading}</div>}
-				<div className="min-w-0 flex-1 space-y-0.5">
-					<div className="flex items-start justify-between gap-2">
-						<p className="line-clamp-2 text-sm font-medium leading-5 text-foreground">
-							{title}
-						</p>
-						{trailing && (
-							<div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-								{trailing}
-							</div>
+				{interactive ? (
+					<button
+						type="button"
+						onClick={onClick}
+						className={cn(
+							"motion-press flex min-h-[52px] min-w-0 flex-1 cursor-pointer items-center gap-3 text-left",
+							rowPadding,
+							actions && "pr-0 sm:pr-0 md:pr-0",
 						)}
-					</div>
-					{(subtitle || meta || status) && (
-						<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-							{status}
-							{subtitle && <span className="min-w-0 truncate">{subtitle}</span>}
-							{meta && <span className="min-w-0 truncate">{meta}</span>}
-						</div>
-					)}
-				</div>
+					>
+						{body}
+					</button>
+				) : (
+					body
+				)}
 				{actions && (
 					<div
-						className="shrink-0"
-						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(e) => e.stopPropagation()}
+						className={cn("shrink-0", interactive && "pr-4 sm:pr-6 md:pr-4")}
 					>
 						{actions}
 					</div>
-				)}
-				{showChevron && interactive && !actions && (
-					<ChevronRight className="size-4 shrink-0 text-muted-foreground" />
 				)}
 			</div>
 		</li>

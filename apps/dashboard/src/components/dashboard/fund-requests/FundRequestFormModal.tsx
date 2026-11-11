@@ -14,6 +14,8 @@ import {
 	X,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
+import { flushSync } from "react-dom";
+import { toast } from "sonner";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
 import { sendNotification } from "@/lib/send-notification";
 import {
 	CATEGORY_LABELS,
@@ -72,6 +76,38 @@ interface FundRequestFormModalProps {
 	className?: string; // Add className prop
 }
 
+type FormSnapshotFields = Omit<FundRequestFormData, "amount"> & {
+	amount: string | number | undefined;
+};
+
+const formSnapshot = ({
+	title,
+	purpose,
+	category,
+	department,
+	amount,
+	vendorLinks,
+}: FormSnapshotFields) =>
+	JSON.stringify([
+		title,
+		purpose,
+		category,
+		department,
+		Number.parseFloat(String(amount ?? "")) || 0,
+		vendorLinks
+			.filter((link) => link.url?.trim() || link.itemName?.trim())
+			.map((link) => [link.url, link.itemName, link.quantity ?? 1]),
+	]);
+
+const BLANK_SNAPSHOT = formSnapshot({
+	title: "",
+	purpose: "",
+	category: "event",
+	department: "events",
+	amount: "",
+	vendorLinks: [],
+});
+
 const STEPS = [
 	{ id: 1, title: "Basic Info" },
 	{ id: 2, title: "Budget" },
@@ -93,12 +129,6 @@ export function FundRequestFormModal({
 	const { user: authUser, getAuthHeaders } = useAuth();
 	const createFundRequest = useAuthedMutation(api.fundRequests.create);
 	const updateFundRequest = useAuthedMutation(api.fundRequests.update);
-	const [currentStep, setCurrentStep] = useState(1);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const stepTrackInset = `${100 / (STEPS.length * 2)}%`;
-	const stepTrackProgress =
-		STEPS.length > 1 ? ((currentStep - 1) / (STEPS.length - 1)) * 100 : 100;
-
 	const titleId = useId();
 	const purposeId = useId();
 	const departmentId = useId();
@@ -115,36 +145,6 @@ export function FundRequestFormModal({
 
 	// Validation state
 	const [errors, setErrors] = useState<Record<string, string>>({});
-
-	const resetForm = useCallback(() => {
-		setTitle("");
-		setPurpose("");
-		setCategory("event");
-		setDepartment("events");
-		setAmount("");
-		setVendorLinks([
-			{ id: crypto.randomUUID(), url: "", itemName: "", quantity: 1 },
-		]);
-		setErrors({});
-		setCurrentStep(1);
-	}, []);
-
-	// Initialize form with existing data
-	useEffect(() => {
-		if (isOpen) {
-			if (initialData) {
-				setTitle(initialData.title || "");
-				setPurpose(initialData.purpose || "");
-				setCategory(initialData.category || "event");
-				setDepartment(initialData.department || "events");
-				setAmount(initialData.amount ? String(initialData.amount) : "");
-				setVendorLinks(initialData.vendorLinks || []);
-			} else {
-				resetForm();
-			}
-			setCurrentStep(1);
-		}
-	}, [isOpen, initialData, resetForm]);
 
 	const validateStep = (step: number): boolean => {
 		const newErrors: Record<string, string> = {};
@@ -166,15 +166,69 @@ export function FundRequestFormModal({
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const handleNextStep = () => {
-		if (validateStep(currentStep)) {
-			setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
-		}
-	};
+	const wizard = useWizard({
+		stepCount: STEPS.length,
+		canAdvance: validateStep,
+	});
+	const { step: currentStep, reset: resetWizard } = wizard;
+	const isSubmitting = wizard.phase.kind === "submitting";
+	const stepTrackInset = `${100 / (STEPS.length * 2)}%`;
+	const stepTrackProgress =
+		STEPS.length > 1 ? ((currentStep - 1) / (STEPS.length - 1)) * 100 : 100;
 
-	const handlePrevStep = () => {
-		setCurrentStep((prev) => Math.max(prev - 1, 1));
-	};
+	const [initialSnapshot, setInitialSnapshot] = useState(BLANK_SNAPSHOT);
+	const currentSnapshot = formSnapshot({
+		title,
+		purpose,
+		category,
+		department,
+		amount,
+		vendorLinks,
+	});
+	const isDirty =
+		isOpen && !wizard.isPending && currentSnapshot !== initialSnapshot;
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
+
+	const resetForm = useCallback(() => {
+		setTitle("");
+		setPurpose("");
+		setCategory("event");
+		setDepartment("events");
+		setAmount("");
+		setVendorLinks([
+			{ id: crypto.randomUUID(), url: "", itemName: "", quantity: 1 },
+		]);
+		setErrors({});
+		resetWizard();
+		setInitialSnapshot(BLANK_SNAPSHOT);
+	}, [resetWizard]);
+
+	// Initialize form with existing data
+	useEffect(() => {
+		if (isOpen) {
+			if (initialData) {
+				setTitle(initialData.title || "");
+				setPurpose(initialData.purpose || "");
+				setCategory(initialData.category || "event");
+				setDepartment(initialData.department || "events");
+				setAmount(initialData.amount ? String(initialData.amount) : "");
+				setVendorLinks(initialData.vendorLinks || []);
+				setInitialSnapshot(
+					formSnapshot({
+						title: initialData.title || "",
+						purpose: initialData.purpose || "",
+						category: initialData.category || "event",
+						department: initialData.department || "events",
+						amount: initialData.amount,
+						vendorLinks: initialData.vendorLinks || [],
+					}),
+				);
+			} else {
+				resetForm();
+			}
+			resetWizard();
+		}
+	}, [isOpen, initialData, resetForm, resetWizard]);
 
 	// Initialize with one empty row if list is empty
 	useEffect(() => {
@@ -260,6 +314,12 @@ export function FundRequestFormModal({
 		}
 	};
 
+	const handleCancel = async () => {
+		if (!(await confirmDiscard())) return;
+		flushSync(() => setInitialSnapshot(currentSnapshot));
+		onClose();
+	};
+
 	const handleSubmit = async () => {
 		if (!validateStep(1) || !validateStep(2)) {
 			return;
@@ -267,10 +327,13 @@ export function FundRequestFormModal({
 
 		if (!logtoId) {
 			console.error("Cannot submit: no logtoId");
+			toast.error(
+				"Couldn’t verify your account. Refresh the page and try again.",
+			);
 			return;
 		}
 
-		setIsSubmitting(true);
+		if (!wizard.startSubmit()) return;
 
 		try {
 			const cleanedVendorLinks = vendorLinks.filter(
@@ -319,12 +382,15 @@ export function FundRequestFormModal({
 				}
 			}
 
+			wizard.submitSucceeded();
 			onSuccess();
 			resetForm();
 		} catch (error) {
 			console.error("Error saving fund request:", error);
-		} finally {
-			setIsSubmitting(false);
+			const message =
+				"Failed to save fund request. Check your connection and try again.";
+			toast.error(message);
+			wizard.submitFailed(message);
 		}
 	};
 
@@ -349,14 +415,16 @@ export function FundRequestFormModal({
 										</Label>
 										<Input
 											id={titleId}
-											placeholder="Enter a descriptive title for your request"
+											name="title"
+											autoComplete="off"
+											placeholder="Enter a descriptive title for your request…"
 											value={title}
 											onChange={(e) => setTitle(e.target.value)}
 											maxLength={100}
 										/>
 										<div className="flex items-center justify-between text-xs text-muted-foreground">
 											<span>Use a short, clear request title.</span>
-											<span>{title.length}/100</span>
+											<span className="tabular-nums">{title.length}/100</span>
 										</div>
 										{errors.title && (
 											<p className="text-sm text-destructive">{errors.title}</p>
@@ -370,7 +438,8 @@ export function FundRequestFormModal({
 										</Label>
 										<Textarea
 											id={purposeId}
-											placeholder="Explain why you need this funding and how it will be used..."
+											name="purpose"
+											placeholder="Explain why you need this funding and how it will be used…"
 											value={purpose}
 											onChange={(e) => setPurpose(e.target.value)}
 											rows={7}
@@ -508,6 +577,8 @@ export function FundRequestFormModal({
 																</Label>
 																<Input
 																	id={`item-${link.id}`}
+																	name="itemName"
+																	autoComplete="off"
 																	placeholder="e.g. 500x Arduino Uno Rev3"
 																	value={link.itemName || ""}
 																	onChange={(e) =>
@@ -530,7 +601,9 @@ export function FundRequestFormModal({
 																</Label>
 																<Input
 																	id={`qty-${link.id}`}
+																	name="quantity"
 																	type="number"
+																	inputMode="numeric"
 																	min={1}
 																	placeholder="1"
 																	value={link.quantity ?? 1}
@@ -553,6 +626,7 @@ export function FundRequestFormModal({
 																onClick={() => handleRemoveLink(link.id)}
 																className="h-9 w-9 mt-[22px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
 																title="Remove item"
+																aria-label={`Remove ${link.itemName?.trim() || "item"}`}
 															>
 																<Trash2 className="w-4 h-4" />
 															</Button>
@@ -568,7 +642,12 @@ export function FundRequestFormModal({
 															</Label>
 															<Input
 																id={`url-${link.id}`}
-																placeholder="https://..."
+																name="url"
+																type="url"
+																inputMode="url"
+																autoComplete="off"
+																spellCheck={false}
+																placeholder="https://…"
 																value={link.url || ""}
 																onChange={(e) =>
 																	handleLinkChange(
@@ -621,13 +700,18 @@ export function FundRequestFormModal({
 									</div>
 
 									<div className="space-y-2">
+										<Label htmlFor={amountId} className="sr-only">
+											Total Budget Amount
+										</Label>
 										<div className="relative">
 											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
 												$
 											</span>
 											<Input
 												id={amountId}
+												name="amount"
 												type="text"
+												autoComplete="off"
 												inputMode="decimal"
 												placeholder="0.00"
 												value={amount}
@@ -649,7 +733,7 @@ export function FundRequestFormModal({
 														setAmount(num ? num.toFixed(2) : "");
 													}
 												}}
-												className="pl-7 text-lg font-bold h-12"
+												className="pl-7 text-lg font-bold h-12 tabular-nums"
 											/>
 										</div>
 										{errors.amount && (
@@ -687,7 +771,7 @@ export function FundRequestFormModal({
 										</div>
 										<div className="flex items-center justify-between py-2">
 											<span className="text-muted-foreground">Line Items</span>
-											<span className="font-mono font-medium">
+											<span className="font-mono font-medium tabular-nums">
 												{
 													vendorLinks.filter(
 														(l) => l.url?.trim() || l.itemName?.trim(),
@@ -702,7 +786,7 @@ export function FundRequestFormModal({
 											<p className="text-xs text-primary/80 font-medium mb-1">
 												Estimated Total
 											</p>
-											<p className="text-xl font-bold text-primary">
+											<p className="text-xl font-bold text-primary tabular-nums">
 												{formatCurrency(parseFloat(amount) || 0)}
 											</p>
 										</div>
@@ -724,7 +808,7 @@ export function FundRequestFormModal({
 							<CardContent className="p-5 space-y-4">
 								<div className="flex flex-wrap items-start justify-between gap-4">
 									<div className="space-y-1">
-										<h4 className="text-xl font-semibold">
+										<h4 className="text-xl font-semibold break-words text-pretty">
 											{title || "Untitled request"}
 										</h4>
 										<div className="flex flex-wrap gap-2">
@@ -736,7 +820,7 @@ export function FundRequestFormModal({
 											</Badge>
 										</div>
 									</div>
-									<p className="text-2xl font-bold text-tone-success">
+									<p className="text-2xl font-bold text-tone-success tabular-nums">
 										{formatCurrency(parseFloat(amount) || 0)}
 									</p>
 								</div>
@@ -745,7 +829,7 @@ export function FundRequestFormModal({
 									<span className="text-xs font-medium text-muted-foreground block mb-1">
 										Purpose
 									</span>
-									<p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+									<p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
 										{purpose}
 									</p>
 								</div>
@@ -804,7 +888,7 @@ export function FundRequestFormModal({
 			{showHeader && renderMode === "page" && (
 				<div className="border-b bg-muted/10 px-4 py-3 flex-shrink-0 flex items-center justify-between">
 					<div>
-						<h2 className="text-lg font-semibold tracking-tight">
+						<h2 className="text-lg font-semibold tracking-tight text-balance">
 							{isEditMode ? "Edit Fund Request" : "New Fund Request"}
 						</h2>
 						<p className="text-xs text-muted-foreground">
@@ -815,7 +899,8 @@ export function FundRequestFormModal({
 						type="button"
 						variant="ghost"
 						size="icon"
-						onClick={onClose}
+						onClick={() => void handleCancel()}
+						aria-label="Close form"
 						className="h-11 w-11 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
 					>
 						<X className="w-4 h-4" />
@@ -854,7 +939,11 @@ export function FundRequestFormModal({
 							const isCurrent = currentStep === step.id;
 
 							return (
-								<div key={step.id} className="flex flex-col items-center">
+								<div
+									key={step.id}
+									className="flex flex-col items-center"
+									aria-current={isCurrent ? "step" : undefined}
+								>
 									<div
 										className={`
 	                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-[background-color,border-color,color,box-shadow] duration-150 ease-[ease] border-2 relative z-10
@@ -885,7 +974,7 @@ export function FundRequestFormModal({
 				<Button
 					type="button"
 					variant="ghost"
-					onClick={onClose}
+					onClick={() => void handleCancel()}
 					disabled={isSubmitting}
 					className="h-11 w-full sm:h-9 sm:w-auto text-muted-foreground hover:bg-muted"
 				>
@@ -893,22 +982,22 @@ export function FundRequestFormModal({
 				</Button>
 
 				<div className="flex gap-2 w-full sm:w-auto">
-					{currentStep > 1 && (
+					{!wizard.isFirstStep && (
 						<Button
 							type="button"
 							variant="outline"
-							onClick={handlePrevStep}
-							disabled={isSubmitting}
+							onClick={wizard.back}
+							disabled={!wizard.isEditable}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Back
 						</Button>
 					)}
 
-					{currentStep < STEPS.length ? (
+					{!wizard.isLastStep ? (
 						<Button
 							type="button"
-							onClick={handleNextStep}
+							onClick={() => wizard.next()}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Next Step
@@ -917,7 +1006,7 @@ export function FundRequestFormModal({
 						<Button
 							type="button"
 							onClick={handleSubmit}
-							disabled={isSubmitting}
+							disabled={!wizard.isEditable}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							{isSubmitting && (
@@ -940,7 +1029,7 @@ export function FundRequestFormModal({
 			open={isOpen}
 			onOpenChange={(open) => {
 				if (!open && !isSubmitting) {
-					onClose();
+					void handleCancel();
 				}
 			}}
 			title={isEditMode ? "Edit Fund Request" : "New Fund Request"}

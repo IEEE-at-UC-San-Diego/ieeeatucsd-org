@@ -12,8 +12,7 @@ export function NetworkStatusBanner({ className }: { className?: string }) {
 	if (isOnline) return null;
 
 	return (
-		<div
-			role="status"
+		<output
 			aria-live="polite"
 			className={cn(
 				"flex shrink-0 items-center justify-center gap-2 border-b border-ds-amber-100/80 bg-ds-amber-100/90 px-3 py-2 text-center text-xs font-medium text-tone-warning",
@@ -22,8 +21,8 @@ export function NetworkStatusBanner({ className }: { className?: string }) {
 		>
 			<WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
 			<span>
-				You're offline — reconnect to load new data or submit changes.
+				You’re offline — reconnect to load new data or submit changes.
 			</span>
-		</div>
+		</output>
 	);
 }

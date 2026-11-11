@@ -28,13 +28,13 @@ function CallbackPage() {
 	return <CallbackClient />;
 }
 
-function CallbackLoading({ label = "Signing you in..." }: { label?: string }) {
+function CallbackLoading({ label = "Signing you in…" }: { label?: string }) {
 	return (
 		<div className="flex min-h-dvh items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-			<div className="text-center">
+			<output className="block text-center">
 				<Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
 				<p className="text-muted-foreground">{label}</p>
-			</div>
+			</output>
 		</div>
 	);
 }
@@ -106,13 +106,13 @@ function CallbackClient() {
 
 	const label =
 		isLoading && !upsertStarted.current
-			? "Signing you in..."
-			: "Finishing sign in...";
+			? "Signing you in…"
+			: "Finishing sign-in…";
 
 	// Keep a visible shell until navigation unmounts us; never return null.
 	if (isLoading || finalizeInProgress || upsertStarted.current) {
 		return <CallbackLoading label={label} />;
 	}
 
-	return <CallbackLoading label="Finishing sign in..." />;
+	return <CallbackLoading label="Finishing sign-in…" />;
 }

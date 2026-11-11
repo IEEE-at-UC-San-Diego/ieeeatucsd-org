@@ -10,15 +10,18 @@ import {
 	ZoomIn,
 	ZoomOut,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+	type FileKind,
+	initialReceiptViewerState,
+	receiptViewerReducer,
+} from "./receiptViewerState";
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
-
-type FileKind = "pdf" | "image" | "unknown";
 
 interface ReceiptViewerProps {
 	receiptUrl: string;
@@ -218,13 +221,11 @@ export default function ReceiptViewer({
 	const [zoomLevel, setZoomLevel] = useState(1);
 	const [rotation, setRotation] = useState(0);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
-	const [imageError, setImageError] = useState(false);
-	const [fileKind, setFileKind] = useState<FileKind>("unknown");
-	const [loading, setLoading] = useState(true);
-	const [displayUrl, setDisplayUrl] = useState<string>(receiptUrl);
-	const [errorMessage, setErrorMessage] = useState<string>("");
-	const [isConverting, setIsConverting] = useState(false);
-	const blobUrlRef = useRef<string | null>(null);
+	const [state, dispatch] = useReducer(
+		receiptViewerReducer,
+		initialReceiptViewerState,
+	);
+	const [loadAttempt, setLoadAttempt] = useState(0);
 
 	// Touch gesture tracking for pinch-zoom + pan on mobile
 	const gestureRef = useRef<{
@@ -313,88 +314,53 @@ export default function ReceiptViewer({
 		}
 	};
 
-	const detectAndPrepare = useCallback(
-		async (url: string) => {
-			setLoading(true);
-			setImageError(false);
-			setErrorMessage("");
-			setDisplayUrl(url);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadAttempt changes on Retry to re-run the load for the same URL
+	useEffect(() => {
+		if (!receiptUrl) return;
+		let cancelled = false;
+		let convertedUrl: string | null = null;
+		dispatch({ type: "load" });
 
-			// Clean up previous blob URL
-			if (blobUrlRef.current) {
-				URL.revokeObjectURL(blobUrlRef.current);
-				blobUrlRef.current = null;
-			}
-
+		const prepare = async () => {
 			try {
-				const kind = await detectFileKind(url, receiptType);
-				setFileKind(kind);
-
-				if (kind === "image") {
-					// Check if HEIC and convert
-					const heic = await isHeicFile(url);
-					if (heic) {
-						setIsConverting(true);
-						try {
-							const jpegUrl = await convertHeicToJpeg(url);
-							blobUrlRef.current = jpegUrl;
-							setDisplayUrl(jpegUrl);
-						} catch (e) {
-							console.error("HEIC conversion failed:", e);
-							setErrorMessage(
-								"Failed to convert HEIC image. Try downloading the file directly.",
-							);
-							setImageError(true);
-						} finally {
-							setIsConverting(false);
-						}
+				const kind = await detectFileKind(receiptUrl, receiptType);
+				const heic = kind === "image" && (await isHeicFile(receiptUrl));
+				if (cancelled) return;
+				if (!heic) {
+					dispatch({ type: "detected", kind, url: receiptUrl });
+					return;
+				}
+				dispatch({ type: "conversionStarted" });
+				try {
+					const jpegUrl = await convertHeicToJpeg(receiptUrl);
+					if (cancelled) {
+						URL.revokeObjectURL(jpegUrl);
+						return;
 					}
-				} else if (kind === "unknown") {
-					// Try loading as image first; if it fails, try PDF
-					setFileKind("image");
+					convertedUrl = jpegUrl;
+					dispatch({ type: "converted", url: jpegUrl });
+				} catch (e) {
+					console.error("HEIC conversion failed:", e);
+					if (!cancelled) dispatch({ type: "conversionFailed" });
 				}
 			} catch (e) {
 				console.error("File detection failed:", e);
-				// Default to image and let the error handler deal with it
-				setFileKind("image");
-			} finally {
-				setLoading(false);
-			}
-		},
-		[receiptType],
-	);
-
-	useEffect(() => {
-		if (receiptUrl) {
-			detectAndPrepare(receiptUrl);
-		} else {
-			setLoading(false);
-		}
-		return () => {
-			if (blobUrlRef.current) {
-				URL.revokeObjectURL(blobUrlRef.current);
-				blobUrlRef.current = null;
+				if (!cancelled) {
+					dispatch({ type: "detected", kind: "image", url: receiptUrl });
+				}
 			}
 		};
-	}, [receiptUrl, detectAndPrepare]);
+		prepare();
 
-	const handleImageError = () => {
-		// If we thought it was an image but it failed, try as PDF
-		if (fileKind === "image" && !imageError) {
-			setFileKind("pdf");
-		} else {
-			setImageError(true);
-			setErrorMessage(
-				"Failed to load receipt. The file may be corrupted or in an unsupported format.",
-			);
-		}
-	};
+		return () => {
+			cancelled = true;
+			if (convertedUrl) URL.revokeObjectURL(convertedUrl);
+		};
+	}, [receiptUrl, receiptType, loadAttempt]);
 
 	const handleRetry = () => {
-		setImageError(false);
-		setErrorMessage("");
 		resetView();
-		detectAndPrepare(receiptUrl);
+		setLoadAttempt((prev) => prev + 1);
 	};
 
 	if (!receiptUrl) {
@@ -408,8 +374,10 @@ export default function ReceiptViewer({
 		);
 	}
 
-	const isPdf = fileKind === "pdf";
-	const isImage = fileKind === "image";
+	const loading = state.status === "loading" || state.status === "converting";
+	const isConverting = state.status === "converting";
+	const isPdf = state.status === "ready" && state.kind === "pdf";
+	const isImage = state.status === "ready" && state.kind === "image";
 
 	return (
 		<div
@@ -447,7 +415,7 @@ export default function ReceiptViewer({
 					)}
 				</div>
 				<div className="flex items-center gap-1">
-					{isImage && !loading && !imageError && (
+					{isImage && (
 						<>
 							<Button
 								variant="ghost"
@@ -455,6 +423,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomOut}
 								title="Zoom out"
+								aria-label="Zoom out"
 							>
 								<ZoomOut className="w-4 h-4" />
 							</Button>
@@ -467,6 +436,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomIn}
 								title="Zoom in"
+								aria-label="Zoom in"
 							>
 								<ZoomIn className="w-4 h-4" />
 							</Button>
@@ -476,6 +446,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleRotate}
 								title="Rotate"
+								aria-label="Rotate"
 							>
 								<RotateCw className="w-4 h-4" />
 							</Button>
@@ -485,12 +456,13 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={resetView}
 								title="Reset view"
+								aria-label="Reset view"
 							>
 								<RefreshCw className="w-3 h-3" />
 							</Button>
 						</>
 					)}
-					<div className="w-px h-4 bg-muted mx-1" />
+					<div aria-hidden="true" className="w-px h-4 bg-muted mx-1" />
 					<Button
 						variant="ghost"
 						size="icon"
@@ -503,6 +475,7 @@ export default function ReceiptViewer({
 							a.click();
 						}}
 						title="Download"
+						aria-label="Download"
 					>
 						<Download className="w-4 h-4" />
 					</Button>
@@ -512,6 +485,7 @@ export default function ReceiptViewer({
 						className="h-8 w-8 text-muted-foreground hover:text-tone-info hover:bg-muted"
 						onClick={() => window.open(receiptUrl, "_blank")}
 						title="Open in new tab"
+						aria-label="Open in new tab"
 					>
 						<ExternalLink className="w-4 h-4" />
 					</Button>
@@ -522,7 +496,10 @@ export default function ReceiptViewer({
 			<div className="flex-1 overflow-hidden relative bg-muted flex items-center justify-center">
 				{/* Loading / Converting State */}
 				{loading && (
-					<div className="flex flex-col items-center gap-3 text-muted-foreground">
+					<output
+						aria-live="polite"
+						className="flex flex-col items-center gap-3 text-muted-foreground"
+					>
 						<Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
 						<p className="text-sm">
 							{isConverting
@@ -534,20 +511,23 @@ export default function ReceiptViewer({
 								This can take a few seconds on larger photos.
 							</p>
 						)}
-					</div>
+					</output>
 				)}
 
 				{/* Error State */}
-				{!loading && imageError && (
-					<div className="flex flex-col items-center gap-4 text-center p-8 max-w-sm">
+				{state.status === "failed" && (
+					<div
+						role="alert"
+						className="flex flex-col items-center gap-4 text-center p-8 max-w-sm"
+					>
 						<div className="w-14 h-14 rounded-full bg-ds-red-100 flex items-center justify-center">
 							<AlertCircle className="w-7 h-7 text-tone-danger" />
 						</div>
 						<div>
 							<p className="text-sm font-medium text-foreground mb-1">
-								Unable to display receipt
+								Unable to Display Receipt
 							</p>
-							<p className="text-xs text-muted-foreground">{errorMessage}</p>
+							<p className="text-xs text-muted-foreground">{state.message}</p>
 						</div>
 						<div className="flex gap-2">
 							<Button
@@ -566,7 +546,7 @@ export default function ReceiptViewer({
 								className="text-xs"
 							>
 								<ExternalLink className="w-3 h-3 mr-1.5" />
-								Open directly
+								Open Directly
 							</Button>
 							<Button
 								size="sm"
@@ -588,7 +568,7 @@ export default function ReceiptViewer({
 				)}
 
 				{/* PDF Viewer */}
-				{!loading && isPdf && !imageError && (
+				{isPdf && (
 					<div className="w-full h-full flex flex-col">
 						<object
 							data={`${receiptUrl}#toolbar=1&navpanes=0&view=FitH`}
@@ -622,7 +602,7 @@ export default function ReceiptViewer({
 				)}
 
 				{/* Image Viewer */}
-				{!loading && isImage && !imageError && (
+				{state.status === "ready" && state.kind === "image" && (
 					<div
 						className="w-full h-full overflow-hidden flex items-center justify-center p-4 touch-none select-none"
 						onTouchStart={handleTouchStart}
@@ -630,18 +610,19 @@ export default function ReceiptViewer({
 						onTouchEnd={handleTouchEnd}
 					>
 						<img
-							src={displayUrl}
+							src={state.url}
 							alt={receiptName || "Receipt"}
+							width={800}
+							height={1000}
 							className={cn(
-								"max-w-full max-h-full object-contain rounded shadow-sm origin-center block",
+								"max-w-full max-h-full w-auto h-auto object-contain rounded shadow-sm origin-center block",
 								gestureRef.current.mode === "none" &&
-									"transition-transform duration-200 ease-out",
+									"transition-transform duration-200 ease-out motion-reduce:transition-none",
 							)}
 							style={{
 								transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`,
 							}}
-							onError={handleImageError}
-							onLoad={() => setLoading(false)}
+							onError={() => dispatch({ type: "imageFailed", url: state.url })}
 							draggable={false}
 						/>
 					</div>

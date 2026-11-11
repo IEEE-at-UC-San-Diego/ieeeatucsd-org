@@ -20,6 +20,8 @@ import {
   UserRoleAssignment,
   assignableUserRoleValidator,
 } from "./userRoleAssignment";
+import { transitionAccountStatus } from "./accountStatusTransition";
+import { serverPolicyAcceptance } from "./legalVersions";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -171,16 +173,14 @@ export const completeOnboarding = mutation({
       );
     }
 
+    const policyAcceptance = serverPolicyAcceptance(now);
     await ctx.db.patch(user._id, {
       pid: args.pid,
       major: args.major,
       graduationYear: args.graduationYear,
       signedUp: true,
       joinDate: now,
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
+      ...policyAcceptance,
       ...(args.memberId && { memberId: args.memberId }),
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
       ...(resume && { resume }),
@@ -359,12 +359,7 @@ export const acceptPolicyUpdate = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const now = Date.now();
 
-    await ctx.db.patch(user._id, {
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
-    });
+    await ctx.db.patch(user._id, serverPolicyAcceptance(now));
 
     return user._id;
   },
@@ -568,9 +563,12 @@ export const updateStatus = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const existing = await ctx.db.get(args.userId);
+    if (!existing) throw new Error("User not found");
+    const nextStatus = transitionAccountStatus(existing.status, args.status);
 
     await ctx.db.patch(args.userId, {
-      status: args.status,
+      status: nextStatus,
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });

@@ -532,8 +532,31 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
     overflow-x: clip;
     max-width: 100%;
+  }
+
+  @media (pointer: fine) {
+    html {
+      overscroll-behavior: none;
+    }
+  }
+
+  a,
+  button,
+  input,
+  label,
+  select,
+  summary,
+  textarea,
+  [role='button'] {
+    touch-action: manipulation;
+  }
+
+  select {
+    background-color: var(--background);
+    color: var(--foreground);
   }
 
   body {
@@ -654,6 +677,14 @@
   .animate-spin,
   .animate-ping {
     animation: motion-status-pulse 1.5s ease infinite;
+  }
+
+  .animate-pulse {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 
   .motion-surface {

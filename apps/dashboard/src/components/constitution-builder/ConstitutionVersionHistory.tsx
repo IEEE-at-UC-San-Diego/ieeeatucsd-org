@@ -1,4 +1,3 @@
-import { format, formatDistanceToNow } from "date-fns";
 import {
 	CalendarClock,
 	History,
@@ -14,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDateTime, formatRelativeTime } from "@/lib/formatters";
 import type { ConstitutionVersion } from "./types";
 
 interface ConstitutionVersionHistoryProps {
@@ -46,7 +46,7 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 		try {
 			const result = await onRestoreVersion(versionToRestore._id);
 			if (!result) {
-				toast.error("Failed to restore version");
+				toast.error("Failed to restore version. Please try again.");
 				return;
 			}
 
@@ -56,7 +56,9 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 			setVersionToRestore(null);
 		} catch (error) {
 			console.error("Failed to restore version:", error);
-			toast.error("Failed to restore version");
+			toast.error(
+				"Failed to restore version. Check your connection and try again.",
+			);
 		} finally {
 			setIsRestoring(false);
 		}
@@ -101,11 +103,11 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 								return (
 									<div
 										key={version._id}
-										className="rounded-lg border border-border bg-background p-4 space-y-3"
+										className="rounded-lg border border-border bg-background p-4 space-y-3 [content-visibility:auto] [contain-intrinsic-size:auto_140px]"
 									>
 										<div className="flex flex-wrap items-center justify-between gap-2">
-											<div className="flex items-center gap-2">
-												<span className="text-sm font-semibold text-foreground">
+											<div className="flex min-w-0 items-center gap-2">
+												<span className="truncate text-sm font-semibold text-foreground">
 													{version.label}
 												</span>
 												{isCurrent && (
@@ -133,7 +135,7 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 												onClick={() => setVersionToRestore(version)}
 											>
 												<RotateCcw className="h-3.5 w-3.5 mr-1" />
-												Restore
+												Restore Version
 											</Button>
 										</div>
 
@@ -144,21 +146,16 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 											</div>
 											<div className="flex items-center gap-1.5">
 												<CalendarClock className="h-3.5 w-3.5" />
-												<span
-													title={format(
-														new Date(version.createdAt),
-														"MMM d, yyyy 'at' h:mm a",
-													)}
-												>
-													{formatDistanceToNow(new Date(version.createdAt), {
-														addSuffix: true,
-													})}
+												<span title={formatDateTime(version.createdAt)}>
+													{formatRelativeTime(version.createdAt)}
 												</span>
 											</div>
 											{version.note && (
 												<div className="flex items-start gap-1.5">
 													<MessageSquare className="h-3.5 w-3.5 mt-0.5" />
-													<span>{version.note}</span>
+													<span className="min-w-0 break-words">
+														{version.note}
+													</span>
 												</div>
 											)}
 										</div>
@@ -195,7 +192,7 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 							onClick={handleRestore}
 							disabled={isRestoring}
 						>
-							{isRestoring ? "Restoring..." : "Restore Version"}
+							{isRestoring ? "Restoring…" : "Restore Version"}
 						</Button>
 					</div>
 				}

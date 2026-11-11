@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
 	id?: string;
+	name?: string;
 	label?: string;
 	value: string;
 	onChange: (value: string) => void;
@@ -73,10 +74,11 @@ type PlacesApiState = {
  */
 export function AddressAutocompleteInput({
 	id: propId,
+	name = "address",
 	label,
 	value,
 	onChange,
-	placeholder = "Start typing an address...",
+	placeholder = "Start typing an address…",
 	disabled,
 	className,
 	addressOnly = true,
@@ -290,7 +292,7 @@ export function AddressAutocompleteInput({
 			return "Suggestions are unavailable. You can still type the address manually.";
 		}
 		if (maps.loading || (maps.ready && !placesApi)) {
-			return "Loading address suggestions...";
+			return "Loading address suggestions…";
 		}
 		return "Start typing, choose a suggestion, or enter the address manually.";
 	})();
@@ -345,6 +347,7 @@ export function AddressAutocompleteInput({
 				<Input
 					ref={inputRef}
 					id={inputId}
+					name={name}
 					value={value}
 					onChange={(event) => {
 						setSelectionLocked(false);
@@ -378,9 +381,15 @@ export function AddressAutocompleteInput({
 					className="w-full pr-10"
 				/>
 				{isFetching || maps.loading ? (
-					<span className="-translate-y-1/2 absolute top-1/2 right-3 h-2 w-2 animate-pulse rounded-full bg-primary" />
+					<span
+						aria-hidden="true"
+						className="-translate-y-1/2 absolute top-1/2 right-3 h-2 w-2 animate-pulse rounded-full bg-primary"
+					/>
 				) : placesApi && !suggestionsDisabled ? (
-					<span className="-translate-y-1/2 absolute top-1/2 right-3 h-2 w-2 rounded-full bg-ds-green-1000" />
+					<span
+						aria-hidden="true"
+						className="-translate-y-1/2 absolute top-1/2 right-3 h-2 w-2 rounded-full bg-ds-green-1000"
+					/>
 				) : null}
 			</div>
 			{canShowSuggestions ? (
@@ -420,7 +429,10 @@ export function AddressAutocompleteInput({
 				</div>
 			) : null}
 			{helperText ? (
-				<p className="text-[11px] leading-snug text-muted-foreground">
+				<p
+					aria-live="polite"
+					className="text-[11px] leading-snug text-muted-foreground"
+				>
 					{helperText}
 				</p>
 			) : null}

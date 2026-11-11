@@ -19,7 +19,7 @@ function PrivacyPolicyPage() {
 				</Button>
 			</div>
 			<div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-				<h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
+				<h1 className="mb-2 text-2xl font-bold tracking-tight text-balance sm:text-3xl">
 					Privacy Policy
 				</h1>
 				<p className="mb-8 text-sm text-muted-foreground sm:text-base">

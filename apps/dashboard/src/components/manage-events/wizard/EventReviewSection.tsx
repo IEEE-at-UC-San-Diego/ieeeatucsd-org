@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
 	ArrowRight,
 	Calendar,
@@ -10,6 +9,11 @@ import {
 	Users,
 	Utensils,
 } from "lucide-react";
+import {
+	formatCurrencyUSD,
+	formatDateTime,
+	formatNumber,
+} from "@/lib/formatters";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import type { EventFormData, EventRequest } from "../types";
 import { BudgetCalculation } from "./BudgetCalculation";
@@ -24,10 +28,6 @@ export function EventReviewSection({
 	originalData,
 }: EventReviewSectionProps) {
 	const isEditing = !!originalData;
-
-	const formatDate = (timestamp: number) => {
-		return format(new Date(timestamp), "MMMM d, yyyy 'at' h:mm a");
-	};
 
 	const getRequirements = () => {
 		const reqs = [];
@@ -89,14 +89,14 @@ export function EventReviewSection({
 		if (o.startDate && o.startDate !== data.startDate)
 			changes.push({
 				label: "Start Date",
-				before: formatDate(o.startDate),
-				after: formatDate(data.startDate),
+				before: formatDateTime(o.startDate),
+				after: formatDateTime(data.startDate),
 			});
 		if (o.endDate && o.endDate !== data.endDate)
 			changes.push({
 				label: "End Date",
-				before: formatDate(o.endDate),
-				after: formatDate(data.endDate),
+				before: formatDateTime(o.endDate),
+				after: formatDateTime(data.endDate),
 			});
 		if (o.eventCode && o.eventCode !== data.eventCode)
 			changes.push({
@@ -160,8 +160,8 @@ export function EventReviewSection({
 		if (Math.abs(origInvoiceTotal - totalInvoiceAmount) > 0.01)
 			changes.push({
 				label: "Invoice Total",
-				before: `$${origInvoiceTotal.toFixed(2)}`,
-				after: `$${totalInvoiceAmount.toFixed(2)}`,
+				before: formatCurrencyUSD(origInvoiceTotal),
+				after: formatCurrencyUSD(totalInvoiceAmount),
 			});
 	}
 
@@ -237,12 +237,12 @@ export function EventReviewSection({
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<ReviewItem
 							label="Start Date"
-							value={formatDate(data.startDate)}
+							value={formatDateTime(data.startDate)}
 							icon={<Calendar className="h-4 w-4" />}
 						/>
 						<ReviewItem
 							label="End Date"
-							value={formatDate(data.endDate)}
+							value={formatDateTime(data.endDate)}
 							icon={<Calendar className="h-4 w-4" />}
 						/>
 					</div>
@@ -273,7 +273,7 @@ export function EventReviewSection({
 					</div>
 					<ReviewItem
 						label="Estimated Attendance"
-						value={data.estimatedAttendance.toString()}
+						value={formatNumber(data.estimatedAttendance)}
 						icon={<Users className="h-4 w-4" />}
 					/>
 					<BudgetCalculation
@@ -289,7 +289,7 @@ export function EventReviewSection({
 					{data.needsFlyers && data.flyerAdvertisingStartDate > 0 && (
 						<ReviewItem
 							label="Advertising Start"
-							value={formatDate(data.flyerAdvertisingStartDate)}
+							value={formatDateTime(data.flyerAdvertisingStartDate)}
 						/>
 					)}
 					{data.needsFlyers && data.flyerAdditionalRequests && (
@@ -345,11 +345,13 @@ export function EventReviewSection({
 										className="p-3 bg-muted rounded-lg text-sm space-y-2"
 									>
 										<div className="flex items-center justify-between">
-											<span className="font-medium text-foreground">
+											<span className="min-w-0 break-words font-medium text-foreground">
 												#{idx + 1}: {invoice.vendor}
 											</span>
-											<span className="font-bold">
-												${(invoice.total || invoice.amount || 0).toFixed(2)}
+											<span className="shrink-0 font-bold tabular-nums">
+												{formatCurrencyUSD(
+													invoice.total || invoice.amount || 0,
+												)}
 											</span>
 										</div>
 										{invoice.items.length > 0 && (
@@ -359,19 +361,25 @@ export function EventReviewSection({
 														key={itemIdx}
 														className="flex justify-between text-xs text-muted-foreground"
 													>
-														<span>
-															{item.description} (x{item.quantity})
+														<span className="min-w-0 break-words">
+															{item.description} (×{item.quantity})
 														</span>
-														<span>${item.total.toFixed(2)}</span>
+														<span className="shrink-0 tabular-nums">
+															{formatCurrencyUSD(item.total)}
+														</span>
 													</div>
 												))}
 												{(invoice.tax > 0 || invoice.tip > 0) && (
 													<div className="flex justify-between text-xs text-muted-foreground pt-1 border-t border-border">
 														{invoice.tax > 0 && (
-															<span>Tax: ${invoice.tax.toFixed(2)}</span>
+															<span className="tabular-nums">
+																Tax: {formatCurrencyUSD(invoice.tax)}
+															</span>
 														)}
 														{invoice.tip > 0 && (
-															<span>Tip: ${invoice.tip.toFixed(2)}</span>
+															<span className="tabular-nums">
+																Tip: {formatCurrencyUSD(invoice.tip)}
+															</span>
 														)}
 													</div>
 												)}
@@ -387,8 +395,8 @@ export function EventReviewSection({
 							</div>
 							<div className="flex justify-between items-center pt-2 mt-2 border-t">
 								<span className="text-sm font-medium">Total:</span>
-								<span className="font-bold text-lg">
-									${totalInvoiceAmount.toFixed(2)}
+								<span className="font-bold text-lg tabular-nums">
+									{formatCurrencyUSD(totalInvoiceAmount)}
 								</span>
 							</div>
 						</div>
@@ -408,7 +416,7 @@ function ReviewSection({
 }) {
 	return (
 		<div className="border rounded-lg p-4">
-			<h3 className="font-semibold text-foreground mb-3 pb-2 border-b">
+			<h3 className="text-balance font-semibold text-foreground mb-3 pb-2 border-b">
 				{title}
 			</h3>
 			<div className="space-y-3">{children}</div>
@@ -437,9 +445,9 @@ function ReviewItem({
 			>
 				{icon}
 				{multiline ? (
-					<p className="whitespace-pre-wrap">{value}</p>
+					<p className="min-w-0 whitespace-pre-wrap break-words">{value}</p>
 				) : (
-					<span>{value || "-"}</span>
+					<span className="min-w-0 break-words">{value || "-"}</span>
 				)}
 			</div>
 		</div>

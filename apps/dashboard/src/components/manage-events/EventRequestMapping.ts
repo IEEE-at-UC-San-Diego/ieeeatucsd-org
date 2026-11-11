@@ -1,4 +1,5 @@
 import { EventPoints } from "@convex/eventPoints";
+import { eventRequestLabel } from "@convex/eventRequestTransition";
 import { normalizeDepartment, normalizeEventType } from "./constants";
 import type { EventFormData, EventRequest } from "./types";
 
@@ -55,11 +56,10 @@ export class EventRequestMapping {
 	};
 
 	static fromDocument(event: Record<string, unknown>): EventRequest {
-		const status: EventRequest["status"] = event.published
-			? "published"
-			: event.status === "completed"
-				? "published"
-				: ((event.status as EventRequest["status"] | undefined) ?? "draft");
+		const status: EventRequest["status"] = eventRequestLabel(
+			typeof event.status === "string" ? event.status : undefined,
+			event.published === true,
+		);
 
 		const invoices = Array.isArray(event.invoices) ? event.invoices : [];
 

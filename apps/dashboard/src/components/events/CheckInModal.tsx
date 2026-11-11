@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Check, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ export function CheckInModal({
 	eventName = "this event",
 	isSubmitting = false,
 }: CheckInModalProps) {
+	const formId = useId();
 	const [step, setStep] = useState<1 | 2>(1);
 	const [code, setCode] = useState("");
 	const [foodPreference, setFoodPreference] = useState("");
@@ -47,7 +48,7 @@ export function CheckInModal({
 
 	const handleCodeSubmit = () => {
 		if (!code.trim()) {
-			setError("Please enter the event code");
+			setError("Enter the event code shown by the event organizer.");
 			return;
 		}
 		setError("");
@@ -106,7 +107,7 @@ export function CheckInModal({
 						{isSubmitting ? (
 							<>
 								<Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-								Checking in...
+								Checking In…
 							</>
 						) : step === 1 ? (
 							<>
@@ -115,7 +116,7 @@ export function CheckInModal({
 							</>
 						) : (
 							<>
-								Complete Check-in
+								Complete Check-In
 								<Check className="w-3.5 h-3.5 ml-1.5" />
 							</>
 						)}
@@ -127,40 +128,59 @@ export function CheckInModal({
 				<div className="space-y-3 pb-2">
 					<div className="space-y-2">
 						<Label
-							htmlFor="event-code"
+							htmlFor={`${formId}-event-code`}
 							className="text-xs font-medium text-muted-foreground"
 						>
 							Event Code
 						</Label>
 						<Input
-							id="event-code"
+							id={`${formId}-event-code`}
+							name="eventCode"
 							placeholder="e.g. IEEE2024"
+							autoComplete="off"
+							autoCapitalize="characters"
+							spellCheck={false}
 							value={code}
 							onChange={(e) => setCode(e.target.value)}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") handleCodeSubmit();
 							}}
 							className="text-center text-lg font-mono tracking-wider uppercase h-12"
-							autoFocus
+							aria-invalid={error ? true : undefined}
+							aria-describedby={
+								error ? `${formId}-event-code-error` : undefined
+							}
 						/>
-						{error && <p className="text-xs text-destructive">{error}</p>}
+						<output
+							id={`${formId}-event-code-error`}
+							aria-live="polite"
+							className="block text-xs text-destructive empty:hidden"
+						>
+							{error}
+						</output>
 					</div>
 				</div>
 			) : (
 				<div className="space-y-3 pb-2">
 					<div className="flex items-center gap-2 rounded-lg border px-3 py-2">
-						<div className="w-1.5 h-1.5 rounded-full bg-ds-green-1000" />
+						<div
+							aria-hidden="true"
+							className="w-1.5 h-1.5 rounded-full bg-ds-green-1000"
+						/>
 						<span className="text-xs font-medium">Code accepted</span>
 					</div>
 					<div className="space-y-2">
 						<Label
-							htmlFor="food-preference"
+							htmlFor={`${formId}-food-preference`}
 							className="text-xs font-medium text-muted-foreground"
 						>
 							Dietary Preference (Optional)
 						</Label>
 						<Select value={foodPreference} onValueChange={setFoodPreference}>
-							<SelectTrigger id="food-preference" className="h-11 sm:h-9">
+							<SelectTrigger
+								id={`${formId}-food-preference`}
+								className="h-11 sm:h-9"
+							>
 								<SelectValue placeholder="Select your preference" />
 							</SelectTrigger>
 							<SelectContent>

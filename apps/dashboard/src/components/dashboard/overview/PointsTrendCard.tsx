@@ -20,6 +20,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { formatNumber } from "@/lib/formatters";
 import { InlineEmpty } from "./InlineEmpty";
 
 export type PointsTrendPoint = {
@@ -61,7 +62,7 @@ function ChartTooltip({ active, payload, label }: Record<string, unknown>) {
 				{label as string}
 			</p>
 			<p className="mt-0.5 text-base font-semibold leading-5 tabular-nums text-popover-foreground">
-				{value?.toLocaleString()}
+				{value === undefined ? null : formatNumber(value)}
 				<span className="ml-1 text-xs font-normal text-muted-foreground">
 					points
 				</span>
@@ -80,7 +81,7 @@ export function PointsTrendCard({ data, rangeLabel }: PointsTrendCardProps) {
 	return (
 		<Card className="lg:col-span-2">
 			<CardHeader>
-				<CardTitle>Points over time</CardTitle>
+				<CardTitle>Points Over Time</CardTitle>
 				<CardDescription>Cumulative points earned</CardDescription>
 				{hasTrend && rangeLabel && (
 					<CardAction>
@@ -167,7 +168,7 @@ export function PointsTrendCard({ data, rangeLabel }: PointsTrendCardProps) {
 						description="Check in at two or more events and your points will chart here."
 						action={
 							<Button asChild variant="secondary" size="sm" className="px-3">
-								<Link to="/events">Browse events</Link>
+								<Link to="/events">Browse Events</Link>
 							</Button>
 						}
 					/>
