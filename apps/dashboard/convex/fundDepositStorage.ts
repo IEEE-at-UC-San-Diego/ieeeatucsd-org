@@ -6,10 +6,12 @@
  * holds resumes, reimbursement receipts, and event files. The stored checksum
  * is the check: an officer who only knows the id cannot mint a new URL.
  */
+const SHA256_BASE64 = /^[A-Za-z0-9+/]{43}=$/;
+
 export function storageChecksumMatches(actual: string, provided: string): boolean {
-  const left = actual.trim().toLowerCase();
-  const right = provided.trim().toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(left) || !/^[0-9a-f]{64}$/.test(right)) {
+  const left = actual.trim();
+  const right = provided.trim();
+  if (!SHA256_BASE64.test(left) || !SHA256_BASE64.test(right)) {
     return false;
   }
 

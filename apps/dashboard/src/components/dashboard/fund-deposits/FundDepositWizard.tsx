@@ -31,7 +31,7 @@ import { useWizard } from "@/hooks/useWizard";
 import { formatCurrencyUSD } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MultiFileUpload } from "./MultiFileUpload";
-import { fileSha256Hex } from "./receiptChecksum";
+import { fileSha256Base64 } from "./receiptChecksum";
 import {
 	createRequestGate,
 	mergeParsedReceipt,
@@ -257,7 +257,7 @@ export function FundDepositWizard({
 				}
 
 				const { storageId } = await result.json();
-				const sha256 = await fileSha256Hex(file);
+				const sha256 = await fileSha256Base64(file);
 				const fileUrl = await getStorageUrl({ storageId, sha256 });
 				if (!fileUrl) {
 					throw new Error(
