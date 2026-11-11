@@ -23,10 +23,10 @@ export function SummaryStrip({
 		<dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm">
 			{items.map((item) => (
 				<div key={item.label} className="flex items-baseline gap-1.5">
-					<dd className="font-semibold tabular-nums text-foreground">
+					<dt className="text-muted-foreground">{item.label}</dt>
+					<dd className="order-first font-semibold tabular-nums text-foreground">
 						{item.value}
 					</dd>
-					<dt className="text-muted-foreground">{item.label}</dt>
 				</div>
 			))}
 		</dl>

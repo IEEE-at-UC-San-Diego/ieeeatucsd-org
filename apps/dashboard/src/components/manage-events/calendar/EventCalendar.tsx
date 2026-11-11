@@ -5,7 +5,6 @@ import {
 	endOfDay,
 	endOfMonth,
 	endOfWeek,
-	format,
 	getDay,
 	isSameDay,
 	isSameMonth,
@@ -22,6 +21,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+	formatLongDate,
+	formatShortDate,
+	formatTime,
+	formatWeekdayShort,
+} from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { EventRequest, EventStatus } from "../types";
 
@@ -46,6 +51,8 @@ const statusColors: Record<EventStatus, string> = {
 	declined: "bg-ds-red-600",
 	published: "bg-ds-blue-700",
 };
+
+const monthNameFormatter = new Intl.DateTimeFormat("en-US", { month: "long" });
 
 const statusBgColors: Record<EventStatus, string> = {
 	draft: "bg-muted hover:bg-ds-gray-200",
@@ -130,13 +137,13 @@ export function EventCalendar({
 					<h2 className="min-w-[10.5rem] text-xl font-semibold tracking-[-0.02em] text-foreground">
 						{view === "month" ? (
 							<>
-								{format(currentMonth, "MMMM")}{" "}
+								{monthNameFormatter.format(currentMonth)}{" "}
 								<span className="font-normal text-muted-foreground">
-									{format(currentMonth, "yyyy")}
+									{currentMonth.getFullYear()}
 								</span>
 							</>
 						) : (
-							format(selectedDay, "EEE, MMM d")
+							`${formatWeekdayShort(selectedDay)}, ${formatShortDate(selectedDay)}`
 						)}
 					</h2>
 					<div className="flex items-center gap-1">
@@ -210,12 +217,13 @@ export function EventCalendar({
 										isToday(day) && !active && "border-ds-blue-400",
 									)}
 								>
-									<span className="font-medium">{format(day, "EEE")}</span>
-									<span className="text-sm tabular-nums">
-										{format(day, "d")}
-									</span>
+									<span className="font-medium">{formatWeekdayShort(day)}</span>
+									<span className="text-sm tabular-nums">{day.getDate()}</span>
 									{count > 0 && (
-										<span className="mt-0.5 h-1 w-1 rounded-full bg-ieee-blue" />
+										<span
+											aria-hidden="true"
+											className="mt-0.5 h-1 w-1 rounded-full bg-ieee-blue"
+										/>
 									)}
 								</button>
 							);
@@ -225,7 +233,7 @@ export function EventCalendar({
 					{agendaEvents.length === 0 ? (
 						<div className="px-4 py-10 text-center text-sm text-muted-foreground">
 							No events in the next two weeks from{" "}
-							{format(selectedDay, "MMM d")}.
+							{formatShortDate(selectedDay)}.
 						</div>
 					) : (
 						<ul>
@@ -235,7 +243,7 @@ export function EventCalendar({
 								return (
 									<li key={day.toISOString()} className="border-t">
 										<div className="bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-											{format(day, "EEEE, MMM d")}
+											{formatLongDate(day)}
 											{isToday(day) ? " · Today" : ""}
 										</div>
 										<ul className="divide-y">
@@ -247,6 +255,7 @@ export function EventCalendar({
 														onClick={() => onEventClick?.(event)}
 													>
 														<span
+															aria-hidden="true"
 															className={cn(
 																"h-2.5 w-2.5 shrink-0 rounded-full",
 																statusColors[event.status],
@@ -257,7 +266,7 @@ export function EventCalendar({
 																{event.eventName}
 															</p>
 															<p className="truncate text-xs text-muted-foreground">
-																{format(new Date(event.startDate), "h:mm a")}
+																{formatTime(event.startDate)}
 																{event.location ? ` · ${event.location}` : ""}
 															</p>
 														</div>
@@ -277,7 +286,7 @@ export function EventCalendar({
 							className="h-11 w-full"
 							onClick={() => onDateClick?.(selectedDay)}
 						>
-							Add event on {format(selectedDay, "MMM d")}
+							Add Event on {formatShortDate(selectedDay)}
 						</Button>
 					</div>
 				</div>
@@ -295,7 +304,7 @@ export function EventCalendar({
 							className="h-11"
 							onClick={() => onDateClick?.(selectedDay)}
 						>
-							Add
+							Add Event
 						</Button>
 					</div>
 					{dayEvents.length === 0 ? (
@@ -315,6 +324,7 @@ export function EventCalendar({
 										onClick={() => onEventClick?.(event)}
 									>
 										<span
+											aria-hidden="true"
 											className={cn(
 												"h-2.5 w-2.5 shrink-0 rounded-full",
 												statusColors[event.status],
@@ -325,7 +335,7 @@ export function EventCalendar({
 												{event.eventName}
 											</p>
 											<p className="truncate text-xs text-muted-foreground">
-												{format(new Date(event.startDate), "h:mm a")}
+												{formatTime(event.startDate)}
 												{event.location ? ` · ${event.location}` : ""}
 											</p>
 										</div>
@@ -385,7 +395,7 @@ export function EventCalendar({
 									}}
 									role="button"
 									tabIndex={0}
-									aria-label={format(day, "EEEE, MMMM d")}
+									aria-label={formatLongDate(day)}
 								>
 									<div className="mb-1 flex items-center justify-between gap-1 px-0.5">
 										<span
@@ -398,7 +408,7 @@ export function EventCalendar({
 														: "text-muted-foreground/60",
 											)}
 										>
-											{format(day, "d")}
+											{day.getDate()}
 										</span>
 										{sundayWeekLabel && (
 											<span
@@ -435,6 +445,7 @@ export function EventCalendar({
 												title={event.eventName}
 											>
 												<span
+													aria-hidden="true"
 													className={cn(
 														"size-1.5 shrink-0 rounded-full",
 														statusColors[event.status],
@@ -446,7 +457,7 @@ export function EventCalendar({
 											</button>
 										))}
 										{dayEventList.length > 3 && (
-											<div className="truncate px-1.5 text-xs text-muted-foreground">
+											<div className="truncate px-1.5 text-xs text-muted-foreground tabular-nums">
 												+{dayEventList.length - 3} more
 											</div>
 										)}
@@ -463,6 +474,7 @@ export function EventCalendar({
 								className="flex items-center gap-1.5 text-xs text-muted-foreground"
 							>
 								<span
+									aria-hidden="true"
 									className={cn(
 										"size-1.5 rounded-full",
 										statusColors[item.status],

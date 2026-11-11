@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/formatters";
 import SectionRenderer from "./SectionRenderer";
 import type { Constitution, ConstitutionSection } from "./types";
 import {
@@ -99,6 +100,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 				<img
 					src="/logos/blue_logo_only.svg"
 					alt="IEEE Logo"
+					width={120}
+					height={120}
 					style={{
 						width: "120px",
 						height: "120px",
@@ -152,12 +155,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						color: "var(--foreground)",
 					}}
 				>
-					Last Updated:{" "}
-					{new Date().toLocaleDateString("en-US", {
-						year: "numeric",
-						month: "long",
-						day: "numeric",
-					})}
+					Last Updated: {formatDate(new Date())}
 				</p>
 
 				<p
@@ -268,7 +266,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 								<Button
 									variant="link"
 									onClick={() => setCurrentPage(pageNum)}
-									className="text-foreground hover:text-tone-info hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									aria-label={`Go to page ${pageNum}`}
+									className="tabular-nums text-foreground hover:text-tone-info hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{pageNum}
@@ -537,6 +536,12 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                 border-color: transparent;
               }
             }
+
+            @media (prefers-reduced-motion: reduce) {
+              .constitution-section-highlight {
+                animation: none !important;
+              }
+            }
           `,
 				}}
 			/>
@@ -554,7 +559,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						Previous
 					</Button>
 
-					<span className="text-sm text-muted-foreground">
+					<span className="text-sm text-muted-foreground tabular-nums">
 						Page {currentPage} of {totalPages}
 					</span>
 
@@ -579,7 +584,9 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
 			{/* Screen Content - Current Page Only */}
 			<div className="relative screen-only">
-				<div className="page-indicator no-print">Page {currentPage}</div>
+				<div className="page-indicator no-print tabular-nums">
+					Page {currentPage}
+				</div>
 				{renderCurrentPage()}
 			</div>
 
@@ -591,6 +598,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						variant="outline"
 						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
 						disabled={currentPage === 1}
+						aria-label="Previous page"
 						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-muted text-foreground hover:bg-ds-gray-300"
 					>
 						‹
@@ -611,7 +619,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
 							if (startPage > 1) {
 								pages.push(1);
-								if (startPage > 2) pages.push("...");
+								if (startPage > 2) pages.push("…");
 							}
 
 							for (let i = startPage; i <= endPage; i++) {
@@ -619,19 +627,20 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 							}
 
 							if (endPage < totalPages) {
-								if (endPage < totalPages - 1) pages.push("...");
+								if (endPage < totalPages - 1) pages.push("…");
 								pages.push(totalPages);
 							}
 						}
 
 						return pages.map((pageNum, index) => {
-							if (pageNum === "...") {
+							if (pageNum === "…") {
 								return (
 									<span
 										key={`ellipsis-${index}`}
+										aria-hidden="true"
 										className="px-2 py-1 text-muted-foreground"
 									>
-										...
+										…
 									</span>
 								);
 							}
@@ -641,7 +650,9 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 									variant="outline"
 									key={pageNum}
 									onClick={() => setCurrentPage(pageNum as number)}
-									className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
+									aria-label={`Page ${pageNum}`}
+									aria-current={pageNum === currentPage ? "page" : undefined}
+									className={`w-8 h-8 rounded text-sm font-medium tabular-nums transition-colors ${
 										pageNum === currentPage
 											? "bg-ds-blue-700 text-on-accent"
 											: "bg-muted text-foreground hover:bg-ds-gray-300"
@@ -660,13 +671,14 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 							setCurrentPage(Math.min(totalPages, currentPage + 1))
 						}
 						disabled={currentPage === totalPages}
+						aria-label="Next page"
 						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-muted text-foreground hover:bg-ds-gray-300"
 					>
 						›
 					</Button>
 
 					{/* Page info */}
-					<span className="ml-4 text-sm text-muted-foreground">
+					<span className="ml-4 text-sm text-muted-foreground tabular-nums">
 						Page {currentPage} of {totalPages}
 					</span>
 				</div>

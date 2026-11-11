@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
 import {
 	DashboardPage,
 	PageHeader,
@@ -14,10 +15,19 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { formatNumber } from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { cn } from "@/lib/utils";
 
+const searchSchema = z.object({
+	q: z.string().default("").catch(""),
+	page: z.number().int().min(1).default(1).catch(1),
+});
+
+type LeaderboardSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/leaderboard")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.users.getLeaderboard, undefined, ctx),
 	component: LeaderboardPage,
@@ -46,8 +56,17 @@ function LeaderboardPage() {
 		api.users.getLeaderboard,
 		logtoId ? { logtoId } : "skip",
 	);
-	const [searchTerm, setSearchTerm] = useState("");
-	const [currentPage, setCurrentPage] = useState(1);
+	const { q, page: currentPage } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearchParams = (patch: Partial<LeaderboardSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const [searchTerm, setSearchInput] = useState(q);
+	const setSearchTerm = (value: string) => {
+		setSearchInput(value);
+		setSearchParams({ q: value, page: 1 });
+	};
+	const setCurrentPage = (nextPage: number) =>
+		setSearchParams({ page: nextPage });
 	const loading = leaderboard === undefined;
 
 	const filteredData = leaderboard?.filter((userData) => {
@@ -76,7 +95,7 @@ function LeaderboardPage() {
 
 	const description =
 		currentUserRank >= 0 && currentUserPoints !== undefined
-			? `You're ${ordinal(currentUserRank + 1)} of ${memberCount} with ${currentUserPoints.toLocaleString()} points.`
+			? `You’re ${ordinal(currentUserRank + 1)} of ${formatNumber(memberCount)} with ${formatNumber(currentUserPoints)} points.`
 			: "Community rankings based on event participation and engagement.";
 
 	const headCell = "px-4 py-2.5 text-xs font-medium text-muted-foreground";
@@ -92,13 +111,12 @@ function LeaderboardPage() {
 						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							type="search"
-							placeholder="Search members or majors"
+							name="q"
+							autoComplete="off"
+							placeholder="Search members or majors…"
 							aria-label="Search members or majors"
 							value={searchTerm}
-							onChange={(e) => {
-								setSearchTerm(e.target.value);
-								setCurrentPage(1);
-							}}
+							onChange={(e) => setSearchTerm(e.target.value)}
 							className="pl-9"
 						/>
 					</div>
@@ -109,7 +127,7 @@ function LeaderboardPage() {
 				loading={loading}
 				items={[
 					{ label: "members", value: memberCount },
-					{ label: "points earned", value: totalPoints.toLocaleString() },
+					{ label: "points earned", value: formatNumber(totalPoints) },
 					{ label: "average per member", value: avgPoints },
 				]}
 			/>
@@ -214,7 +232,7 @@ function LeaderboardPage() {
 												{member.eventsAttended || 0}
 											</td>
 											<td className="px-4 py-3 text-right text-sm font-semibold tabular-nums text-foreground">
-												{member.points.toLocaleString()}
+												{formatNumber(member.points)}
 											</td>
 										</tr>
 									);
@@ -224,9 +242,13 @@ function LeaderboardPage() {
 					</div>
 				) : (
 					<div className="px-6 py-14 text-center">
-						<p className="text-sm font-semibold text-foreground">No results</p>
-						<p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
-							No members match "{searchTerm}".
+						<p className="text-sm font-semibold text-foreground">
+							{searchTerm ? "No Results" : "No Members Yet"}
+						</p>
+						<p className="mx-auto mt-1 max-w-xs break-words text-sm text-muted-foreground">
+							{searchTerm
+								? `No members match “${searchTerm}”. Try a different name or major.`
+								: "Members will appear here once they earn points."}
 						</p>
 					</div>
 				)}

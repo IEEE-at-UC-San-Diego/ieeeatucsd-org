@@ -111,7 +111,7 @@ export function ResponsiveOverlay({
 					<DialogTitle>{title}</DialogTitle>
 					{description && <DialogDescription>{description}</DialogDescription>}
 				</DialogHeader>
-				<div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
 					{children}
 				</div>
 				{footer && (

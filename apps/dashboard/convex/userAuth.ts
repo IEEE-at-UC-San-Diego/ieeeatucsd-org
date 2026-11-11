@@ -7,6 +7,7 @@ import { LogtoIdentity } from "./logtoIdentity";
 import { hasOfficerAccess, requireCurrentUser } from "./permissions";
 import type { AuthUpsertResult } from "./userProvisioning";
 import { buildAuthUpsertResult } from "./userProvisioning";
+import { transitionOfficerInvitation } from "./officerInvitationTransition";
 
 export type VerifiedAuthUpsertArgs = {
   logtoId: string;
@@ -187,7 +188,25 @@ export class UserAuth {
     const acceptedInvitation = invitationMatches[0];
 
     if (acceptedInvitation && role === "Member") {
-      role = acceptedInvitation.role;
+      const decision = transitionOfficerInvitation(
+        {
+          status: acceptedInvitation.status,
+          expiresAt: acceptedInvitation.expiresAt,
+          acceptedAt: acceptedInvitation.acceptedAt,
+          declinedAt: acceptedInvitation.declinedAt,
+          role: acceptedInvitation.role,
+        },
+        { type: "applyAccepted" },
+        Date.now(),
+      );
+      if (decision.ok && decision.stamp?.grantRole) {
+        role = decision.stamp.role;
+        await ctx.db.patch(acceptedInvitation._id, {
+          status: decision.stamp.status,
+          acceptedAt: decision.stamp.acceptedAt,
+          declinedAt: decision.stamp.declinedAt,
+        });
+      }
     }
 
     const userId = await ctx.db.insert("users", {

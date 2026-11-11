@@ -15,4 +15,10 @@ crons.interval(
   internal.storageReferenceBackfill.backfillStorageReferences,
 );
 
+crons.interval(
+  "expire overdue officer invitations",
+  { hours: 1 },
+  internal.officerInvitations.expireOverdue,
+);
+
 export default crons;

@@ -159,7 +159,7 @@ Rules:
 					"X-Title": "IEEE UCSD Reimbursement System",
 				},
 				body: JSON.stringify({
-					model: "google/gemini-3-flash-preview",
+					model: "deepseek/deepseek-v4.1-flash",
 					messages: [
 						{ role: "system", content: systemPrompt },
 						{ role: "user", content: contentParts },

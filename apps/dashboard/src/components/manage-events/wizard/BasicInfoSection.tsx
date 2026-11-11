@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,31 +27,36 @@ interface BasicInfoSectionProps {
 }
 
 export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
+	const formId = useId();
 	return (
 		<div className="space-y-6">
 			<div className="grid gap-6">
 				<div className="space-y-2">
-					<Label htmlFor="eventName">
+					<Label htmlFor={`${formId}-eventName`}>
 						Event Name <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
-						id="eventName"
+						id={`${formId}-eventName`}
+						name="eventName"
+						autoComplete="off"
 						value={data.eventName}
 						onChange={(e) => onChange({ eventName: e.target.value })}
-						placeholder="Enter event name"
+						placeholder="Enter event name…"
 						required
 					/>
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="eventDescription">
+					<Label htmlFor={`${formId}-eventDescription`}>
 						Event Description <span className="text-tone-danger">*</span>
 					</Label>
 					<Textarea
-						id="eventDescription"
+						id={`${formId}-eventDescription`}
+						name="eventDescription"
+						autoComplete="off"
 						value={data.eventDescription}
 						onChange={(e) => onChange({ eventDescription: e.target.value })}
-						placeholder="Describe your event..."
+						placeholder="Describe your event…"
 						rows={4}
 						required
 					/>
@@ -61,16 +67,17 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="eventType">
+						<Label htmlFor={`${formId}-eventType`}>
 							Event Type <span className="text-tone-danger">*</span>
 						</Label>
 						<Select
+							name="eventType"
 							value={data.eventType || undefined}
 							onValueChange={(value) =>
 								onChange({ eventType: value as EventTypeValue })
 							}
 						>
-							<SelectTrigger id="eventType">
+							<SelectTrigger id={`${formId}-eventType`}>
 								<SelectValue placeholder="Select event type" />
 							</SelectTrigger>
 							<SelectContent>
@@ -84,8 +91,9 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="department">Department</Label>
+						<Label htmlFor={`${formId}-department`}>Department</Label>
 						<Select
+							name="department"
 							value={data.department ?? "none"}
 							onValueChange={(value) =>
 								onChange({
@@ -96,7 +104,7 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 								})
 							}
 						>
-							<SelectTrigger id="department">
+							<SelectTrigger id={`${formId}-department`}>
 								<SelectValue placeholder="Select department (optional)" />
 							</SelectTrigger>
 							<SelectContent>

@@ -6,6 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { InlineEmpty } from "./InlineEmpty";
 
@@ -30,7 +31,7 @@ export function ActivityLedger({ items }: { items: ActivityItem[] }) {
 	return (
 		<Card className="flex flex-col">
 			<CardHeader>
-				<CardTitle>Recent activity</CardTitle>
+				<CardTitle>Recent Activity</CardTitle>
 				<CardDescription>Your latest check-ins and requests</CardDescription>
 			</CardHeader>
 			<CardContent className="min-h-0 flex-1 overflow-y-auto scrollbar-quiet">
@@ -72,10 +73,7 @@ export function ActivityLedger({ items }: { items: ActivityItem[] }) {
 												dateTime={new Date(item.date).toISOString()}
 												className="shrink-0 text-xs leading-4 tabular-nums text-muted-foreground"
 											>
-												{new Date(item.date).toLocaleDateString(undefined, {
-													month: "short",
-													day: "numeric",
-												})}
+												{formatShortDate(item.date)}
 											</time>
 										</div>
 									</div>

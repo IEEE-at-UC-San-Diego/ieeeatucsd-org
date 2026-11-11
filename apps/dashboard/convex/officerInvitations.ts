@@ -1,12 +1,19 @@
-import { query } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { mutation } from "./storageReferences";
 import { v } from "convex/values";
 import { requireAdminAccess } from "./permissions";
+import {
+  assertInvitationServerWriter,
+  expiredInvitationFailure,
+  transitionOfficerInvitation,
+  type InvitationState,
+} from "./officerInvitationTransition";
 
 const publicInvitationFields = (invitation: any) => ({
   _id: invitation._id,
   name: invitation.name,
-  email: invitation.email,
   role: invitation.role,
   position: invitation.position,
   offeredPositions: invitation.offeredPositions,
@@ -18,6 +25,88 @@ const publicInvitationFields = (invitation: any) => ({
   leaderName: invitation.leaderName,
 });
 
+function invitationState(invitation: {
+  status: InvitationState["status"];
+  expiresAt: number;
+  acceptedAt?: number;
+  declinedAt?: number;
+  role: string;
+}): InvitationState {
+  return {
+    status: invitation.status,
+    expiresAt: invitation.expiresAt,
+    acceptedAt: invitation.acceptedAt,
+    declinedAt: invitation.declinedAt,
+    role: invitation.role,
+  };
+}
+
+function stampPatch(stamp: {
+  status: InvitationState["status"];
+  acceptedAt: number | undefined;
+  declinedAt: number | undefined;
+  grantRole: boolean;
+}) {
+  return {
+    status: stamp.status,
+    acceptedAt: stamp.acceptedAt,
+    declinedAt: stamp.declinedAt,
+    ...(stamp.grantRole
+      ? {
+          roleGranted: true,
+          userCreatedOrUpdated: true,
+          permissionsGranted: true,
+          roleGrantedAt: stamp.acceptedAt,
+        }
+      : {}),
+  };
+}
+
+async function grantInvitationRole(
+  ctx: MutationCtx,
+  invitation: Doc<"officerInvitations">,
+  selectedPosition: string,
+  now: number,
+) {
+  const normalizedEmail = invitation.email.trim().toLowerCase();
+  const existingUser = await ctx.db
+    .query("users")
+    .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+    .first();
+
+  if (existingUser) {
+    await ctx.db.patch(existingUser._id, {
+      role: invitation.role,
+      position: selectedPosition,
+      lastUpdated: now,
+      lastUpdatedBy: invitation.invitedBy,
+    });
+    return;
+  }
+
+  await ctx.db.insert("users", {
+    email: normalizedEmail,
+    emailVisibility: true,
+    verified: true,
+    name: invitation.name,
+    role: invitation.role,
+    position: selectedPosition,
+    status: "active",
+    signedUp: false,
+    requestedEmail: false,
+    joinDate: now,
+    invitedBy: invitation.invitedBy,
+    inviteAccepted: now,
+    lastUpdated: now,
+    lastUpdatedBy: invitation.invitedBy,
+    notificationPreferences: {},
+    displayPreferences: {},
+    accessibilitySettings: {},
+    eventsAttended: 0,
+    points: 0,
+  });
+}
+
 export const list = query({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
@@ -27,8 +116,9 @@ export const list = query({
 });
 
 export const getByEmail = query({
-  args: { email: v.string() },
+  args: { logtoId: v.string(), authToken: v.string(), email: v.string() },
   handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db
       .query("officerInvitations")
       .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -37,8 +127,9 @@ export const getByEmail = query({
 });
 
 export const get = query({
-  args: { id: v.id("officerInvitations") },
+  args: { logtoId: v.string(), authToken: v.string(), id: v.id("officerInvitations") },
   handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db.get(args.id);
   },
 });
@@ -84,7 +175,7 @@ export const create = mutation({
       invitedBy: adminId,
       invitedAt: now,
       lastSentAt: now,
-      expiresAt: now + 30 * 24 * 60 * 60 * 1000, // 30 days
+      expiresAt: now + 30 * 24 * 60 * 60 * 1000,
     });
   },
 });
@@ -103,11 +194,26 @@ export const updateStatus = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const invitation = await ctx.db.get(args.id);
+    if (!invitation) throw new Error("Invitation not found");
+
     const now = Date.now();
-    const updates: Record<string, unknown> = { status: args.status };
-    if (args.status === "accepted") updates.acceptedAt = now;
-    if (args.status === "declined") updates.declinedAt = now;
-    await ctx.db.patch(args.id, updates);
+    const result = transitionOfficerInvitation(
+      invitationState(invitation),
+      {
+        type: "setStatus",
+        status: args.status,
+        grantRole: args.status === "accepted",
+      },
+      now,
+    );
+    if (result.stamp) {
+      if (result.stamp.grantRole) {
+        await grantInvitationRole(ctx, invitation, invitation.position, now);
+      }
+      await ctx.db.patch(args.id, stampPatch(result.stamp));
+    }
+    if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
     return args.id;
   },
 });
@@ -115,6 +221,7 @@ export const updateStatus = mutation({
 export const acceptPublic = mutation({
   args: {
     id: v.id("officerInvitations"),
+    email: v.string(),
     selectedPosition: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -122,12 +229,22 @@ export const acceptPublic = mutation({
     if (!invitation) {
       throw new Error("Invitation not found");
     }
-    if (invitation.status !== "pending") {
-      throw new Error(`Invitation has already been ${invitation.status}`);
+
+    const now = Date.now();
+    const emailMatches =
+      args.email.trim().toLowerCase() === invitation.email.trim().toLowerCase();
+    const result = transitionOfficerInvitation(
+      invitationState(invitation),
+      { type: "accept", emailMatches },
+      now,
+    );
+    const expired = expiredInvitationFailure(result);
+    if (expired && result.stamp) {
+      await ctx.db.patch(args.id, stampPatch(result.stamp));
+      return expired;
     }
-    if (Date.now() > invitation.expiresAt) {
-      await ctx.db.patch(args.id, { status: "expired" });
-      throw new Error("Invitation has expired");
+    if (!result.ok) {
+      throw new Error(result.error ?? "Illegal invitation transition");
     }
 
     const offeredPositions =
@@ -142,67 +259,22 @@ export const acceptPublic = mutation({
       throw new Error("Selected position is not part of this invitation");
     }
 
-    const now = Date.now();
-    const normalizedEmail = invitation.email.trim().toLowerCase();
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .first();
-
-    let roleGranted = false;
-    if (existingUser) {
-      await ctx.db.patch(existingUser._id, {
-        role: invitation.role,
-        position: selectedPosition,
-        lastUpdated: now,
-        lastUpdatedBy: invitation.invitedBy,
-      });
-      roleGranted = true;
-    } else {
-      await ctx.db.insert("users", {
-        email: normalizedEmail,
-        emailVisibility: true,
-        verified: true,
-        name: invitation.name,
-        role: invitation.role,
-        position: selectedPosition,
-        status: "active",
-        signedUp: false,
-        requestedEmail: false,
-        joinDate: now,
-        invitedBy: invitation.invitedBy,
-        inviteAccepted: now,
-        lastUpdated: now,
-        lastUpdatedBy: invitation.invitedBy,
-        notificationPreferences: {},
-        displayPreferences: {},
-        accessibilitySettings: {},
-        eventsAttended: 0,
-        points: 0,
-      });
-      roleGranted = true;
-    }
-
-    const updates: Record<string, unknown> = {
-      status: "accepted",
+    await grantInvitationRole(ctx, invitation, selectedPosition, now);
+    const stamp = result.stamp;
+    if (!stamp) throw new Error("Illegal invitation transition");
+    await ctx.db.patch(args.id, {
+      ...stampPatch(stamp),
       position: selectedPosition,
-      acceptedAt: now,
-      roleGranted,
-      userCreatedOrUpdated: roleGranted,
-      permissionsGranted: roleGranted,
-    };
-    if (roleGranted) {
-      updates.roleGrantedAt = now;
-    }
-    await ctx.db.patch(args.id, updates);
+    });
 
     return {
       ...publicInvitationFields(invitation),
+      email: invitation.email,
       position: selectedPosition,
-      status: "accepted",
+      status: "accepted" as const,
       acceptedAt: now,
-      roleGranted,
-      userCreatedOrUpdated: roleGranted,
+      roleGranted: true,
+      userCreatedOrUpdated: true,
     };
   },
 });
@@ -214,23 +286,23 @@ export const declinePublic = mutation({
     if (!invitation) {
       throw new Error("Invitation not found");
     }
-    if (invitation.status !== "pending") {
-      throw new Error(`Invitation has already been ${invitation.status}`);
-    }
-    if (Date.now() > invitation.expiresAt) {
-      await ctx.db.patch(args.id, { status: "expired" });
-      throw new Error("Invitation has expired");
-    }
-
     const now = Date.now();
-    await ctx.db.patch(args.id, {
-      status: "declined",
-      declinedAt: now,
-    });
+    const result = transitionOfficerInvitation(
+      invitationState(invitation),
+      { type: "decline" },
+      now,
+    );
+    const expired = expiredInvitationFailure(result);
+    if (expired && result.stamp) {
+      await ctx.db.patch(args.id, stampPatch(result.stamp));
+      return expired;
+    }
+    if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
+    if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
 
     return {
       ...publicInvitationFields(invitation),
-      status: "declined",
+      status: "declined" as const,
       declinedAt: now,
     };
   },
@@ -239,6 +311,7 @@ export const declinePublic = mutation({
 export const recordAcceptanceSideEffects = mutation({
   args: {
     id: v.id("officerInvitations"),
+    serverSecret: v.string(),
     onboardingEmailSent: v.optional(v.boolean()),
     roleGranted: v.optional(v.boolean()),
     userCreatedOrUpdated: v.optional(v.boolean()),
@@ -246,10 +319,22 @@ export const recordAcceptanceSideEffects = mutation({
     googleGroup: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertInvitationServerWriter(args.serverSecret);
     const invitation = await ctx.db.get(args.id);
     if (!invitation) {
       throw new Error("Invitation not found");
     }
+
+    const setsRoleFlags =
+      args.roleGranted !== undefined ||
+      args.userCreatedOrUpdated !== undefined ||
+      args.roleGranted === true;
+    const result = transitionOfficerInvitation(
+      invitationState(invitation),
+      { type: "recordSideEffects", setsRoleFlags },
+      Date.now(),
+    );
+    if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
 
     const now = Date.now();
     const updates: Record<string, unknown> = {};
@@ -259,9 +344,7 @@ export const recordAcceptanceSideEffects = mutation({
     if (args.roleGranted !== undefined) {
       updates.roleGranted = args.roleGranted;
       updates.permissionsGranted = args.roleGranted;
-      if (args.roleGranted) {
-        updates.roleGrantedAt = now;
-      }
+      if (args.roleGranted) updates.roleGrantedAt = now;
     }
     if (args.userCreatedOrUpdated !== undefined) {
       updates.userCreatedOrUpdated = args.userCreatedOrUpdated;
@@ -274,7 +357,6 @@ export const recordAcceptanceSideEffects = mutation({
     }
 
     await ctx.db.patch(args.id, updates);
-
     return args.id;
   },
 });
@@ -301,10 +383,43 @@ export const resend = mutation({
   args: { logtoId: v.string(), authToken: v.string(), id: v.id("officerInvitations") },
   handler: async (ctx, args) => {
     await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const invitation = await ctx.db.get(args.id);
+    if (!invitation) throw new Error("Invitation not found");
+    const now = Date.now();
+    const result = transitionOfficerInvitation(
+      invitationState(invitation),
+      { type: "resend" },
+      now,
+    );
+    if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
+    if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
     await ctx.db.patch(args.id, {
-      resentAt: Date.now(),
-      lastSentAt: Date.now(),
+      resentAt: now,
+      lastSentAt: now,
     });
     return args.id;
+  },
+});
+
+export const expireOverdue = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const pending = await ctx.db
+      .query("officerInvitations")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    let expired = 0;
+    for (const invitation of pending) {
+      const result = transitionOfficerInvitation(
+        invitationState(invitation),
+        { type: "expire" },
+        now,
+      );
+      if (!result.ok || !result.stamp) continue;
+      await ctx.db.patch(invitation._id, stampPatch(result.stamp));
+      expired += 1;
+    }
+    return { expired };
   },
 });

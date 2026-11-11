@@ -5,6 +5,11 @@ import {
   requireCurrentUser,
   requireAdminAccess,
 } from "./permissions";
+import {
+  assertReimbursementDeletable,
+  transitionReimbursementPayment,
+  transitionReimbursementStatus,
+} from "./reimbursementTransition";
 
 export const listMine = query({
   args: { logtoId: v.string(), authToken: v.string() },
@@ -79,6 +84,7 @@ export const create = mutation({
     ),
     receipts: v.optional(v.any()),
     dateOfPurchase: v.optional(v.number()),
+    businessPurpose: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
@@ -119,9 +125,14 @@ export const updateStatus = mutation({
     if (!reimbursement) throw new Error("Reimbursement not found");
 
     const reason = args.reason?.trim();
-    if (args.status === "declined" && !reason) {
-      throw new Error("Decline reason is required");
+    if (args.status === "paid") {
+      throw new Error("Mark a reimbursement paid by recording payment details");
     }
+    const nextStatus = transitionReimbursementStatus(
+      reimbursement.status,
+      args.status,
+      reason,
+    );
 
     const now = Date.now();
     const auditLogs = [...(reimbursement.auditLogs || [])];
@@ -141,7 +152,7 @@ export const updateStatus = mutation({
     }
 
     await ctx.db.patch(args.id, {
-      status: args.status,
+      status: nextStatus,
       auditLogs,
       ...(args.status === "declined" && reason ? { auditNotes } : {}),
     });
@@ -167,6 +178,7 @@ export const updatePaymentDetails = mutation({
     const adminId = admin.logtoId ?? admin.authUserId ?? "";
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
+    transitionReimbursementPayment(reimbursement.status);
 
     const auditLogs = reimbursement.auditLogs || [];
     auditLogs.push({
@@ -194,6 +206,7 @@ export const remove = mutation({
     await requireAdminAccess(ctx, args.logtoId, args.authToken);
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
+    assertReimbursementDeletable(reimbursement.status);
     await ctx.db.delete(args.id);
     return args.id;
   },

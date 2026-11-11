@@ -8,7 +8,7 @@ import {
 	Loader2,
 	Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useGlobalImagePaste } from "@/hooks/useGlobalImagePaste";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
+import { formatCurrencyUSD } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MultiFileUpload } from "./MultiFileUpload";
+import {
+	createRequestGate,
+	mergeParsedReceipt,
+	type ParsedReceipt,
+	type ReceiptParseState,
+} from "./receiptParse";
 import type { DepositMethod, IeeeDepositSource } from "./types";
 
 interface FundDepositWizardProps {
@@ -47,11 +56,10 @@ export function FundDepositWizard({
 	onClose,
 	logtoId,
 }: FundDepositWizardProps) {
+	const formId = useId();
 	const { setHideTabBar } = useMobileShell();
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
-	const [step, setStep] = useState(1);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 	const createDeposit = useAuthedMutation(api.fundDeposits.create);
 	const generateUploadUrl = useAuthedMutation(
 		api.fundDeposits.generateUploadUrl,
@@ -72,140 +80,11 @@ export function FundDepositWizard({
 	});
 	const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-	const [isAiParsing, setIsAiParsing] = useState(false);
-	const [aiParseMessage, setAiParseMessage] = useState("");
-
-	useEffect(() => {
-		setHideTabBar(isOpen);
-		return () => setHideTabBar(false);
-	}, [isOpen, setHideTabBar]);
-
-	const fileToDataUrl = async (file: File): Promise<string> =>
-		await new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = () => reject(new Error("Failed to read file"));
-			reader.readAsDataURL(file);
-		});
-
-	const parseReceiptWithAI = async (file: File) => {
-		setIsAiParsing(true);
-		setAiParseMessage("");
-		try {
-			const imageUrl = await fileToDataUrl(file);
-			const response = await fetch("/api/parse-receipt", {
-				method: "POST",
-				headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-				body: JSON.stringify({ imageUrl }),
-			});
-
-			const result = await response.json();
-			if (!response.ok || !result.success || !result.data) {
-				throw new Error(result.error || "Failed to parse receipt");
-			}
-
-			const parsed = result.data as {
-				vendorName?: string;
-				dateOfPurchase?: string;
-				total?: number;
-				lineItems?: Array<{ description?: string; amount?: number }>;
-			};
-
-			const detectedAmount =
-				parsed.total && parsed.total > 0 ? parsed.total : undefined;
-			const parsedDate = parsed.dateOfPurchase
-				? new Date(parsed.dateOfPurchase)
-				: null;
-			const hasValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
-			const todayDate = new Date().toISOString().split("T")[0];
-			const aiDescription = Array.isArray(parsed.lineItems)
-				? parsed.lineItems
-						.filter((item) => item.description)
-						.slice(0, 5)
-						.map(
-							(item) =>
-								`${item.description}${item.amount ? ` ($${Number(item.amount).toFixed(2)})` : ""}`,
-						)
-						.join(", ")
-				: "";
-
-			setFormData((prev) => ({
-				...prev,
-				title:
-					prev.title.trim() ||
-					(parsed.vendorName ? `${parsed.vendorName} Deposit` : prev.title),
-				amount:
-					detectedAmount && !prev.amount
-						? detectedAmount.toFixed(2)
-						: prev.amount,
-				depositDate:
-					hasValidDate && prev.depositDate === todayDate
-						? parsedDate.toISOString().split("T")[0]
-						: prev.depositDate,
-				description:
-					prev.description.trim() || aiDescription || prev.description,
-			}));
-
-			setAiParseMessage(
-				"AI extracted details from the latest receipt. Review before submitting.",
-			);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			setAiParseMessage(
-				`AI parse failed: ${message}. You can continue with manual entry.`,
-			);
-		} finally {
-			setIsAiParsing(false);
-		}
-	};
-
-	const handleReceiptFilesChange = (nextFiles: File[]) => {
-		const latestFile = nextFiles[nextFiles.length - 1];
-		const prevCount = receiptFiles.length;
-		setReceiptFiles(nextFiles);
-		if (aiEnabled && latestFile && nextFiles.length > prevCount) {
-			void parseReceiptWithAI(latestFile);
-		}
-	};
-
-	// Global paste support
-	useGlobalImagePaste({
-		enabled: isOpen && step === 3,
-		onImagePasted: (files) => {
-			if (files.length > 0 && receiptFiles.length < 10) {
-				const remainingSlots = 10 - receiptFiles.length;
-				const filesToAdd = files.slice(0, remainingSlots);
-				const updatedFiles = [...receiptFiles, ...filesToAdd];
-				handleReceiptFilesChange(updatedFiles);
-				toast.success(`${filesToAdd.length} image(s) pasted from clipboard`);
-			}
-		},
+	const [parseState, setParseState] = useState<ReceiptParseState>({
+		status: "idle",
 	});
-
-	const resetForm = () => {
-		setFormData({
-			title: "",
-			amount: "",
-			purpose: "",
-			depositDate: new Date().toISOString().split("T")[0],
-			depositMethod: "cash",
-			otherDepositMethod: "",
-			description: "",
-			referenceNumber: "",
-			isIeeeDeposit: false,
-			ieeeDepositSource: "upp",
-		});
-		setReceiptFiles([]);
-		setFormErrors({});
-		setIsAiParsing(false);
-		setAiParseMessage("");
-		setStep(1);
-	};
-
-	const handleClose = () => {
-		onClose();
-		setTimeout(resetForm, 300); // Reset after animation
-	};
+	const [parseGate] = useState(createRequestGate);
+	const isAiParsing = parseState.status === "parsing";
 
 	const validateStep1 = () => {
 		const errors: Record<string, string> = {};
@@ -235,19 +114,131 @@ export function FundDepositWizard({
 		return Object.keys(errors).length === 0;
 	};
 
-	const handleNext = () => {
-		if (step === 1 && validateStep1()) {
-			setStep(2);
-		}
-		if (step === 2 && validateStep2()) {
-			setStep(3);
+	const wizard = useWizard({
+		stepCount: DEPOSIT_STEPS.length,
+		canAdvance: (step) => {
+			if (step === 1) return validateStep1();
+			if (step === 2) return validateStep2();
+			return true;
+		},
+	});
+	const { step } = wizard;
+
+	const isDirty =
+		isOpen &&
+		wizard.isEditable &&
+		(Boolean(
+			formData.title ||
+				formData.amount ||
+				formData.purpose ||
+				formData.otherDepositMethod ||
+				formData.description ||
+				formData.referenceNumber,
+		) ||
+			receiptFiles.length > 0);
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
+
+	useEffect(() => {
+		setHideTabBar(isOpen);
+		return () => setHideTabBar(false);
+	}, [isOpen, setHideTabBar]);
+
+	const fileToDataUrl = async (file: File): Promise<string> =>
+		await new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = () => reject(new Error("Failed to read file"));
+			reader.readAsDataURL(file);
+		});
+
+	const parseReceiptWithAI = async (file: File) => {
+		if (!wizard.isEditable) return;
+		const token = parseGate.begin();
+		setParseState({ status: "parsing" });
+		try {
+			const imageUrl = await fileToDataUrl(file);
+			const response = await fetch("/api/parse-receipt", {
+				method: "POST",
+				headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+				body: JSON.stringify({ imageUrl }),
+			});
+
+			const result = await response.json();
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || "Failed to parse receipt");
+			}
+
+			if (!parseGate.isCurrent(token)) return;
+			const parsed = result.data as ParsedReceipt;
+			const todayDate = new Date().toISOString().split("T")[0];
+			setFormData((prev) => mergeParsedReceipt(prev, parsed, todayDate));
+			setParseState({
+				status: "done",
+				message:
+					"AI extracted details from the latest receipt. Review before submitting.",
+			});
+		} catch (error) {
+			if (!parseGate.isCurrent(token)) return;
+			const message = error instanceof Error ? error.message : "Unknown error";
+			setParseState({
+				status: "done",
+				message: `AI parse failed: ${message}. You can continue with manual entry.`,
+			});
 		}
 	};
 
-	const handleBack = () => {
-		if (step > 1) {
-			setStep(step - 1);
+	const handleReceiptFilesChange = (nextFiles: File[]) => {
+		const latestFile = nextFiles[nextFiles.length - 1];
+		const prevCount = receiptFiles.length;
+		setReceiptFiles(nextFiles);
+		if (aiEnabled && latestFile && nextFiles.length > prevCount) {
+			void parseReceiptWithAI(latestFile);
 		}
+	};
+
+	// Global paste support
+	useGlobalImagePaste({
+		enabled: isOpen && step === 3 && wizard.isEditable,
+		onImagePasted: (files) => {
+			if (files.length > 0 && receiptFiles.length < 10) {
+				const remainingSlots = 10 - receiptFiles.length;
+				const filesToAdd = files.slice(0, remainingSlots);
+				const updatedFiles = [...receiptFiles, ...filesToAdd];
+				handleReceiptFilesChange(updatedFiles);
+				toast.success(`${filesToAdd.length} image(s) pasted from clipboard`);
+			}
+		},
+	});
+
+	const resetForm = () => {
+		setFormData({
+			title: "",
+			amount: "",
+			purpose: "",
+			depositDate: new Date().toISOString().split("T")[0],
+			depositMethod: "cash",
+			otherDepositMethod: "",
+			description: "",
+			referenceNumber: "",
+			isIeeeDeposit: false,
+			ieeeDepositSource: "upp",
+		});
+		setReceiptFiles([]);
+		setFormErrors({});
+		parseGate.invalidate();
+		setParseState({ status: "idle" });
+		wizard.reset();
+	};
+
+	const handleClose = () => {
+		parseGate.invalidate();
+		onClose();
+		setTimeout(resetForm, 300); // Reset after animation
+	};
+
+	const handleCancel = async () => {
+		if (wizard.isPending || !(await confirmDiscard())) return;
+		handleClose();
 	};
 
 	const uploadFiles = async (files: File[]): Promise<string[]> => {
@@ -277,7 +268,8 @@ export function FundDepositWizard({
 	};
 
 	const handleSubmit = async () => {
-		setIsSubmitting(true);
+		if (isAiParsing || !wizard.startSubmit()) return;
+		parseGate.invalidate();
 		try {
 			let receiptFileUrls: string[] = [];
 			if (receiptFiles.length > 0) {
@@ -300,13 +292,15 @@ export function FundDepositWizard({
 			});
 
 			toast.success("Deposit submitted successfully");
+			wizard.submitSucceeded();
 			handleClose();
 		} catch (error: unknown) {
 			const errorMessage =
-				error instanceof Error ? error.message : "Failed to submit deposit";
+				error instanceof Error
+					? error.message
+					: "Failed to submit deposit. Please try again.";
 			toast.error(errorMessage);
-		} finally {
-			setIsSubmitting(false);
+			wizard.submitFailed(errorMessage);
 		}
 	};
 
@@ -314,19 +308,19 @@ export function FundDepositWizard({
 		<ResponsiveOverlay
 			open={isOpen}
 			onOpenChange={(open) => {
-				if (!open) handleClose();
+				if (!open) void handleCancel();
 			}}
 			title="New Fund Deposit"
-			description={`Step ${step} of 3: ${DEPOSIT_STEPS[step - 1].name}`}
+			description={`Step ${step} of ${wizard.stepCount}: ${DEPOSIT_STEPS[step - 1].name}`}
 			variant="fullscreen"
 			className="sm:max-w-[600px]"
 			footer={
 				<div className="flex w-full items-center justify-between gap-2">
 					<Button
 						variant="ghost"
-						onClick={handleBack}
-						disabled={step === 1 || isSubmitting}
-						className={cn("h-11 sm:h-9", step === 1 ? "invisible" : "")}
+						onClick={wizard.back}
+						disabled={wizard.isFirstStep || !wizard.isEditable}
+						className={cn("h-11 sm:h-9", wizard.isFirstStep ? "invisible" : "")}
 					>
 						<ChevronLeft className="h-4 w-4 mr-2" /> Back
 					</Button>
@@ -334,16 +328,16 @@ export function FundDepositWizard({
 					<div className="flex flex-1 justify-end gap-2 sm:flex-none">
 						<Button
 							variant="outline"
-							onClick={handleClose}
-							disabled={isSubmitting}
+							onClick={() => void handleCancel()}
+							disabled={wizard.isPending}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Cancel
 						</Button>
 
-						{step < 3 ? (
+						{!wizard.isLastStep ? (
 							<Button
-								onClick={handleNext}
+								onClick={() => wizard.next()}
 								className="h-11 flex-1 sm:h-9 sm:flex-none"
 							>
 								Next <ArrowRight className="h-4 w-4 ml-2" />
@@ -351,10 +345,10 @@ export function FundDepositWizard({
 						) : (
 							<Button
 								onClick={handleSubmit}
-								disabled={isSubmitting}
+								disabled={!wizard.isEditable || isAiParsing}
 								className="h-11 flex-1 sm:h-9 sm:flex-none"
 							>
-								{isSubmitting && (
+								{wizard.phase.kind === "submitting" && (
 									<Loader2 className="h-4 w-4 animate-spin mr-2" />
 								)}
 								Submit Deposit
@@ -368,7 +362,7 @@ export function FundDepositWizard({
 			<div className="mb-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
 				<div
 					className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
-					style={{ transform: `scaleX(${step / 3})` }}
+					style={{ transform: `scaleX(${step / wizard.stepCount})` }}
 				/>
 			</div>
 
@@ -378,11 +372,13 @@ export function FundDepositWizard({
 						{/* Amount and Title Group */}
 						<div className="grid gap-4">
 							<div>
-								<Label htmlFor="title">
+								<Label htmlFor={`${formId}-title`}>
 									Deposit Title <span className="text-destructive">*</span>
 								</Label>
 								<Input
-									id="title"
+									id={`${formId}-title`}
+									name="title"
+									autoComplete="off"
 									value={formData.title}
 									onChange={(e) =>
 										setFormData({ ...formData, title: e.target.value })
@@ -392,7 +388,6 @@ export function FundDepositWizard({
 										"h-11 text-base sm:h-9 sm:text-sm",
 										formErrors.title ? "border-destructive" : "",
 									)}
-									autoFocus
 								/>
 								{formErrors.title && (
 									<p className="text-xs text-destructive mt-1">
@@ -403,22 +398,25 @@ export function FundDepositWizard({
 
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<Label htmlFor="amount">
+									<Label htmlFor={`${formId}-amount`}>
 										Amount <span className="text-destructive">*</span>
 									</Label>
 									<div className="relative">
 										<DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 										<Input
-											id="amount"
+											id={`${formId}-amount`}
+											name="amount"
 											type="number"
+											inputMode="decimal"
 											step="0.01"
+											autoComplete="off"
 											value={formData.amount}
 											onChange={(e) =>
 												setFormData({ ...formData, amount: e.target.value })
 											}
 											placeholder="0.00"
 											className={cn(
-												"h-11 pl-9 text-base sm:h-9 sm:text-sm",
+												"h-11 pl-9 text-base tabular-nums sm:h-9 sm:text-sm",
 												formErrors.amount ? "border-destructive" : "",
 											)}
 										/>
@@ -430,11 +428,12 @@ export function FundDepositWizard({
 									)}
 								</div>
 								<div>
-									<Label htmlFor="depositDate">
+									<Label htmlFor={`${formId}-depositDate`}>
 										Date <span className="text-destructive">*</span>
 									</Label>
 									<Input
-										id="depositDate"
+										id={`${formId}-depositDate`}
+										name="depositDate"
 										type="date"
 										value={formData.depositDate}
 										onChange={(e) =>
@@ -451,20 +450,25 @@ export function FundDepositWizard({
 
 						{/* Method Group */}
 						<div className="space-y-3 pt-2">
-							<Label>
+							<Label id={`${formId}-deposit-method-label`}>
 								Deposit Method <span className="text-destructive">*</span>
 							</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<fieldset
+								className="grid min-w-0 grid-cols-2 gap-2"
+								aria-labelledby={`${formId}-deposit-method-label`}
+							>
 								{(
 									["cash", "check", "bank_transfer", "other"] as DepositMethod[]
 								).map((method) => (
-									<div
+									<button
+										type="button"
 										key={method}
+										aria-pressed={formData.depositMethod === method}
 										onClick={() =>
 											setFormData({ ...formData, depositMethod: method })
 										}
 										className={cn(
-											"cursor-pointer rounded-lg border p-3 min-h-11 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] active:bg-muted/50 sm:hover:bg-muted/50",
+											"w-full text-left cursor-pointer rounded-lg border p-3 min-h-11 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] active:bg-muted/50 sm:hover:bg-muted/50",
 											formData.depositMethod === method
 												? "border-primary bg-primary/5 ring-1 ring-primary"
 												: "border-input",
@@ -476,14 +480,23 @@ export function FundDepositWizard({
 										{formData.depositMethod === method && (
 											<CheckCircle className="h-4 w-4 text-primary" />
 										)}
-									</div>
+									</button>
 								))}
-							</div>
+							</fieldset>
 
 							{formData.depositMethod === "other" && (
 								<div className="animate-in fade-in duration-150 motion-instant-reduce">
+									<Label
+										htmlFor={`${formId}-otherDepositMethod`}
+										className="sr-only"
+									>
+										Other Deposit Method
+									</Label>
 									<Input
-										placeholder="Specify method..."
+										id={`${formId}-otherDepositMethod`}
+										name="otherDepositMethod"
+										autoComplete="off"
+										placeholder="Specify method…"
 										value={formData.otherDepositMethod}
 										onChange={(e) =>
 											setFormData({
@@ -496,6 +509,11 @@ export function FundDepositWizard({
 											formErrors.otherDepositMethod ? "border-destructive" : "",
 										)}
 									/>
+									{formErrors.otherDepositMethod && (
+										<p className="text-xs text-destructive mt-1">
+											{formErrors.otherDepositMethod}
+										</p>
+									)}
 								</div>
 							)}
 						</div>
@@ -503,27 +521,32 @@ export function FundDepositWizard({
 						{/* IEEE Source checkbox */}
 						<div className="flex items-center space-x-2 pt-2 min-h-11">
 							<Checkbox
-								id="isIeee"
+								id={`${formId}-isIeee`}
 								checked={formData.isIeeeDeposit}
 								onCheckedChange={(c) =>
 									setFormData({ ...formData, isIeeeDeposit: c === true })
 								}
 							/>
-							<Label htmlFor="isIeee" className="cursor-pointer">
+							<Label htmlFor={`${formId}-isIeee`} className="cursor-pointer">
 								This is an IEEE Deposit (Concur)
 							</Label>
 						</div>
 
 						{formData.isIeeeDeposit && (
 							<div className="pl-6 border-l-2 py-1 animate-in fade-in duration-150 motion-instant-reduce">
-								<Label>IEEE Source</Label>
+								<Label htmlFor={`${formId}-ieeeDepositSource`}>
+									IEEE Source
+								</Label>
 								<Select
 									value={formData.ieeeDepositSource}
 									onValueChange={(v: IeeeDepositSource) =>
 										setFormData({ ...formData, ieeeDepositSource: v })
 									}
 								>
-									<SelectTrigger className="mt-1 h-11 sm:h-9">
+									<SelectTrigger
+										id={`${formId}-ieeeDepositSource`}
+										className="mt-1 h-11 sm:h-9"
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -543,11 +566,13 @@ export function FundDepositWizard({
 				{step === 2 && (
 					<div className="space-y-4">
 						<div>
-							<Label htmlFor="purpose">
+							<Label htmlFor={`${formId}-purpose`}>
 								Purpose <span className="text-destructive">*</span>
 							</Label>
 							<Input
-								id="purpose"
+								id={`${formId}-purpose`}
+								name="purpose"
+								autoComplete="off"
 								value={formData.purpose}
 								onChange={(e) =>
 									setFormData({ ...formData, purpose: e.target.value })
@@ -557,7 +582,6 @@ export function FundDepositWizard({
 									"h-11 text-base sm:h-9 sm:text-sm",
 									formErrors.purpose ? "border-destructive" : "",
 								)}
-								autoFocus
 							/>
 							{formErrors.purpose && (
 								<p className="text-xs text-destructive mt-1">
@@ -567,9 +591,14 @@ export function FundDepositWizard({
 						</div>
 
 						<div>
-							<Label htmlFor="reference">Reference Number (Optional)</Label>
+							<Label htmlFor={`${formId}-reference`}>
+								Reference Number (Optional)
+							</Label>
 							<Input
-								id="reference"
+								id={`${formId}-reference`}
+								name="referenceNumber"
+								autoComplete="off"
+								spellCheck={false}
 								value={formData.referenceNumber}
 								onChange={(e) =>
 									setFormData({
@@ -583,14 +612,17 @@ export function FundDepositWizard({
 						</div>
 
 						<div>
-							<Label htmlFor="description">Additional Notes (Optional)</Label>
+							<Label htmlFor={`${formId}-description`}>
+								Additional Notes (Optional)
+							</Label>
 							<Textarea
-								id="description"
+								id={`${formId}-description`}
+								name="description"
 								value={formData.description}
 								onChange={(e) =>
 									setFormData({ ...formData, description: e.target.value })
 								}
-								placeholder="Any extra details..."
+								placeholder="Any extra details…"
 								className="h-32 resize-none text-base sm:text-sm"
 							/>
 						</div>
@@ -619,7 +651,10 @@ export function FundDepositWizard({
 									variant="outline"
 									className="h-11 sm:h-9"
 									disabled={
-										!aiEnabled || isAiParsing || receiptFiles.length === 0
+										!aiEnabled ||
+										isAiParsing ||
+										!wizard.isEditable ||
+										receiptFiles.length === 0
 									}
 									onClick={() => {
 										if (receiptFiles.length > 0) {
@@ -640,11 +675,18 @@ export function FundDepositWizard({
 									? "The latest uploaded receipt will auto-fill amount/title when possible."
 									: "AI is disabled for this account. Enter details manually after uploading receipts."}
 							</p>
-							{aiParseMessage && (
-								<p className="text-xs mt-2 text-muted-foreground">
-									{aiParseMessage}
-								</p>
-							)}
+							<output aria-live="polite" className="block">
+								{isAiParsing && (
+									<p className="text-xs mt-2 text-muted-foreground">
+										Analyzing receipt…
+									</p>
+								)}
+								{parseState.status === "done" && (
+									<p className="text-xs mt-2 text-muted-foreground">
+										{parseState.message}
+									</p>
+								)}
+							</output>
 						</div>
 
 						<div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 border">
@@ -653,8 +695,10 @@ export function FundDepositWizard({
 							</h4>
 							<div className="grid grid-cols-2 gap-2 text-muted-foreground">
 								<span>Amount:</span>
-								<span className="font-medium text-foreground text-right">
-									${formData.amount}
+								<span className="font-medium text-foreground text-right tabular-nums">
+									{formData.amount
+										? formatCurrencyUSD(parseFloat(formData.amount) || 0)
+										: "—"}
 								</span>
 
 								<span>Method:</span>
@@ -665,7 +709,7 @@ export function FundDepositWizard({
 								</span>
 
 								<span>Receipts:</span>
-								<span className="font-medium text-foreground text-right">
+								<span className="font-medium text-foreground text-right tabular-nums">
 									{receiptFiles.length} file(s)
 								</span>
 							</div>

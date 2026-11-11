@@ -10,8 +10,10 @@ import {
 	Tag,
 	Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	EmptyState,
@@ -32,9 +34,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
+const searchSchema = z.object({
+	q: z.string().default("").catch(""),
+	category: z.string().default("all").catch("all"),
+	page: z.number().int().min(1).default(1).catch(1),
+});
+
+type LinksSearch = z.infer<typeof searchSchema>;
+
+const EMPTY_FORM = {
+	title: "",
+	url: "",
+	category: "",
+	description: "",
+	shortUrl: "",
+};
+
 export const Route = createFileRoute("/_dashboard/links")({
+	validateSearch: searchSchema,
 	loader: (ctx) => prefetchAuthedQuery(api.links.list, undefined, ctx),
 	component: LinksPage,
 });
@@ -50,6 +70,7 @@ function getLinkDomain(url: string) {
 }
 
 function LinksPage() {
+	const formId = useId();
 	const isMobile = useIsMobile();
 	const { hasOfficerAccess, logtoId } = usePermissions();
 	const links = useAuthedQuery(api.links.list, logtoId ? { logtoId } : "skip");
@@ -57,9 +78,19 @@ function LinksPage() {
 	const updateLink = useAuthedMutation(api.links.update);
 	const removeLink = useAuthedMutation(api.links.remove);
 
-	const [search, setSearch] = useState("");
-	const [categoryFilter, setCategoryFilter] = useState<string>("all");
-	const [page, setPage] = useState(1);
+	const confirm = useConfirm();
+	const { q, category: categoryFilter, page } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearchParams = (patch: Partial<LinksSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const [search, setSearchInput] = useState(q);
+	const setSearch = (value: string) => {
+		setSearchInput(value);
+		setSearchParams({ q: value, page: 1 });
+	};
+	const setCategoryFilter = (category: string) =>
+		setSearchParams({ category, page: 1 });
+	const setPage = (nextPage: number) => setSearchParams({ page: nextPage });
 	const [modalOpen, setModalOpen] = useState(false);
 	const [manageLink, setManageLink] = useState<
 		NonNullable<typeof links>[number] | null
@@ -73,6 +104,16 @@ function LinksPage() {
 	const [formCategory, setFormCategory] = useState("");
 	const [formDescription, setFormDescription] = useState("");
 	const [formShortUrl, setFormShortUrl] = useState("");
+	const [initialForm, setInitialForm] = useState(EMPTY_FORM);
+
+	const isDirty =
+		modalOpen &&
+		(formTitle !== initialForm.title ||
+			formUrl !== initialForm.url ||
+			formCategory !== initialForm.category ||
+			formDescription !== initialForm.description ||
+			formShortUrl !== initialForm.shortUrl);
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
 
 	const resetForm = () => {
 		setFormTitle("");
@@ -80,6 +121,14 @@ function LinksPage() {
 		setFormCategory("");
 		setFormDescription("");
 		setFormShortUrl("");
+		setInitialForm(EMPTY_FORM);
+	};
+
+	const closeFormModal = async () => {
+		if (!(await confirmDiscard())) return;
+		setModalOpen(false);
+		setEditingId(null);
+		resetForm();
 	};
 
 	const openCreateModal = () => {
@@ -96,6 +145,13 @@ function LinksPage() {
 		setFormCategory(link.category);
 		setFormDescription(link.description || "");
 		setFormShortUrl(link.shortUrl || "");
+		setInitialForm({
+			title: link.title,
+			url: link.url,
+			category: link.category,
+			description: link.description || "",
+			shortUrl: link.shortUrl || "",
+		});
 		setManageLink(null);
 		setModalOpen(true);
 	};
@@ -103,7 +159,7 @@ function LinksPage() {
 	const handleSubmit = async () => {
 		if (!logtoId) return;
 		if (!formTitle.trim() || !formUrl.trim() || !formCategory.trim()) {
-			toast.error("Title, URL, and category are required");
+			toast.error("Fill in the title, URL, and category, then try again.");
 			return;
 		}
 		setIsSubmitting(true);
@@ -135,22 +191,35 @@ function LinksPage() {
 			setModalOpen(false);
 		} catch (error: unknown) {
 			const message =
-				error instanceof Error ? error.message : "Failed to save link";
+				error instanceof Error
+					? error.message
+					: "Failed to save link. Check your connection and try again.";
 			toast.error(message);
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const handleDelete = async (id: string) => {
+	const handleDelete = async (id: string, title: string) => {
 		if (!logtoId) return;
+		if (
+			!(await confirm({
+				title: "Delete Link?",
+				description: `“${title}” will be removed for everyone. This can’t be undone.`,
+				confirmLabel: "Delete Link",
+				destructive: true,
+			}))
+		)
+			return;
 		setDeletingId(id);
 		try {
 			await removeLink({ logtoId, id: id as never });
 			toast.success("Link deleted");
 			setManageLink(null);
 		} catch {
-			toast.error("Failed to delete link");
+			toast.error(
+				"Failed to delete link. Check your connection and try again.",
+			);
 		} finally {
 			setDeletingId(null);
 		}
@@ -198,7 +267,6 @@ function LinksPage() {
 						label: categoryFilter,
 						onClear: () => {
 							setCategoryFilter("all");
-							setPage(1);
 						},
 					},
 				]
@@ -208,9 +276,10 @@ function LinksPage() {
 		<div className="space-y-4">
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<div className="space-y-2">
-					<Label htmlFor="link-title">Title *</Label>
+					<Label htmlFor={`${formId}-link-title`}>Title *</Label>
 					<Input
-						id="link-title"
+						id={`${formId}-link-title`}
+						name="title"
 						placeholder="e.g. IEEE UCSD Website"
 						value={formTitle}
 						onChange={(e) => setFormTitle(e.target.value)}
@@ -219,10 +288,13 @@ function LinksPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="link-url">URL *</Label>
+					<Label htmlFor={`${formId}-link-url`}>URL *</Label>
 					<Input
-						id="link-url"
-						placeholder="https://..."
+						id={`${formId}-link-url`}
+						name="url"
+						type="url"
+						spellCheck={false}
+						placeholder="https://example.com"
 						value={formUrl}
 						onChange={(e) => setFormUrl(e.target.value)}
 						className="h-11 text-base md:h-9 md:text-sm"
@@ -231,9 +303,10 @@ function LinksPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="link-category">Category *</Label>
+					<Label htmlFor={`${formId}-link-category`}>Category *</Label>
 					<Input
-						id="link-category"
+						id={`${formId}-link-category`}
+						name="category"
 						placeholder="e.g. General, Social Media"
 						value={formCategory}
 						onChange={(e) => setFormCategory(e.target.value)}
@@ -242,9 +315,11 @@ function LinksPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="link-short">Short URL</Label>
+					<Label htmlFor={`${formId}-link-short`}>Short URL</Label>
 					<Input
-						id="link-short"
+						id={`${formId}-link-short`}
+						name="shortUrl"
+						spellCheck={false}
 						placeholder="e.g. ieee-ucsd"
 						value={formShortUrl}
 						onChange={(e) => setFormShortUrl(e.target.value)}
@@ -254,10 +329,12 @@ function LinksPage() {
 				</div>
 			</div>
 			<div className="space-y-2">
-				<Label htmlFor="link-description">Description</Label>
+				<Label htmlFor={`${formId}-link-description`}>Description</Label>
 				<Textarea
-					id="link-description"
-					placeholder="Brief description..."
+					id={`${formId}-link-description`}
+					name="description"
+					autoComplete="off"
+					placeholder="Brief description…"
 					value={formDescription}
 					onChange={(e) => setFormDescription(e.target.value)}
 					rows={2}
@@ -291,18 +368,15 @@ function LinksPage() {
 					searchValue={search}
 					onSearchChange={(value) => {
 						setSearch(value);
-						setPage(1);
 					}}
-					searchPlaceholder="Search links..."
+					searchPlaceholder="Search links…"
 					activeChips={activeChips}
 					activeFilterCount={categoryFilter !== "all" ? 1 : 0}
 					onClearAll={() => {
 						setCategoryFilter("all");
-						setPage(1);
 					}}
 					onReset={() => {
 						setCategoryFilter("all");
-						setPage(1);
 					}}
 					sheetTitle="Category"
 					sheetContent={
@@ -313,7 +387,7 @@ function LinksPage() {
 								onClick={() => setCategoryFilter("all")}
 							>
 								<Tag className="mr-2 h-4 w-4" />
-								All categories
+								All Categories
 							</Button>
 							{categories.map((cat) => (
 								<Button
@@ -332,11 +406,13 @@ function LinksPage() {
 				<div className="space-y-3">
 					<div className="relative max-w-sm">
 						<Input
-							placeholder="Search links..."
+							name="q"
+							aria-label="Search links"
+							autoComplete="off"
+							placeholder="Search links…"
 							value={search}
 							onChange={(e) => {
 								setSearch(e.target.value);
-								setPage(1);
 							}}
 							className="pl-3"
 							type="search"
@@ -349,7 +425,6 @@ function LinksPage() {
 								size="sm"
 								onClick={() => {
 									setCategoryFilter("all");
-									setPage(1);
 								}}
 							>
 								<Tag className="mr-1 h-3 w-3" />
@@ -362,7 +437,6 @@ function LinksPage() {
 									size="sm"
 									onClick={() => {
 										setCategoryFilter(cat);
-										setPage(1);
 									}}
 								>
 									{cat}
@@ -478,7 +552,7 @@ function LinksPage() {
 												disabled={deletingId === link._id}
 												onClick={(e) => {
 													e.preventDefault();
-													handleDelete(link._id);
+													handleDelete(link._id, link.title);
 												}}
 												aria-label={`Delete ${link.title}`}
 											>
@@ -503,7 +577,7 @@ function LinksPage() {
 			) : (
 				<EmptyState
 					icon={<LinkIcon className="size-10 opacity-50" />}
-					title="No links found"
+					title="No Links Found"
 					description={
 						search || categoryFilter !== "all"
 							? "Try adjusting your search or filters."
@@ -515,11 +589,7 @@ function LinksPage() {
 			<ResponsiveOverlay
 				open={modalOpen}
 				onOpenChange={(open) => {
-					if (!open) {
-						setModalOpen(false);
-						setEditingId(null);
-						resetForm();
-					}
+					if (!open) void closeFormModal();
 				}}
 				title={editingId ? "Edit Link" : "Add New Link"}
 				variant="large-sheet"
@@ -528,11 +598,7 @@ function LinksPage() {
 						<Button
 							variant="outline"
 							className="h-11 sm:h-9"
-							onClick={() => {
-								setModalOpen(false);
-								setEditingId(null);
-								resetForm();
-							}}
+							onClick={() => void closeFormModal()}
 						>
 							Cancel
 						</Button>
@@ -558,7 +624,7 @@ function LinksPage() {
 					onOpenChange={(open) => {
 						if (!open) setManageLink(null);
 					}}
-					title={manageLink?.title ?? "Manage link"}
+					title={manageLink?.title ?? "Manage Link"}
 					description={manageLink ? getLinkDomain(manageLink.url) : undefined}
 					variant="sheet"
 				>
@@ -571,7 +637,7 @@ function LinksPage() {
 							}}
 						>
 							<ExternalLink className="size-4" />
-							Open link
+							Open Link
 						</Button>
 						<Button
 							variant="outline"
@@ -581,14 +647,14 @@ function LinksPage() {
 							}}
 						>
 							<Pencil className="size-4" />
-							Edit
+							Edit Link
 						</Button>
 						<Button
 							variant="outline"
 							className="h-12 w-full justify-start gap-3 text-muted-foreground hover:bg-ds-red-100 hover:text-tone-danger"
 							disabled={deletingId === manageLink?._id}
 							onClick={() => {
-								if (manageLink) handleDelete(manageLink._id);
+								if (manageLink) handleDelete(manageLink._id, manageLink.title);
 							}}
 						>
 							{deletingId === manageLink?._id ? (
@@ -596,7 +662,7 @@ function LinksPage() {
 							) : (
 								<Trash2 className="size-4" />
 							)}
-							Delete
+							Delete Link
 						</Button>
 					</div>
 				</ResponsiveOverlay>

@@ -35,28 +35,33 @@ function ConstitutionPreviewPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<output
+				aria-live="polite"
+				className="flex items-center justify-center min-h-[60vh]"
+			>
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
 	if (!hasOfficerAccess) {
 		return (
 			<div className="p-6 text-center text-muted-foreground">
-				You don't have permission to access this page.
+				You don’t have permission to access this page.
 			</div>
 		);
 	}
 
 	if (constitutionPending || sectionsPending) {
 		return (
-			<div className="w-full p-6">
+			<output aria-live="polite" className="block w-full p-6">
+				<span className="sr-only">Loading constitution…</span>
 				<div className="max-w-[8.5in] mx-auto space-y-4">
 					<div className="h-10 bg-muted rounded animate-pulse" />
 					<div className="h-[11in] bg-muted rounded animate-pulse" />
 				</div>
-			</div>
+			</output>
 		);
 	}
 

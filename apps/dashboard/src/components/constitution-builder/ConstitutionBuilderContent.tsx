@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import {
 	AlertCircle,
 	Check,
@@ -13,7 +13,7 @@ import {
 	RefreshCw,
 	RotateCcw,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,17 @@ import ConstitutionDocumentEditor, {
 import ConstitutionPreview from "./ConstitutionPreview";
 import ConstitutionSearch from "./ConstitutionSearch";
 import ConstitutionVersionHistory from "./ConstitutionVersionHistory";
+import {
+	CLEAN_DOCUMENT,
+	documentSaveReducer,
+	toSaveStatus,
+} from "./documentSaveState";
 import { useConstitutionData } from "./hooks/useConstitutionData";
-import type { SaveStatus } from "./types";
 import { exportConstitutionToPdf } from "./utils/pdfExport";
 
 type BuilderView = "editor" | "audit" | "versions";
+
+const routeApi = getRouteApi("/_dashboard/constitution-builder");
 
 const ConstitutionBuilderContent = () => {
 	const isMobile = useIsMobile();
@@ -48,14 +54,21 @@ const ConstitutionBuilderContent = () => {
 		constitutionId,
 	} = useConstitutionData();
 
-	const [currentView, setCurrentView] = useState<BuilderView>("editor");
+	const { view: currentView } = routeApi.useSearch();
+	const navigate = routeApi.useNavigate();
+	const setCurrentView = (view: BuilderView) => {
+		if (view === currentView) return;
+		navigate({ search: (prev) => ({ ...prev, view }), replace: true });
+	};
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [exportSheetOpen, setExportSheetOpen] = useState(false);
-	const [documentSaveStatus, setDocumentSaveStatus] =
-		useState<SaveStatus>("idle");
+	const [documentSaveState, dispatchDocumentSave] = useReducer(
+		documentSaveReducer,
+		CLEAN_DOCUMENT,
+	);
 	const editorRef = useRef<ConstitutionDocumentEditorHandle>(null);
 
-	const saveStatus: SaveStatus = isLoading ? "idle" : documentSaveStatus;
+	const saveStatus = toSaveStatus(documentSaveState);
 
 	useEffect(() => {
 		initializeConstitution();
@@ -84,8 +97,8 @@ const ConstitutionBuilderContent = () => {
 							<div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
 								<AlertCircle className="w-7 h-7 text-destructive" />
 							</div>
-							<h2 className="text-xl font-semibold mb-2">
-								Couldn't load the constitution
+							<h2 className="text-xl font-semibold mb-2 text-balance">
+								Couldn’t Load the Constitution
 							</h2>
 							<p className="text-sm text-muted-foreground mb-4">
 								{ensureError}
@@ -107,10 +120,11 @@ const ConstitutionBuilderContent = () => {
 
 		return (
 			<DashboardPage>
-				<div className="space-y-4">
+				<output aria-live="polite" className="block space-y-4">
+					<span className="sr-only">Loading constitution…</span>
 					<div className="h-10 bg-muted rounded animate-pulse" />
 					<div className="h-64 bg-muted rounded animate-pulse" />
-				</div>
+				</output>
 			</DashboardPage>
 		);
 	}
@@ -149,7 +163,7 @@ const ConstitutionBuilderContent = () => {
 				<div className="mb-4 md:mb-6 lg:mb-8">
 					<div className="lg:hidden space-y-3 mb-4">
 						<div className="flex items-start justify-between gap-3">
-							<h1 className="text-xl font-bold text-foreground flex items-center gap-2 min-w-0">
+							<h1 className="text-xl font-bold text-foreground flex items-center gap-2 min-w-0 text-balance">
 								<FileText className="h-6 w-6 text-tone-info shrink-0" />
 								<span className="truncate">Constitution Builder</span>
 							</h1>
@@ -178,7 +192,10 @@ const ConstitutionBuilderContent = () => {
 							/>
 						</div>
 						<div className="flex flex-wrap items-center gap-2">
-							<div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+							<output
+								aria-live="polite"
+								className="flex items-center gap-2 text-xs text-muted-foreground shrink-0"
+							>
 								{saveStatus === "saved" && (
 									<>
 										<Check className="h-3.5 w-3.5 text-tone-success" />
@@ -200,7 +217,9 @@ const ConstitutionBuilderContent = () => {
 								{saveStatus === "error" && (
 									<>
 										<AlertCircle className="h-3.5 w-3.5 text-tone-danger" />
-										<span className="text-tone-danger">Save failed</span>
+										<span className="text-tone-danger">
+											Save failed. Check your connection and retry.
+										</span>
 										<Button
 											type="button"
 											variant="ghost"
@@ -213,10 +232,11 @@ const ConstitutionBuilderContent = () => {
 										</Button>
 									</>
 								)}
-							</div>
+							</output>
 							<div className="flex flex-1 min-w-0 bg-muted rounded-md p-1">
 								<Button
 									onClick={() => setCurrentView("editor")}
+									aria-pressed={currentView === "editor"}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "editor"
 											? "bg-background text-foreground shadow-sm"
@@ -229,6 +249,7 @@ const ConstitutionBuilderContent = () => {
 								</Button>
 								<Button
 									onClick={() => setCurrentView("versions")}
+									aria-pressed={currentView === "versions"}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "versions"
 											? "bg-background text-foreground shadow-sm"
@@ -241,6 +262,7 @@ const ConstitutionBuilderContent = () => {
 								</Button>
 								<Button
 									onClick={() => setCurrentView("audit")}
+									aria-pressed={currentView === "audit"}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "audit"
 											? "bg-background text-foreground shadow-sm"
@@ -257,12 +279,12 @@ const ConstitutionBuilderContent = () => {
 
 					<div className="hidden lg:flex items-center justify-between">
 						<div className="flex-1 mr-8">
-							<h1 className="text-2xl xl:text-3xl font-bold text-foreground flex items-center gap-3">
+							<h1 className="text-2xl xl:text-3xl font-bold text-foreground flex items-center gap-3 text-balance">
 								<FileText className="h-7 w-7 xl:h-8 xl:w-8 text-tone-info" />
 								Constitution Builder
 							</h1>
 							<p className="text-muted-foreground mt-2 mb-4">
-								Collaboratively build and manage the organization's constitution
+								Collaboratively build and manage the organization’s constitution
 							</p>
 							<div className="max-w-md">
 								<ConstitutionSearch
@@ -275,7 +297,10 @@ const ConstitutionBuilderContent = () => {
 						</div>
 
 						<div className="flex items-center gap-4">
-							<div className="flex items-center gap-2 text-sm">
+							<output
+								aria-live="polite"
+								className="flex items-center gap-2 text-sm"
+							>
 								{saveStatus === "saved" && (
 									<>
 										<Check className="h-4 w-4 text-tone-success" />
@@ -297,7 +322,9 @@ const ConstitutionBuilderContent = () => {
 								{saveStatus === "error" && (
 									<>
 										<AlertCircle className="h-4 w-4 text-tone-danger" />
-										<span className="text-tone-danger">Save failed</span>
+										<span className="text-tone-danger">
+											Save failed. Check your connection and retry.
+										</span>
 										<Button
 											type="button"
 											variant="ghost"
@@ -310,13 +337,14 @@ const ConstitutionBuilderContent = () => {
 										</Button>
 									</>
 								)}
-							</div>
+							</output>
 
 							{previewButton}
 
 							<div className="flex bg-muted rounded-md p-1">
 								<Button
 									onClick={() => setCurrentView("editor")}
+									aria-pressed={currentView === "editor"}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "editor"
 											? "bg-background text-foreground shadow-sm"
@@ -329,6 +357,7 @@ const ConstitutionBuilderContent = () => {
 								</Button>
 								<Button
 									onClick={() => setCurrentView("versions")}
+									aria-pressed={currentView === "versions"}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "versions"
 											? "bg-background text-foreground shadow-sm"
@@ -341,6 +370,7 @@ const ConstitutionBuilderContent = () => {
 								</Button>
 								<Button
 									onClick={() => setCurrentView("audit")}
+									aria-pressed={currentView === "audit"}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "audit"
 											? "bg-background text-foreground shadow-sm"
@@ -365,7 +395,8 @@ const ConstitutionBuilderContent = () => {
 						sections={sections}
 						onSaveDocument={saveDocumentSections}
 						onSaveVersion={saveVersion}
-						onSaveStatusChange={setDocumentSaveStatus}
+						saveState={documentSaveState}
+						dispatchSaveState={dispatchDocumentSave}
 					/>
 				) : currentView === "versions" ? (
 					<div className="bg-background rounded-md shadow-sm border border-border p-4 md:p-6">
@@ -395,7 +426,7 @@ const ConstitutionBuilderContent = () => {
 							className="h-11 w-full"
 							onClick={() => setPreviewOpen(false)}
 						>
-							Done
+							Close Preview
 						</Button>
 					) : (
 						<div className="flex w-full gap-2">
@@ -404,7 +435,7 @@ const ConstitutionBuilderContent = () => {
 								className="h-11 flex-1"
 								onClick={() => setPreviewOpen(false)}
 							>
-								Done
+								Close Preview
 							</Button>
 							<Button className="h-11 flex-1" onClick={handlePrint}>
 								Export PDF
@@ -425,7 +456,7 @@ const ConstitutionBuilderContent = () => {
 			<ResponsiveOverlay
 				open={exportSheetOpen}
 				onOpenChange={setExportSheetOpen}
-				title="Preview & export"
+				title="Preview & Export"
 				description="View or export the current constitution draft."
 				variant="sheet"
 			>
@@ -464,7 +495,7 @@ const ConstitutionBuilderContent = () => {
 							onClick={() => setExportSheetOpen(false)}
 						>
 							<ExternalLink className="size-4" />
-							Open live preview
+							Open Live Preview
 						</Link>
 					</Button>
 				</div>

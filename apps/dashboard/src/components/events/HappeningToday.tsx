@@ -23,7 +23,7 @@ export function HappeningToday({
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center gap-2">
-				<span className="relative flex h-2 w-2">
+				<span aria-hidden="true" className="relative flex h-2 w-2">
 					<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ds-green-600 opacity-75" />
 					<span className="relative inline-flex rounded-full h-2 w-2 bg-ds-green-1000" />
 				</span>

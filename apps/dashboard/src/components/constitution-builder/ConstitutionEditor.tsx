@@ -8,7 +8,8 @@ import {
 	Trash2,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import type { ConstitutionSection } from "./types";
 import { isHtmlContent } from "./utils/documentEditorUtils";
 
@@ -48,6 +50,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 	onDeleteSection,
 	onAddSection,
 }) => {
+	const formId = useId();
 	const [editTitle, setEditTitle] = useState("");
 	const [editContent, setEditContent] = useState("");
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -61,6 +64,12 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 	const [addSectionContent, setAddSectionContent] = useState("");
 
 	const currentSection = sections.find((s) => s.id === selectedSection);
+	const confirm = useConfirm();
+	const confirmDiscard = useUnsavedChangesGuard(
+		editingSection !== null &&
+			editingSection === selectedSection &&
+			hasUnsavedChanges,
+	);
 
 	useEffect(() => {
 		if (currentSection && editingSection === currentSection.id) {
@@ -94,7 +103,8 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 		onEditSection(null);
 	};
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		if (!(await confirmDiscard())) return;
 		setEditTitle(originalTitle);
 		setEditContent(originalContent);
 		setHasUnsavedChanges(false);
@@ -103,6 +113,19 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 			setEditTitle(currentSection.title);
 			setEditContent(currentSection.content);
 		}
+	};
+
+	const handleDeleteSection = async (id: string) => {
+		if (
+			!(await confirm({
+				title: "Delete Section?",
+				description: "This section will be removed. This can’t be undone.",
+				confirmLabel: "Delete Section",
+				destructive: true,
+			}))
+		)
+			return;
+		onDeleteSection(id);
 	};
 
 	const handleAddSection = () => {
@@ -125,12 +148,12 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 					<div className="bg-ds-blue-100 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
 						<BookOpen className="h-12 w-12 text-tone-info" />
 					</div>
-					<h3 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
+					<h3 className="text-2xl lg:text-3xl font-bold text-foreground mb-4 text-balance">
 						Welcome to the Constitution Builder
 					</h3>
 					<p className="text-muted-foreground mb-8 text-base lg:text-lg leading-relaxed">
 						{sections.length === 0
-							? "Start by adding your first section to begin building your organization's constitution. Choose from a preamble or your first article to get started."
+							? "Start by adding your first section to begin building your organization’s constitution. Choose from a preamble or your first article to get started."
 							: "Select a section from the sidebar to view and edit its content. Changes are automatically saved as you type, making collaboration seamless and efficient."}
 					</p>
 					{sections.length === 0 && (
@@ -193,7 +216,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 			<div className="border-b border-border p-4 lg:p-6">
 				<div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
 					<div className="min-w-0 flex-1">
-						<h2 className="text-xl lg:text-2xl font-semibold text-foreground leading-tight mb-1">
+						<h2 className="text-xl lg:text-2xl font-semibold text-foreground leading-tight mb-1 text-balance break-words">
 							{currentSection.title}
 						</h2>
 						<p className="text-sm text-muted-foreground capitalize font-medium">
@@ -212,7 +235,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 									Edit Section
 								</Button>
 								<Button
-									onClick={() => onDeleteSection(selectedSection)}
+									onClick={() => handleDeleteSection(selectedSection)}
 									variant="destructive"
 									className="inline-flex items-center px-4 py-2.5 rounded-md transition-colors text-sm font-medium"
 								>
@@ -263,37 +286,49 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 				{isCurrentlyEditing ? (
 					<div className="space-y-6">
 						<div>
-							<label className="block text-sm font-medium text-foreground mb-3">
+							<label
+								htmlFor={`${formId}-edit-section-title`}
+								className="block text-sm font-medium text-foreground mb-3"
+							>
 								Section Title
 							</label>
 							<Input
+								id={`${formId}-edit-section-title`}
+								name="section-title"
 								type="text"
+								autoComplete="off"
 								value={editTitle}
 								onChange={(e) => setEditTitle(e.target.value)}
 								className="w-full px-4 py-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ds-blue-700"
-								placeholder="Enter section title..."
+								placeholder="Enter section title…"
 							/>
 						</div>
 
 						<div>
 							<div className="flex items-center justify-between mb-3">
-								<label className="block text-sm font-medium text-foreground">
+								<label
+									htmlFor={`${formId}-edit-section-content`}
+									className="block text-sm font-medium text-foreground"
+								>
 									Section Content
 								</label>
-								<div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+								<div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded tabular-nums">
 									{editContent.length} characters
 								</div>
 							</div>
 							<div className="space-y-4">
 								<Textarea
+									id={`${formId}-edit-section-content`}
+									name="section-content"
+									autoComplete="off"
 									value={editContent}
 									onChange={(e) => setEditContent(e.target.value)}
 									rows={14}
 									className="w-full px-4 py-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ds-blue-700 font-mono text-sm leading-relaxed min-h-[300px]"
 									placeholder={
 										currentSection.type === "article"
-											? "Optional introductory text before the first section..."
-											: "Enter the section content..."
+											? "Optional introductory text before the first section…"
+											: "Enter the section content…"
 									}
 								/>
 								<div className="flex gap-3">
@@ -338,7 +373,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								<div className="text-muted-foreground mb-3">
 									<Edit3 className="h-8 w-8 mx-auto" />
 								</div>
-								<h3 className="text-lg font-medium text-muted-foreground mb-2">
+								<h3 className="text-lg font-medium text-muted-foreground mb-2 text-balance">
 									No Content Yet
 								</h3>
 								<p className="text-muted-foreground mb-4">
@@ -382,7 +417,10 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 			>
 				<div className="space-y-4 pb-2">
 					<div>
-						<label className="block text-sm font-medium text-foreground mb-2">
+						<label
+							htmlFor={`${formId}-add-section-type`}
+							className="block text-sm font-medium text-foreground mb-2"
+						>
 							Section Type
 						</label>
 						<Select
@@ -394,7 +432,10 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								}
 							}}
 						>
-							<SelectTrigger className="h-11 w-full sm:h-9">
+							<SelectTrigger
+								id={`${formId}-add-section-type`}
+								className="h-11 w-full sm:h-9"
+							>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -419,15 +460,21 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 
 					{parentOptions.length > 0 && (
 						<div>
-							<label className="block text-sm font-medium text-foreground mb-2">
+							<label
+								htmlFor={`${formId}-add-section-parent`}
+								className="block text-sm font-medium text-foreground mb-2"
+							>
 								Parent Section
 							</label>
 							<Select
 								value={addSectionParent}
 								onValueChange={setAddSectionParent}
 							>
-								<SelectTrigger className="h-11 w-full sm:h-9">
-									<SelectValue placeholder="Select parent..." />
+								<SelectTrigger
+									id={`${formId}-add-section-parent`}
+									className="h-11 w-full sm:h-9"
+								>
+									<SelectValue placeholder="Select parent…" />
 								</SelectTrigger>
 								<SelectContent>
 									{parentOptions.map((section) => (
@@ -444,15 +491,21 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 
 					{addSectionType !== "preamble" && (
 						<div>
-							<label className="block text-sm font-medium text-foreground mb-2">
+							<label
+								htmlFor={`${formId}-add-section-title`}
+								className="block text-sm font-medium text-foreground mb-2"
+							>
 								Title{" "}
 								{addSectionType === "article" ? "(required)" : "(optional)"}
 							</label>
 							<Input
+								id={`${formId}-add-section-title`}
+								name="section-title"
 								type="text"
+								autoComplete="off"
 								value={addSectionTitle}
 								onChange={(e) => setAddSectionTitle(e.target.value)}
-								placeholder="Enter section title..."
+								placeholder="Enter section title…"
 								required={addSectionType === "article"}
 								className="h-11 text-base sm:h-9 sm:text-sm"
 							/>
@@ -460,19 +513,25 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 					)}
 
 					<div>
-						<label className="block text-sm font-medium text-foreground mb-2">
+						<label
+							htmlFor={`${formId}-add-section-content`}
+							className="block text-sm font-medium text-foreground mb-2"
+						>
 							Content{" "}
 							{addSectionType === "preamble" ? "(required)" : "(optional)"}
 						</label>
 						<Textarea
+							id={`${formId}-add-section-content`}
+							name="section-content"
+							autoComplete="off"
 							value={addSectionContent}
 							onChange={(e) => setAddSectionContent(e.target.value)}
 							placeholder={
 								addSectionType === "preamble"
-									? "Enter preamble content..."
+									? "Enter preamble content…"
 									: addSectionType === "article"
-										? "Optional introductory text before the first section..."
-										: "Enter section content..."
+										? "Optional introductory text before the first section…"
+										: "Enter section content…"
 							}
 							rows={4}
 							className="text-base sm:text-sm"
@@ -498,7 +557,7 @@ const renderContentWithImages = (content: string) => {
 							<div className="bg-muted rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
 								<Image className="h-8 w-8 text-muted-foreground" />
 							</div>
-							<h4 className="text-sm font-medium text-foreground mb-1">
+							<h4 className="text-sm font-medium text-foreground mb-1 text-balance">
 								Image Placeholder
 							</h4>
 							<p className="text-sm text-muted-foreground">

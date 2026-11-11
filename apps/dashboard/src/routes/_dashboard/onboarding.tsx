@@ -19,8 +19,10 @@ import {
 	UserPlus,
 	XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	PageHeader,
@@ -56,11 +58,25 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { formatDateTimeDisplay } from "@/lib/formatters";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { cn } from "@/lib/utils";
 
+const ONBOARDING_TABS = [
+	"invitation",
+	"direct",
+	"pending",
+	"rejections",
+] as const;
+
+const searchSchema = z.object({
+	tab: z.enum(ONBOARDING_TABS).catch("invitation"),
+});
+
 export const Route = createFileRoute("/_dashboard/onboarding")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.officerInvitations.list, undefined, ctx),
 	component: OnboardingPage,
@@ -99,12 +115,15 @@ const MOBILE_INPUT = "h-11 text-base md:h-9 md:text-sm";
 
 function OnboardingPage() {
 	const { hasAdminAccess, logtoId, isLoading } = usePermissions();
+	const { tab } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<output className="flex items-center justify-center min-h-[60vh]">
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
@@ -116,9 +135,11 @@ function OnboardingPage() {
 						<div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
 							<Lock className="w-8 h-8 text-destructive" />
 						</div>
-						<h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+						<h2 className="text-2xl font-bold mb-2 text-balance">
+							Access Denied
+						</h2>
 						<p className="text-muted-foreground">
-							You don't have permission to access the onboarding page. This page
+							You don’t have permission to access the onboarding page. This page
 							is only accessible to Executive Officers and Administrators.
 						</p>
 					</div>
@@ -135,7 +156,19 @@ function OnboardingPage() {
 				hideTitleOnMobile
 			/>
 
-			<Tabs defaultValue="invitation" className="space-y-6">
+			<Tabs
+				value={tab}
+				onValueChange={(value) =>
+					navigate({
+						search: (prev) => ({
+							...prev,
+							tab: value as (typeof ONBOARDING_TABS)[number],
+						}),
+						replace: true,
+					})
+				}
+				className="space-y-6"
+			>
 				<div className="-mx-4 overflow-x-auto scrollbar-quiet px-4 sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0">
 					<TabsList variant="line" className="h-11 w-max gap-1 md:h-9 md:w-fit">
 						<TabsTrigger
@@ -192,6 +225,7 @@ function OnboardingPage() {
 // ── Tab 1: Invitation Flow ──
 
 function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
+	const formId = useId();
 	const { getAuthHeaders } = useAuth();
 	const createInvitation = useAuthedMutation(api.officerInvitations.create);
 
@@ -206,6 +240,19 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 	const [acceptanceDeadline, setAcceptanceDeadline] = useState("");
 	const [leaderName, setLeaderName] = useState("");
 	const [message, setMessage] = useState("");
+
+	useUnsavedChangesGuard(
+		Boolean(
+			name ||
+				email ||
+				role !== "General Officer" ||
+				positions.some((p) => p.value) ||
+				team ||
+				acceptanceDeadline ||
+				leaderName ||
+				message,
+		),
+	);
 
 	const resetForm = () => {
 		setName("");
@@ -319,17 +366,24 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 				if (!resp.ok) {
 					const err = await resp.json();
 					console.error("Email send failed:", err);
-					toast.warning("Invitation created but email failed to send.");
+					toast.warning(
+						"Invitation created but email failed to send. Resend it from Pending Invitations.",
+					);
 				}
 			} catch (emailErr) {
 				console.error("Email send error:", emailErr);
-				toast.warning("Invitation created but email failed to send.");
+				toast.warning(
+					"Invitation created but email failed to send. Resend it from Pending Invitations.",
+				);
 			}
 
 			toast.success(`Invitation sent successfully to ${name}!`);
 			resetForm();
 		} catch (error: any) {
-			toast.error(error.message || "Failed to send invitation");
+			toast.error(
+				error.message ||
+					"Failed to send invitation. Check your connection and try again.",
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -350,8 +404,10 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Full Name *</Label>
+							<Label htmlFor={`${formId}-invite-name`}>Full Name *</Label>
 							<Input
+								id={`${formId}-invite-name`}
+								name="name"
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
@@ -361,8 +417,11 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Email Address *</Label>
+							<Label htmlFor={`${formId}-invite-email`}>Email Address *</Label>
 							<Input
+								id={`${formId}-invite-email`}
+								name="email"
+								spellCheck={false}
 								type="email"
 								placeholder="john.doe@ucsd.edu"
 								value={email}
@@ -377,9 +436,12 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Officer Role *</Label>
+							<Label htmlFor={`${formId}-invite-role`}>Officer Role *</Label>
 							<Select value={role} onValueChange={setRole}>
-								<SelectTrigger className={MOBILE_INPUT}>
+								<SelectTrigger
+									id={`${formId}-invite-role`}
+									className={MOBILE_INPUT}
+								>
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -392,11 +454,21 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Offered Positions *</Label>
+							<Label htmlFor={`${formId}-invite-position-0`}>
+								Offered Positions *
+							</Label>
 							<div className="space-y-2">
 								{positions.map((position, index) => (
 									<div key={position.id} className="flex gap-2">
 										<Input
+											id={`${formId}-invite-position-${index}`}
+											name="offeredPositions"
+											aria-label={
+												index === 0
+													? undefined
+													: `Offered position ${index + 1}`
+											}
+											autoComplete="off"
 											placeholder="e.g., Webmaster, President"
 											value={position.value}
 											onChange={(e) => updatePosition(index, e.target.value)}
@@ -410,7 +482,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 											className="size-11 shrink-0 md:size-9"
 											onClick={() => removePosition(index)}
 											disabled={positions.length === 1}
-											aria-label="Remove position"
+											aria-label={`Remove position ${index + 1}`}
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -435,9 +507,14 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Team Assignment (Optional)</Label>
+							<Label htmlFor={`${formId}-invite-team`}>
+								Team Assignment (Optional)
+							</Label>
 							<Select value={team} onValueChange={setTeam}>
-								<SelectTrigger className={MOBILE_INPUT}>
+								<SelectTrigger
+									id={`${formId}-invite-team`}
+									className={MOBILE_INPUT}
+								>
 									<SelectValue placeholder="Select a team" />
 								</SelectTrigger>
 								<SelectContent>
@@ -451,8 +528,13 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Acceptance Deadline *</Label>
+							<Label htmlFor={`${formId}-invite-deadline`}>
+								Acceptance Deadline *
+							</Label>
 							<Input
+								id={`${formId}-invite-deadline`}
+								name="acceptanceDeadline"
+								autoComplete="off"
 								type="datetime-local"
 								value={acceptanceDeadline}
 								onChange={(e) => setAcceptanceDeadline(e.target.value)}
@@ -465,8 +547,12 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Team Lead Name (Optional)</Label>
+						<Label htmlFor={`${formId}-invite-leader`}>
+							Team Lead Name (Optional)
+						</Label>
 						<Input
+							id={`${formId}-invite-leader`}
+							name="leaderName"
 							placeholder="e.g., Jane Smith"
 							value={leaderName}
 							onChange={(e) => setLeaderName(e.target.value)}
@@ -476,9 +562,14 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Custom Message (Optional)</Label>
+						<Label htmlFor={`${formId}-invite-message`}>
+							Custom Message (Optional)
+						</Label>
 						<Textarea
-							placeholder="Add any additional information for the invitation..."
+							id={`${formId}-invite-message`}
+							name="message"
+							autoComplete="off"
+							placeholder="Add any additional information for the invitation…"
 							value={message}
 							onChange={(e) => setMessage(e.target.value)}
 							rows={4}
@@ -517,7 +608,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							) : (
 								<Send className="h-4 w-4 mr-2" />
 							)}
-							{isSubmitting ? "Sending Invitation..." : "Send Invitation"}
+							{isSubmitting ? "Sending Invitation…" : "Send Invitation"}
 						</Button>
 					</div>
 				</form>
@@ -529,6 +620,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 // ── Tab 2: Direct Onboarding ──
 
 function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
+	const formId = useId();
 	const { getAuthHeaders } = useAuth();
 	const orgSettings = useAuthedQuery(
 		api.organizationSettings.get,
@@ -569,6 +661,42 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 		orgSettings?.directOnboardingEmailTemplate ||
 		DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE;
 
+	const confirm = useConfirm();
+	const formDirty = Boolean(
+		name ||
+			email ||
+			role !== "General Officer" ||
+			position ||
+			team ||
+			leaderName ||
+			customMessage ||
+			emailTemplate !== savedEmailTemplate,
+	);
+	const settingsDirty =
+		showSettings &&
+		(tempGoogleSheetsUrl !== googleSheetsUrl ||
+			tempEmailTemplate !== savedEmailTemplate);
+	useUnsavedChangesGuard(formDirty || settingsDirty);
+
+	const closeSettings = async () => {
+		if (
+			settingsDirty &&
+			!(await confirm({
+				title: "Discard Unsaved Changes?",
+				description: "Your edits haven’t been saved and will be lost.",
+				confirmLabel: "Discard Changes",
+				cancelLabel: "Keep Editing",
+				destructive: true,
+			}))
+		) {
+			return;
+		}
+		setShowSettings(false);
+		setSettingsError(null);
+		setTempGoogleSheetsUrl(googleSheetsUrl);
+		setTempEmailTemplate(savedEmailTemplate);
+	};
+
 	useEffect(() => {
 		setTempGoogleSheetsUrl(googleSheetsUrl);
 	}, [googleSheetsUrl]);
@@ -591,11 +719,13 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 		setSettingsError(null);
 
 		if (!validateGoogleSheetsUrl(tempGoogleSheetsUrl)) {
-			setSettingsError("Please enter a valid Google Sheets URL");
+			setSettingsError(
+				"Enter a valid Google Sheets URL starting with https://docs.google.com/spreadsheets/d/.",
+			);
 			return;
 		}
 		if (!tempEmailTemplate.trim()) {
-			setSettingsError("Please enter an onboarding email template");
+			setSettingsError("Enter an onboarding email template.");
 			return;
 		}
 
@@ -711,7 +841,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 				const roleSyncResult = await roleSyncResp.json();
 				if (!roleSyncResp.ok) {
 					toast.warning(
-						roleSyncResult.error || "Onboarding succeeded but role sync failed",
+						roleSyncResult.error ||
+							"Onboarding succeeded but role sync failed. Update the role from Manage Users.",
 					);
 				} else {
 					await updateDirectOnboardingGoogleGroup({
@@ -731,7 +862,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 			} catch (roleSyncError) {
 				console.error("Error syncing onboarding role:", roleSyncError);
 				toast.warning(
-					"Onboarding succeeded, but role sync could not be completed.",
+					"Onboarding succeeded, but role sync could not be completed. Update the role from Manage Users.",
 				);
 			}
 
@@ -739,7 +870,10 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 			resetForm();
 		} catch (error: any) {
 			console.error("Error sending direct onboarding:", error);
-			toast.error(error.message || "Failed to onboard officer");
+			toast.error(
+				error.message ||
+					"Failed to onboard officer. Check your connection and try again.",
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -825,7 +959,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						}}
 					>
 						<Settings className="w-4 h-4 mr-2" />
-						Configure
+						Configure Email
 					</Button>
 				</div>
 			</div>
@@ -844,8 +978,10 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Full Name *</Label>
+							<Label htmlFor={`${formId}-direct-name`}>Full Name *</Label>
 							<Input
+								id={`${formId}-direct-name`}
+								name="name"
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
@@ -855,8 +991,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Email Address *</Label>
+							<Label htmlFor={`${formId}-direct-email`}>Email Address *</Label>
 							<Input
+								id={`${formId}-direct-email`}
+								name="email"
+								spellCheck={false}
 								type="email"
 								placeholder="john.doe@ucsd.edu"
 								value={email}
@@ -871,9 +1010,12 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Officer Role *</Label>
+							<Label htmlFor={`${formId}-direct-role`}>Officer Role *</Label>
 							<Select value={role} onValueChange={setRole}>
-								<SelectTrigger className={MOBILE_INPUT}>
+								<SelectTrigger
+									id={`${formId}-direct-role`}
+									className={MOBILE_INPUT}
+								>
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -886,8 +1028,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Position *</Label>
+							<Label htmlFor={`${formId}-direct-position`}>Position *</Label>
 							<Input
+								id={`${formId}-direct-position`}
+								name="position"
+								autoComplete="off"
 								placeholder="e.g., Webmaster, President"
 								value={position}
 								onChange={(e) => setPosition(e.target.value)}
@@ -899,9 +1044,14 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Team Assignment (Optional)</Label>
+							<Label htmlFor={`${formId}-direct-team`}>
+								Team Assignment (Optional)
+							</Label>
 							<Select value={team} onValueChange={setTeam}>
-								<SelectTrigger className={MOBILE_INPUT}>
+								<SelectTrigger
+									id={`${formId}-direct-team`}
+									className={MOBILE_INPUT}
+								>
 									<SelectValue placeholder="Select a team" />
 								</SelectTrigger>
 								<SelectContent>
@@ -915,8 +1065,12 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							</Select>
 						</div>
 						<div className="space-y-2">
-							<Label>Vice Chair / Mentor Name (Optional)</Label>
+							<Label htmlFor={`${formId}-direct-leader`}>
+								Vice Chair / Mentor Name (Optional)
+							</Label>
 							<Input
+								id={`${formId}-direct-leader`}
+								name="leaderName"
 								placeholder="e.g., Jane Smith"
 								value={leaderName}
 								onChange={(e) => setLeaderName(e.target.value)}
@@ -927,9 +1081,14 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Additional Custom Message (Optional)</Label>
+						<Label htmlFor={`${formId}-direct-message`}>
+							Additional Custom Message (Optional)
+						</Label>
 						<Textarea
-							placeholder="Add any additional information to include in the email..."
+							id={`${formId}-direct-message`}
+							name="customMessage"
+							autoComplete="off"
+							placeholder="Add any additional information to include in the email…"
 							value={customMessage}
 							onChange={(e) => setCustomMessage(e.target.value)}
 							rows={3}
@@ -938,12 +1097,23 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Email Template</Label>
-						<p className="text-xs text-muted-foreground">
-							Customize the onboarding email. Use {"{NAME}"}, {"{POSITION}"},{" "}
-							{"{LEADER_INFO}"}, and {"{CUSTOM_MESSAGE}"} as placeholders.
+						<Label htmlFor={`${formId}-direct-template`}>Email Template</Label>
+						<p
+							id={`${formId}-direct-template-help`}
+							className="text-xs text-muted-foreground"
+						>
+							Customize the onboarding email. Use{" "}
+							<code translate="no">{"{NAME}"}</code>,{" "}
+							<code translate="no">{"{POSITION}"}</code>,{" "}
+							<code translate="no">{"{LEADER_INFO}"}</code>, and{" "}
+							<code translate="no">{"{CUSTOM_MESSAGE}"}</code> as placeholders.
 						</p>
 						<Textarea
+							id={`${formId}-direct-template`}
+							name="emailTemplate"
+							aria-describedby={`${formId}-direct-template-help`}
+							autoComplete="off"
+							spellCheck={false}
 							value={emailTemplate}
 							onChange={(e) => setEmailTemplate(e.target.value)}
 							rows={10}
@@ -960,7 +1130,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								Onboarding email will be sent with all necessary instructions
 							</li>
 							<li>Officer permissions will be granted in the system</li>
-							<li>No acceptance required - they are onboarded immediately</li>
+							<li>No acceptance required — they are onboarded immediately</li>
 						</ul>
 					</div>
 
@@ -989,7 +1159,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							) : (
 								<Send className="h-4 w-4 mr-2" />
 							)}
-							{isSubmitting ? "Sending..." : "Send Onboarding Email"}
+							{isSubmitting ? "Sending…" : "Send Onboarding Email"}
 						</Button>
 					</div>
 				</form>
@@ -1022,12 +1192,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 			<ResponsiveOverlay
 				open={showSettings}
 				onOpenChange={(open) => {
-					if (!open) {
-						setShowSettings(false);
-						setSettingsError(null);
-						setTempGoogleSheetsUrl(googleSheetsUrl);
-						setTempEmailTemplate(savedEmailTemplate);
-					}
+					if (!open) void closeSettings();
 				}}
 				title="Configure Onboarding Email"
 				description="Save the Direct Onboarding template and contact list URL. Accepted invitations use this saved configuration."
@@ -1037,12 +1202,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						<Button
 							variant="outline"
 							className="h-11 w-full sm:h-9 sm:w-auto"
-							onClick={() => {
-								setShowSettings(false);
-								setSettingsError(null);
-								setTempGoogleSheetsUrl(googleSheetsUrl);
-								setTempEmailTemplate(savedEmailTemplate);
-							}}
+							onClick={() => void closeSettings()}
 						>
 							Cancel
 						</Button>
@@ -1056,34 +1216,55 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							) : (
 								<Save className="h-4 w-4 mr-2" />
 							)}
-							{savingSettings ? "Saving..." : "Save Settings"}
+							{savingSettings ? "Saving…" : "Save Settings"}
 						</Button>
 					</div>
 				}
 			>
 				<div className="space-y-4">
 					<div className="space-y-2">
-						<Label>Google Sheets URL</Label>
+						<Label htmlFor={`${formId}-direct-sheets-url`}>
+							Google Sheets URL
+						</Label>
 						<Input
+							id={`${formId}-direct-sheets-url`}
+							name="googleSheetsUrl"
+							autoComplete="url"
+							spellCheck={false}
 							type="url"
-							placeholder="https://docs.google.com/spreadsheets/d/..."
+							placeholder="https://docs.google.com/spreadsheets/d/…"
 							value={tempGoogleSheetsUrl}
 							onChange={(e) => setTempGoogleSheetsUrl(e.target.value)}
 							className={MOBILE_INPUT}
 							inputMode="url"
 						/>
 						<p className="text-xs text-muted-foreground">
-							The URL should start with https://docs.google.com/spreadsheets/d/
+							The URL should start with{" "}
+							<span translate="no" className="break-all">
+								https://docs.google.com/spreadsheets/d/
+							</span>
 						</p>
 					</div>
 
 					<div className="space-y-2">
-						<Label>Saved Direct Onboarding Template</Label>
-						<p className="text-xs text-muted-foreground">
-							Use {"{NAME}"}, {"{POSITION}"}, {"{LEADER_INFO}"}, and{" "}
-							{"{CUSTOM_MESSAGE}"} as placeholders.
+						<Label htmlFor={`${formId}-direct-saved-template`}>
+							Saved Direct Onboarding Template
+						</Label>
+						<p
+							id={`${formId}-direct-saved-template-help`}
+							className="text-xs text-muted-foreground"
+						>
+							Use <code translate="no">{"{NAME}"}</code>,{" "}
+							<code translate="no">{"{POSITION}"}</code>,{" "}
+							<code translate="no">{"{LEADER_INFO}"}</code>, and{" "}
+							<code translate="no">{"{CUSTOM_MESSAGE}"}</code> as placeholders.
 						</p>
 						<Textarea
+							id={`${formId}-direct-saved-template`}
+							name="directOnboardingEmailTemplate"
+							aria-describedby={`${formId}-direct-saved-template-help`}
+							autoComplete="off"
+							spellCheck={false}
 							value={tempEmailTemplate}
 							onChange={(e) => setTempEmailTemplate(e.target.value)}
 							rows={12}
@@ -1091,12 +1272,14 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						/>
 					</div>
 
-					{settingsError && (
-						<div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-							<AlertCircle className="w-4 h-4 shrink-0" />
-							<span>{settingsError}</span>
-						</div>
-					)}
+					<output className="block" aria-live="polite">
+						{settingsError && (
+							<div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+								<AlertCircle className="w-4 h-4 shrink-0" />
+								<span className="min-w-0 break-words">{settingsError}</span>
+							</div>
+						)}
+					</output>
 
 					<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-4">
 						<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
@@ -1105,9 +1288,9 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						<ol className="text-sm text-tone-info space-y-1 list-decimal list-inside">
 							<li>Open your Google Sheets contact list</li>
 							<li>
-								Click "Share" and ensure it's accessible to anyone with the link
+								Click “Share” and ensure it’s accessible to anyone with the link
 							</li>
-							<li>Copy the full URL from your browser's address bar</li>
+							<li>Copy the full URL from your browser’s address bar</li>
 							<li>Paste it in the field above</li>
 						</ol>
 					</div>
@@ -1120,6 +1303,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 // ── Tab 3: Rejections ──
 
 function RejectionsTab({ logtoId }: { logtoId: string | null }) {
+	const formId = useId();
 	const isMobile = useIsMobile();
 	const { getAuthHeaders } = useAuth();
 	const rejections = useAuthedQuery(
@@ -1139,6 +1323,10 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 	const rejectionPositions = positions
 		.map((p) => p.value.trim())
 		.filter(Boolean);
+
+	useUnsavedChangesGuard(
+		Boolean(name || email || positions.some((p) => p.value) || customMessage),
+	);
 
 	const resetForm = () => {
 		setName("");
@@ -1165,17 +1353,6 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 				? [createPositionField()]
 				: current.filter((_, i) => i !== index),
 		);
-	};
-
-	const formatDate = (timestamp: number | undefined) => {
-		if (!timestamp) return "N/A";
-		return new Date(timestamp).toLocaleDateString("en-US", {
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -1221,7 +1398,10 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 			resetForm();
 		} catch (error: any) {
 			console.error("Error sending rejection:", error);
-			toast.error(error.message || "Failed to send rejection email");
+			toast.error(
+				error.message ||
+					"Failed to send rejection email. Check your connection and try again.",
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -1241,8 +1421,10 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>Full Name *</Label>
+							<Label htmlFor={`${formId}-reject-name`}>Full Name *</Label>
 							<Input
+								id={`${formId}-reject-name`}
+								name="name"
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
@@ -1252,8 +1434,11 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Email Address *</Label>
+							<Label htmlFor={`${formId}-reject-email`}>Email Address *</Label>
 							<Input
+								id={`${formId}-reject-email`}
+								name="email"
+								spellCheck={false}
 								type="email"
 								placeholder="john.doe@ucsd.edu"
 								value={email}
@@ -1267,11 +1452,19 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Position(s) Applied For (Optional)</Label>
+						<Label htmlFor={`${formId}-reject-position-0`}>
+							Position(s) Applied For (Optional)
+						</Label>
 						<div className="space-y-2">
 							{positions.map((position, index) => (
 								<div key={position.id} className="flex gap-2">
 									<Input
+										id={`${formId}-reject-position-${index}`}
+										name="positions"
+										aria-label={
+											index === 0 ? undefined : `Position ${index + 1}`
+										}
+										autoComplete="off"
 										placeholder="e.g., Webmaster, President"
 										value={position.value}
 										onChange={(e) => updatePosition(index, e.target.value)}
@@ -1284,7 +1477,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 										className="size-11 shrink-0 md:size-9"
 										onClick={() => removePosition(index)}
 										disabled={positions.length === 1}
-										aria-label="Remove position"
+										aria-label={`Remove position ${index + 1}`}
 									>
 										<Trash2 className="h-4 w-4" />
 									</Button>
@@ -1303,9 +1496,14 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="space-y-2">
-						<Label>Custom Message (Optional)</Label>
+						<Label htmlFor={`${formId}-reject-message`}>
+							Custom Message (Optional)
+						</Label>
 						<Textarea
-							placeholder="Add a brief personal note..."
+							id={`${formId}-reject-message`}
+							name="customMessage"
+							autoComplete="off"
+							placeholder="Add a brief personal note…"
 							value={customMessage}
 							onChange={(e) => setCustomMessage(e.target.value)}
 							rows={4}
@@ -1324,7 +1522,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 							) : (
 								<Send className="h-4 w-4 mr-2" />
 							)}
-							{isSubmitting ? "Sending..." : "Send Rejection"}
+							{isSubmitting ? "Sending…" : "Send Rejection"}
 						</Button>
 					</div>
 				</form>
@@ -1339,11 +1537,12 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 				</div>
 
 				{!rejections ? (
-					<div className="space-y-3">
+					<output className="block space-y-3" aria-busy="true">
+						<span className="sr-only">Loading…</span>
 						{[1, 2, 3].map((i) => (
 							<Skeleton key={i} className="h-16 w-full rounded-md" />
 						))}
-					</div>
+					</output>
 				) : rejections.length === 0 ? (
 					<div className="rounded-md border bg-card p-8 text-center">
 						<XCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
@@ -1356,6 +1555,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 						{rejections.map((rejection) => (
 							<MobileDataListItem
 								key={rejection._id}
+								className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]"
 								title={rejection.name}
 								subtitle={rejection.email}
 								meta={
@@ -1373,7 +1573,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 								}
 								trailing={
 									<span className="text-xs font-normal text-muted-foreground">
-										{formatDate(rejection.sentAt)}
+										{formatDateTimeDisplay(rejection.sentAt)}
 									</span>
 								}
 							/>
@@ -1393,7 +1593,10 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 							</TableHeader>
 							<TableBody>
 								{rejections.map((rejection) => (
-									<TableRow key={rejection._id}>
+									<TableRow
+										key={rejection._id}
+										className="[content-visibility:auto] [contain-intrinsic-size:auto_53px]"
+									>
 										<TableCell className="font-medium">
 											{rejection.name}
 										</TableCell>
@@ -1406,7 +1609,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 												: "N/A"}
 										</TableCell>
 										<TableCell className="text-muted-foreground">
-											{formatDate(rejection.sentAt)}
+											{formatDateTimeDisplay(rejection.sentAt)}
 										</TableCell>
 										<TableCell>
 											<Badge
@@ -1440,23 +1643,11 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 
 	const [resendingId, setResendingId] = useState<string | null>(null);
 
-	const formatDate = (timestamp: number | undefined) => {
-		if (!timestamp) return "N/A";
-		try {
-			return new Date(timestamp).toLocaleDateString("en-US", {
-				month: "short",
-				day: "numeric",
-				year: "numeric",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} catch {
-			return "Invalid date";
-		}
-	};
-
 	const isExpired = (inv: { expiresAt: number; status: string }) => {
-		return Date.now() > inv.expiresAt && inv.status === "pending";
+		return (
+			inv.status === "expired" ||
+			(inv.status === "pending" && Date.now() > inv.expiresAt)
+		);
 	};
 
 	const getStatusBadge = (status: string, expired: boolean) => {
@@ -1526,21 +1717,23 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				if (!resp.ok) {
 					console.error("Resend email failed");
 					toast.warning(
-						`Invitation updated but email failed to send to ${inv.name}`,
+						`Invitation updated but email failed to send to ${inv.name}. Try resending.`,
 					);
 					return;
 				}
 			} catch (emailErr) {
 				console.error("Resend email error:", emailErr);
 				toast.warning(
-					`Invitation updated but email failed to send to ${inv.name}`,
+					`Invitation updated but email failed to send to ${inv.name}. Try resending.`,
 				);
 				return;
 			}
 
 			toast.success(`Invitation resent to ${inv.name}`);
 		} catch {
-			toast.error(`Failed to resend invitation to ${inv.name}`);
+			toast.error(
+				`Failed to resend invitation to ${inv.name}. Check your connection and try again.`,
+			);
 		} finally {
 			setResendingId(null);
 		}
@@ -1574,7 +1767,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Total</p>
-								<p className="text-2xl font-bold">{stats.total}</p>
+								<p className="text-2xl font-bold tabular-nums">{stats.total}</p>
 							</div>
 							<Mail className="w-8 h-8 text-muted-foreground/40" />
 						</div>
@@ -1583,7 +1776,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Pending</p>
-								<p className="text-2xl font-bold text-tone-warning">
+								<p className="text-2xl font-bold tabular-nums text-tone-warning">
 									{stats.pending}
 								</p>
 							</div>
@@ -1594,7 +1787,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Accepted</p>
-								<p className="text-2xl font-bold text-tone-success">
+								<p className="text-2xl font-bold tabular-nums text-tone-success">
 									{stats.accepted}
 								</p>
 							</div>
@@ -1605,7 +1798,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Declined</p>
-								<p className="text-2xl font-bold text-tone-danger">
+								<p className="text-2xl font-bold tabular-nums text-tone-danger">
 									{stats.declined}
 								</p>
 							</div>
@@ -1617,11 +1810,12 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 
 			{/* Invitations */}
 			{!invitations ? (
-				<div className="space-y-3">
+				<output className="block space-y-3" aria-busy="true">
+					<span className="sr-only">Loading…</span>
 					{[1, 2, 3].map((i) => (
 						<Skeleton key={i} className="h-16 w-full rounded-md" />
 					))}
-				</div>
+				</output>
 			) : invitations.length === 0 ? (
 				<div className="rounded-md border bg-card p-8 text-center">
 					<Mail className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
@@ -1637,6 +1831,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						return (
 							<MobileDataListItem
 								key={inv._id}
+								className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]"
 								title={inv.name}
 								subtitle={inv.email}
 								status={
@@ -1658,11 +1853,11 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 										{" · "}
 										{expired
 											? "Expired"
-											: `Expires ${formatDate(inv.expiresAt)}`}
+											: `Expires ${formatDateTimeDisplay(inv.expiresAt)}`}
 									</span>
 								}
 								actions={
-									inv.status === "pending" ? (
+									inv.status === "pending" && !expired ? (
 										<Button
 											size="icon"
 											variant="ghost"
@@ -1702,7 +1897,10 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 							{invitations.map((inv) => {
 								const expired = isExpired(inv);
 								return (
-									<TableRow key={inv._id}>
+									<TableRow
+										key={inv._id}
+										className="[content-visibility:auto] [contain-intrinsic-size:auto_53px]"
+									>
 										<TableCell className="font-medium">{inv.name}</TableCell>
 										<TableCell className="text-muted-foreground">
 											{inv.email}
@@ -1718,7 +1916,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 										</TableCell>
 										<TableCell>{getStatusBadge(inv.status, expired)}</TableCell>
 										<TableCell className="text-muted-foreground">
-											{formatDate(inv.invitedAt)}
+											{formatDateTimeDisplay(inv.invitedAt)}
 										</TableCell>
 										<TableCell
 											className={
@@ -1727,13 +1925,15 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 													: "text-muted-foreground"
 											}
 										>
-											{formatDate(inv.expiresAt)}
+											{formatDateTimeDisplay(inv.expiresAt)}
 										</TableCell>
 										<TableCell>
-											{inv.status === "pending" && (
+											{inv.status === "pending" && !expired && (
 												<Button
 													size="sm"
 													variant="ghost"
+													aria-label={`Resend invitation to ${inv.name}`}
+													title="Resend Invitation"
 													onClick={() => handleResend(inv)}
 													disabled={resendingId === inv._id}
 												>

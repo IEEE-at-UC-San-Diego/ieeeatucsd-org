@@ -1,4 +1,5 @@
 import { SummaryStrip } from "@/components/dashboard/SummaryStrip";
+import { formatNumber } from "@/lib/formatters";
 import type { EventStats } from "../types";
 
 interface EventStatsCardsProps {
@@ -14,9 +15,9 @@ export function EventStatsCards({
 		<SummaryStrip
 			loading={loading}
 			items={[
-				{ label: "events", value: stats.totalEvents.toLocaleString() },
-				{ label: "published", value: stats.publishedEvents.toLocaleString() },
-				{ label: "attendees", value: stats.totalAttendees.toLocaleString() },
+				{ label: "events", value: formatNumber(stats.totalEvents) },
+				{ label: "published", value: formatNumber(stats.publishedEvents) },
+				{ label: "attendees", value: formatNumber(stats.totalAttendees) },
 			]}
 		/>
 	);

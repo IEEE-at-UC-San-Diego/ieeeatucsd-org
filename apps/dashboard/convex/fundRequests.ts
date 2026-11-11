@@ -6,6 +6,12 @@ import {
   requireOfficerAccess,
   requireAdminAccess,
 } from "./permissions";
+import {
+  assertFundRequestWithdrawable,
+  fundAuditAction,
+  spentFundRequestTotal,
+  transitionFundRequest,
+} from "./fundRequestTransition";
 
 // Fund Request Queries
 export const listMine = query({
@@ -247,24 +253,27 @@ export const update = mutation({
       throw new Error("You can only edit your own fund requests");
     }
 
+    const nextStatus = transitionFundRequest(
+      existingRequest.status,
+      "submitted",
+      "owner",
+    );
     const now = Date.now();
     const auditLog = {
       id: crypto.randomUUID(),
-      action: (existingRequest.status === "needs_info" ? "info_provided" : "updated") as
-        | "info_provided"
-        | "updated",
+      action: fundAuditAction(existingRequest.status, nextStatus),
       performedBy: userId,
       performedByName: user.name,
       timestamp: now,
       previousStatus: existingRequest.status,
-      newStatus: "submitted" as const,
+      newStatus: nextStatus,
     };
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
     await ctx.db.patch(id, {
       ...data,
-      status: "submitted" as const,
+      status: nextStatus,
       updatedAt: now,
       auditLogs: auditLogs as any,
       submittedAt: now,
@@ -300,22 +309,27 @@ export const updateStatus = mutation({
       throw new Error("Fund request not found");
     }
 
+    const nextStatus = transitionFundRequest(
+      existingRequest.status,
+      status,
+      "admin",
+    );
     const now = Date.now();
     const auditLog = {
       id: crypto.randomUUID(),
-      action: status === "needs_info" ? ("info_requested" as const) : status,
+      action: fundAuditAction(existingRequest.status, nextStatus),
       performedBy: adminId,
       performedByName: admin.name,
       timestamp: now,
       previousStatus: existingRequest.status,
-      newStatus: status,
+      newStatus: nextStatus,
       notes: reviewNotes || infoRequestNotes,
     };
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
     await ctx.db.patch(id, {
-      status,
+      status: nextStatus,
       updatedAt: now,
       reviewNotes,
       infoRequestNotes,
@@ -371,9 +385,7 @@ export const deleteRequest = mutation({
       throw new Error("You can only delete your own requests");
     }
 
-    if (request.status !== "draft") {
-      throw new Error("You can only delete draft requests");
-    }
+    assertFundRequestWithdrawable(request.status);
 
     await ctx.db.delete(args.id);
     return args.id;
@@ -602,9 +614,14 @@ export const getBudgetStats = query({
     const adjustmentsTotal = adjustments.reduce((sum, a) => sum + a.amount, 0);
 
     // Calculate used budget
-    const requestsUsed = deptRequests
-      .filter((r) => r.status === "approved" || r.status === "completed")
-      .reduce((sum, r) => sum + r.amount, 0);
+    const requestsUsed = spentFundRequestTotal(
+      deptRequests.map((request) => ({
+        status: request.status,
+        amount: request.amount,
+        department: args.department,
+      })),
+      args.department,
+    );
 
     const usedBudget = requestsUsed + adjustmentsTotal;
 

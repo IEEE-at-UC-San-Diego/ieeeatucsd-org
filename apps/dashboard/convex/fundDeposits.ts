@@ -5,6 +5,10 @@ import {
   requireOfficerAccess,
   requireAdminAccess,
 } from "./permissions";
+import {
+  assertFundDepositDeletable,
+  transitionFundDeposit,
+} from "./fundDepositTransition";
 
 // Queries
 export const listAll = query({
@@ -303,13 +307,10 @@ export const updateStatus = mutation({
       throw new Error("Deposit not found");
     }
 
-    // Prevent status changes if not pending
-    if (deposit.status !== "pending") {
-      throw new Error("Can only change status of pending deposits");
-    }
+    const next = transitionFundDeposit(deposit.status, args.status);
 
     // If rejecting, require a reason
-    if (args.status === "rejected" && !args.rejectionReason?.trim()) {
+    if (next.status === "rejected" && !args.rejectionReason?.trim()) {
       throw new Error("Rejection reason is required");
     }
 
@@ -325,13 +326,18 @@ export const updateStatus = mutation({
     };
 
     // Update deposit status
+    const now = Date.now();
     await ctx.db.patch(args.id, {
-      status: args.status,
-      verifiedBy: adminId,
-      verifiedByName: admin.name || admin.email,
-      verifiedAt: Date.now(),
+      status: next.status,
+      ...(next.setVerifiedAt
+        ? {
+            verifiedBy: adminId,
+            verifiedByName: admin.name || admin.email,
+            verifiedAt: now,
+          }
+        : {}),
       rejectionReason:
-        args.status === "rejected" ? args.rejectionReason : undefined,
+        next.status === "rejected" ? args.rejectionReason : undefined,
       auditLogs: [...(deposit.auditLogs || []), statusAuditLog],
     });
 
@@ -360,9 +366,7 @@ export const deleteRequest = mutation({
       throw new Error("Unauthorized");
     }
 
-    if (user.role !== "Administrator" && deposit.status !== "pending") {
-      throw new Error("Can only delete pending deposits");
-    }
+    assertFundDepositDeletable(deposit.status);
 
     // Delete the deposit
     await ctx.db.delete(args.id);

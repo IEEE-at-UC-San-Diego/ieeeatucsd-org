@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOfficerAccess } from "./permissions";
+import { countsAsSpentFundRequest } from "./fundRequestTransition";
 
 const ALL_TABLES = [
   "users",
@@ -340,10 +341,15 @@ export const getBudgetOverview = query({
 
     const configs = await ctx.db.query("budgetConfigs").take(100);
     const adjustments = await ctx.db.query("budgetAdjustments").take(500);
-    const fundRequests = await ctx.db
+    const approvedFundRequests = await ctx.db
       .query("fundRequests")
       .withIndex("by_status", (q) => q.eq("status", "approved"))
       .take(500);
+    const completedFundRequests = await ctx.db
+      .query("fundRequests")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .take(500);
+    const fundRequests = [...approvedFundRequests, ...completedFundRequests];
     const deposits = await ctx.db
       .query("fundDeposits")
       .withIndex("by_status", (q) => q.eq("status", "verified"))
@@ -359,7 +365,9 @@ export const getBudgetOverview = query({
         .filter((a) => a.department === dept)
         .reduce((sum, a) => sum + a.amount, 0);
       const deptApproved = fundRequests
-        .filter((f) => f.department === dept)
+        .filter(
+          (f) => f.department === dept && countsAsSpentFundRequest(f.status),
+        )
         .reduce((sum, f) => sum + f.amount, 0);
       const deptDeposits = deposits
         .filter((d: any) => d.source === dept || d.department === dept)

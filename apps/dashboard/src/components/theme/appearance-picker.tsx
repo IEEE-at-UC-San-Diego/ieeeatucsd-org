@@ -1,6 +1,6 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = [
@@ -36,11 +36,29 @@ export function AppearancePicker() {
 
 	const active = (mounted ? theme : "system") as ThemeValue;
 
+	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+		const step =
+			event.key === "ArrowRight" || event.key === "ArrowDown"
+				? 1
+				: event.key === "ArrowLeft" || event.key === "ArrowUp"
+					? -1
+					: 0;
+		if (!step) return;
+		event.preventDefault();
+		const index = OPTIONS.findIndex((option) => option.value === active);
+		const next = OPTIONS[(index + step + OPTIONS.length) % OPTIONS.length];
+		setTheme(next.value);
+		event.currentTarget
+			.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)
+			?.focus();
+	};
+
 	return (
 		<div
 			className="grid grid-cols-1 gap-2 sm:grid-cols-3"
 			role="radiogroup"
 			aria-label="Appearance"
+			onKeyDown={handleKeyDown}
 		>
 			{OPTIONS.map(({ value, label, description, icon: Icon }) => {
 				const selected = active === value;
@@ -50,6 +68,8 @@ export function AppearancePicker() {
 						type="button"
 						role="radio"
 						aria-checked={selected}
+						tabIndex={selected ? 0 : -1}
+						data-value={value}
 						onClick={() => setTheme(value)}
 						className={cn(
 							"motion-press group relative flex flex-col items-start gap-3 rounded-md border p-3 text-left transition-[background-color,border-color,box-shadow] duration-150 ease-[var(--ease-geist)]",

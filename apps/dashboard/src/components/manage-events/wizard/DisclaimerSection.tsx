@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Clock3, FileCheck2 } from "lucide-react";
+import { useId } from "react";
 
 const preparationItems = [
 	"Confirm your room booking before submitting.",
@@ -7,11 +8,13 @@ const preparationItems = [
 ];
 
 export function DisclaimerSection() {
+	const formId = useId();
+
 	return (
 		<div className="space-y-5 pb-2">
 			<div>
-				<h2 className="text-lg font-semibold tracking-[-0.015em]">
-					Before you begin
+				<h2 className="text-balance text-lg font-semibold tracking-[-0.015em]">
+					Before You Begin
 				</h2>
 				<p className="mt-1 text-sm leading-6 text-muted-foreground">
 					A complete request helps Operations review your event without delays.
@@ -32,13 +35,16 @@ export function DisclaimerSection() {
 
 			<section
 				className="overflow-hidden rounded-md border"
-				aria-labelledby="deadline-heading"
+				aria-labelledby={`${formId}-deadline-heading`}
 			>
 				<div className="flex items-start gap-3 border-b bg-ds-amber-100/60 px-4 py-3">
 					<Clock3 className="mt-0.5 size-4 shrink-0 text-tone-warning" />
 					<div>
-						<h3 id="deadline-heading" className="font-medium text-tone-warning">
-							Submission deadlines
+						<h3
+							id={`${formId}-deadline-heading`}
+							className="text-balance font-medium text-tone-warning"
+						>
+							Submission Deadlines
 						</h3>
 						<p className="text-xs leading-5 text-muted-foreground">
 							Use the longest deadline that applies and confirm current dates in
