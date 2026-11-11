@@ -30,6 +30,7 @@ import type * as googleGroupAssignments from "../googleGroupAssignments.js";
 import type * as internalEvents from "../internalEvents.js";
 import type * as links from "../links.js";
 import type * as logs from "../logs.js";
+import type * as mailboxRelease from "../mailboxRelease.js";
 import type * as migrations_clearLegacyResumes from "../migrations/clearLegacyResumes.js";
 import type * as migrations_lowercaseIeeeEmails from "../migrations/lowercaseIeeeEmails.js";
 import type * as notifications from "../notifications.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   internalEvents: typeof internalEvents;
   links: typeof links;
   logs: typeof logs;
+  mailboxRelease: typeof mailboxRelease;
   "migrations/clearLegacyResumes": typeof migrations_clearLegacyResumes;
   "migrations/lowercaseIeeeEmails": typeof migrations_lowercaseIeeeEmails;
   notifications: typeof notifications;

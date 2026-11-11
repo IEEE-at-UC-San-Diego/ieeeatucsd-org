@@ -83,16 +83,19 @@ describe("POST /api/create-ieee-email", () => {
 		migrationGateMock.mockResolvedValue({ done: false, collision: false });
 		requireApiAuthMock.mockResolvedValue({
 			logtoId: "officer",
-			body: { username: "president", password: "new-secret" },
+			body: { username: "ada", password: "new-secret" },
 			user: { role: "General Officer", email: "ada@ucsd.edu" },
 		});
 
 		const { handle } = await import("./create-ieee-email");
-		const response = await handle({ request: post("president") });
+		const response = await handle({ request: post("ada") });
 
 		expect(response.status).toBe(200);
 		expect(migrationGateMock).not.toHaveBeenCalled();
 		expect(createIEEEEmailMock).toHaveBeenCalledOnce();
+		expect(steps[0]).toBe("users:setIEEEEmail");
+		expect(bindings.get("officer")).toBe("ada@ieeeatucsd.org");
+		expect(steps).not.toContain("mailboxRelease:releaseIEEEEmail");
 	});
 
 	it("leaves no mailbox binding when provisioning fails", async () => {
@@ -111,8 +114,33 @@ describe("POST /api/create-ieee-email", () => {
 
 		expect(response.status).toBe(500);
 		expect(bindings.size).toBe(0);
-		expect(steps[0]).toBe("users:setIEEEEmail");
-		expect(steps).toContain("provision");
-		expect(steps.at(-1)).toBe("users:releaseIEEEEmail");
+		expect(steps).toEqual([
+			"users:setIEEEEmail",
+			"provision",
+			"mailboxRelease:releaseIEEEEmail",
+		]);
+	});
+
+	it("keeps a mailbox the account already holds when provisioning fails", async () => {
+		createIEEEEmailMock.mockImplementation(async () => {
+			steps.push("provision");
+			throw new Error("Email address ada@ieeeatucsd.org already exists.");
+		});
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "ada",
+			body: { username: "ada", password: "new-secret" },
+			user: {
+				role: "Member",
+				email: "ada@ucsd.edu",
+				ieeeEmail: "ADA@ieeeatucsd.org",
+			},
+		});
+
+		const { handle } = await import("./create-ieee-email");
+		const response = await handle({ request: post("ada") });
+
+		expect(response.status).toBe(500);
+		expect(bindings.get("ada")).toBe("ada@ieeeatucsd.org");
+		expect(steps).toEqual(["users:setIEEEEmail", "provision"]);
 	});
 });

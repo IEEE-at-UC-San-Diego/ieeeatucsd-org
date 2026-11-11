@@ -7,9 +7,45 @@ import { mailboxMigrationGate } from "@/server/mailbox-binding";
 import { createIEEEEmail } from "@/server/mxroute";
 import type { UserRole } from "@/types/roles";
 import {
+	canonicalMailbox,
 	isMailboxOfficer,
 	nonOfficerMailboxAccess,
 } from "../../../convex/mailboxClaim";
+
+function convexUrl() {
+	return (
+		process.env.CONVEX_URL ||
+		process.env.VITE_CONVEX_URL ||
+		(
+			import.meta as ImportMeta & {
+				env?: Record<string, string | undefined>;
+			}
+		).env?.VITE_CONVEX_URL
+	);
+}
+
+async function writeMailbox(args: {
+	name: "users:setIEEEEmail" | "mailboxRelease:releaseIEEEEmail";
+	logtoId: string;
+	role: UserRole | undefined;
+	ieeeEmail: string;
+}) {
+	const url = convexUrl();
+	if (!url) {
+		throw new Error("Missing required env: VITE_CONVEX_URL or CONVEX_URL");
+	}
+	const client = new ConvexHttpClient(url);
+	const fn = args.name as unknown as FunctionReference<"mutation">;
+	const { token } = createConvexSessionToken({
+		sub: args.logtoId,
+		role: args.role,
+	});
+	await client.mutation(fn, {
+		logtoId: args.logtoId,
+		authToken: token,
+		ieeeEmail: args.ieeeEmail,
+	});
+}
 
 export async function handle({ request }: { request: Request }) {
 	try {
@@ -31,7 +67,19 @@ export async function handle({ request }: { request: Request }) {
 			);
 		}
 
-		const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, "");
+		const normalizedUsername = username
+			.trim()
+			.toLowerCase()
+			.replace(/[^a-z0-9]/g, "");
+		const domain = (process.env.MXROUTE_EMAIL_DOMAIN || "ieeeatucsd.org")
+			.trim()
+			.toLowerCase();
+		const claimed = `${normalizedUsername}@${domain}`;
+		const previousValue =
+			typeof user.ieeeEmail === "string"
+				? canonicalMailbox(user.ieeeEmail)
+				: "";
+		const previous = previousValue || undefined;
 		const isPrivileged = isMailboxOfficer(String(user.role || ""));
 		const requesterEmail = String(user.email || "");
 		const requesterUsername = requesterEmail
@@ -54,13 +102,10 @@ export async function handle({ request }: { request: Request }) {
 		}
 
 		if (!isPrivileged) {
-			const domain = (
-				process.env.MXROUTE_EMAIL_DOMAIN || "ieeeatucsd.org"
-			).toLowerCase();
 			const gate = await mailboxMigrationGate({
 				logtoId,
 				role: user.role as UserRole | undefined,
-				ieeeEmail: `${normalizedUsername}@${domain}`,
+				ieeeEmail: claimed,
 			});
 			if (
 				nonOfficerMailboxAccess({
@@ -78,47 +123,50 @@ export async function handle({ request }: { request: Request }) {
 			}
 		}
 
-		const result = await createIEEEEmail({ username, password });
-
-		// Update Convex user record with the new IEEE email
-		if (result.success && result.ieeeEmail) {
-			try {
-				const convexUrl =
-					process.env.CONVEX_URL ||
-					process.env.VITE_CONVEX_URL ||
-					(
-						import.meta as ImportMeta & {
-							env?: Record<string, string | undefined>;
-						}
-					).env?.VITE_CONVEX_URL;
-
-				if (convexUrl) {
-					const client = new ConvexHttpClient(convexUrl);
-					const fn =
-						"users:setIEEEEmail" as unknown as FunctionReference<"mutation">;
-					const { token } = createConvexSessionToken({
-						sub: logtoId,
-						role: user.role as UserRole | undefined,
-					});
-					await client.mutation(fn, {
-						logtoId,
-						authToken: token,
-						ieeeEmail: result.ieeeEmail,
-					});
-				}
-			} catch (convexError) {
-				console.error(
-					"Failed to update Convex user with IEEE email:",
-					convexError,
-				);
-				// Don't fail the request — the MXRoute account was created successfully
-			}
-		}
-
-		return new Response(JSON.stringify(result), {
-			status: 200,
-			headers: { "Content-Type": "application/json" },
+		const role = user.role as UserRole | undefined;
+		await writeMailbox({
+			name: "users:setIEEEEmail",
+			logtoId,
+			role,
+			ieeeEmail: claimed,
 		});
+
+		try {
+			const result = await createIEEEEmail({ username, password });
+			return new Response(JSON.stringify(result), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		} catch (provisionError) {
+			if (previous !== claimed) {
+				try {
+					if (previous) {
+						await writeMailbox({
+							name: "users:setIEEEEmail",
+							logtoId,
+							role,
+							ieeeEmail: previous,
+						});
+					} else {
+						await writeMailbox({
+							name: "mailboxRelease:releaseIEEEEmail",
+							logtoId,
+							role,
+							ieeeEmail: claimed,
+						});
+					}
+				} catch (rollbackError) {
+					const reason =
+						rollbackError instanceof Error
+							? rollbackError.message
+							: "unknown error";
+					throw new Error(
+						`Mailbox provisioning failed and the claim could not be rolled back: ${reason}`,
+					);
+				}
+			}
+			throw provisionError;
+		}
 	} catch (error) {
 		return new Response(
 			JSON.stringify({
