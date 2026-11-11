@@ -4,9 +4,10 @@ const requireApiAuthMock = vi.fn();
 const createIEEEEmailMock = vi.fn();
 const migrationGateMock = vi.fn();
 const steps: string[] = [];
-const bindings = new Map<string, string>();
+const bindings = new Map<string, { email: string; claimToken: string }>();
 let claimCount = 0;
 let onSecondClaim: (() => void) | undefined;
+const releasedClaims: string[] = [];
 
 vi.mock("@/server/auth", () => ({
 	requireApiAuth: (...args: unknown[]) => requireApiAuthMock(...args),
@@ -28,20 +29,32 @@ vi.mock("convex/browser", () => ({
 	ConvexHttpClient: class {
 		async mutation(
 			fn: unknown,
-			args: { logtoId?: string; ieeeEmail?: string },
+			args: { logtoId?: string; ieeeEmail?: string; claimToken?: string },
 		) {
 			const name = String(fn);
 			steps.push(name);
 			if (name.endsWith("setIEEEEmail") && args.logtoId && args.ieeeEmail) {
 				claimCount += 1;
-				bindings.set(args.logtoId, args.ieeeEmail);
+				const claimToken = `claim-${claimCount}`;
+				bindings.set(args.logtoId, {
+					email: args.ieeeEmail,
+					claimToken,
+				});
 				if (claimCount === 2) onSecondClaim?.();
+				return claimToken;
 			}
 			if (name.endsWith("releaseIEEEEmail") && args.logtoId) {
-				if (bindings.get(args.logtoId) === args.ieeeEmail) {
+				releasedClaims.push(args.claimToken ?? "");
+				const row = bindings.get(args.logtoId);
+				if (
+					row &&
+					row.email === args.ieeeEmail &&
+					row.claimToken === args.claimToken
+				) {
 					bindings.delete(args.logtoId);
 				}
 			}
+			return null;
 		}
 	},
 }));
@@ -61,6 +74,7 @@ describe("POST /api/create-ieee-email", () => {
 		bindings.clear();
 		claimCount = 0;
 		onSecondClaim = undefined;
+		releasedClaims.length = 0;
 		vi.stubEnv("MXROUTE_EMAIL_DOMAIN", "ieeeatucsd.org");
 		vi.stubEnv("CONVEX_URL", "http://127.0.0.1:3210");
 		createIEEEEmailMock.mockImplementation(async () => {
@@ -100,7 +114,7 @@ describe("POST /api/create-ieee-email", () => {
 		expect(migrationGateMock).not.toHaveBeenCalled();
 		expect(createIEEEEmailMock).toHaveBeenCalledOnce();
 		expect(steps[0]).toBe("users:setIEEEEmail");
-		expect(bindings.get("officer")).toBe("ada@ieeeatucsd.org");
+		expect(bindings.get("officer")?.email).toBe("ada@ieeeatucsd.org");
 		expect(steps).not.toContain("mailboxRelease:releaseIEEEEmail");
 	});
 
@@ -127,7 +141,7 @@ describe("POST /api/create-ieee-email", () => {
 		]);
 	});
 
-	it("keeps a mailbox the account already holds when provisioning fails", async () => {
+	it("treats an existing MXRoute mailbox for this owner as created", async () => {
 		createIEEEEmailMock.mockImplementation(async () => {
 			steps.push("provision");
 			throw new Error("Email address ada@ieeeatucsd.org already exists.");
@@ -145,8 +159,8 @@ describe("POST /api/create-ieee-email", () => {
 		const { handle } = await import("./create-ieee-email");
 		const response = await handle({ request: post("ada") });
 
-		expect(response.status).toBe(500);
-		expect(bindings.get("ada")).toBe("ada@ieeeatucsd.org");
+		expect(response.status).toBe(200);
+		expect(bindings.get("ada")?.email).toBe("ada@ieeeatucsd.org");
 		expect(steps).toEqual(["users:setIEEEEmail", "provision"]);
 	});
 
@@ -184,6 +198,8 @@ describe("POST /api/create-ieee-email", () => {
 
 		expect(failed.status).toBe(500);
 		expect(created.status).toBe(200);
-		expect(bindings.get("ada")).toBe("ada@ieeeatucsd.org");
+		expect(releasedClaims).toEqual(["claim-1"]);
+		expect(bindings.get("ada")?.email).toBe("ada@ieeeatucsd.org");
+		expect(bindings.get("ada")?.claimToken).toBe("claim-2");
 	});
 });

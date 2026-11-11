@@ -189,6 +189,7 @@ export default defineSchema({
     signInMethod: v.optional(v.string()),
     hasIEEEEmail: v.optional(v.boolean()),
     ieeeEmail: v.optional(v.string()),
+    ieeeEmailClaimToken: v.optional(v.string()),
     ieeeEmailCreatedAt: v.optional(v.number()),
     sponsorTier: v.optional(sponsorTier),
     sponsorOrganization: v.optional(v.string()),

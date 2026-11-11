@@ -8,16 +8,21 @@ export const releaseIEEEEmail = mutation({
     logtoId: v.string(),
     authToken: v.string(),
     ieeeEmail: v.string(),
+    claimToken: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const mailbox = canonicalMailbox(args.ieeeEmail);
     if (!mailbox || canonicalMailbox(user.ieeeEmail ?? "") !== mailbox) {
-      return user._id;
+      return null;
+    }
+    if (user.ieeeEmailClaimToken !== args.claimToken) {
+      return null;
     }
     await ctx.db.patch(user._id, {
       hasIEEEEmail: false,
       ieeeEmail: undefined,
+      ieeeEmailClaimToken: undefined,
       ieeeEmailCreatedAt: undefined,
       lastUpdated: Date.now(),
     });

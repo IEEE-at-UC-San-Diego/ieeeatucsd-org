@@ -24,11 +24,20 @@ function convexUrl() {
 	);
 }
 
+function mailboxAlreadyProvisioned(error: unknown, claimed: string) {
+	return (
+		error instanceof Error &&
+		error.message.includes("already exists") &&
+		error.message.includes(claimed)
+	);
+}
+
 async function writeMailbox(args: {
 	name: "users:setIEEEEmail" | "mailboxRelease:releaseIEEEEmail";
 	logtoId: string;
 	role: UserRole | undefined;
 	ieeeEmail: string;
+	claimToken?: string;
 }) {
 	const url = convexUrl();
 	if (!url) {
@@ -40,10 +49,11 @@ async function writeMailbox(args: {
 		sub: args.logtoId,
 		role: args.role,
 	});
-	await client.mutation(fn, {
+	return await client.mutation(fn, {
 		logtoId: args.logtoId,
 		authToken: token,
 		ieeeEmail: args.ieeeEmail,
+		...(args.claimToken ? { claimToken: args.claimToken } : {}),
 	});
 }
 
@@ -124,12 +134,15 @@ export async function handle({ request }: { request: Request }) {
 		}
 
 		const role = user.role as UserRole | undefined;
-		await writeMailbox({
+		const claimedToken = await writeMailbox({
 			name: "users:setIEEEEmail",
 			logtoId,
 			role,
 			ieeeEmail: claimed,
 		});
+		if (typeof claimedToken !== "string" || claimedToken.length === 0) {
+			throw new Error("Mailbox claim did not return a token");
+		}
 
 		try {
 			const result = await createIEEEEmail({ username, password });
@@ -138,6 +151,12 @@ export async function handle({ request }: { request: Request }) {
 				headers: { "Content-Type": "application/json" },
 			});
 		} catch (provisionError) {
+			if (mailboxAlreadyProvisioned(provisionError, claimed)) {
+				return new Response(
+					JSON.stringify({ success: true, ieeeEmail: claimed }),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				);
+			}
 			if (previous !== claimed) {
 				try {
 					if (previous) {
@@ -153,6 +172,7 @@ export async function handle({ request }: { request: Request }) {
 							logtoId,
 							role,
 							ieeeEmail: claimed,
+							claimToken: claimedToken,
 						});
 					}
 				} catch (rollbackError) {

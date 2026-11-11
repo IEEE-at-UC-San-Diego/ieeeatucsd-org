@@ -333,13 +333,15 @@ export const setIEEEEmail = mutation({
       }
     }
 
+    const claimToken = crypto.randomUUID();
     await ctx.db.patch(user._id, {
       hasIEEEEmail: true,
       ieeeEmail: mailbox,
+      ieeeEmailClaimToken: claimToken,
       ieeeEmailCreatedAt: Date.now(),
       lastUpdated: Date.now(),
     });
-    return user._id;
+    return claimToken;
   },
 });
 
