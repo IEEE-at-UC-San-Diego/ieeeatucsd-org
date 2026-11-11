@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { syncRecordStorage } from "./storageReferences";
+import { deleteTracked, insertTracked, patchTracked } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -175,7 +175,7 @@ export const create = mutation({
       },
     ];
 
-    const requestId = await ctx.db.insert("fundRequests", {
+    const requestId = await insertTracked(ctx, "fundRequests", {
       ...data,
       status: "submitted" as const,
       requestedBy: userId,
@@ -187,7 +187,6 @@ export const create = mutation({
       updatedAt: now,
       auditLogs,
     });
-    await syncRecordStorage(ctx, "fundRequests", requestId);
     return requestId;
   },
 });
@@ -273,14 +272,13 @@ export const update = mutation({
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       ...data,
       status: nextStatus,
       updatedAt: now,
       auditLogs: auditLogs as any,
       submittedAt: now,
     });
-    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -331,14 +329,13 @@ export const updateStatus = mutation({
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       status: nextStatus,
       updatedAt: now,
       reviewNotes,
       infoRequestNotes,
       auditLogs: auditLogs as any,
     });
-    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -361,11 +358,10 @@ export const updateFundSource = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       fundSource,
       updatedAt: now,
     });
-    await syncRecordStorage(ctx, "fundRequests", id);
 
     return id;
   },
@@ -392,8 +388,7 @@ export const deleteRequest = mutation({
 
     assertFundRequestWithdrawable(request.status);
 
-    await ctx.db.delete(args.id);
-    await syncRecordStorage(ctx, "fundRequests", args.id);
+    await deleteTracked(ctx, "fundRequests", args.id);
     return args.id;
   },
 });

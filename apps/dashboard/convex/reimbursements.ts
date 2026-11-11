@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { syncRecordStorage } from "./storageReferences";
+import { deleteTracked, insertTracked, patchTracked } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -90,7 +90,7 @@ export const create = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
     const { logtoId, authToken, ...data } = args;
-    const reimbursementId = await ctx.db.insert("reimbursements", {
+    const reimbursementId = await insertTracked(ctx, "reimbursements", {
       ...data,
       status: "submitted",
       submittedBy: userId,
@@ -102,7 +102,6 @@ export const create = mutation({
         },
       ],
     });
-    await syncRecordStorage(ctx, "reimbursements", reimbursementId);
     return reimbursementId;
   },
 });
@@ -153,12 +152,11 @@ export const updateStatus = mutation({
       });
     }
 
-    await ctx.db.patch(args.id, {
+    await patchTracked(ctx, "reimbursements", args.id, {
       status: nextStatus,
       auditLogs,
       ...(args.status === "declined" && reason ? { auditNotes } : {}),
     });
-    await syncRecordStorage(ctx, "reimbursements", args.id);
     return args.id;
   },
 });
@@ -190,12 +188,11 @@ export const updatePaymentDetails = mutation({
       timestamp: Date.now(),
     });
 
-    await ctx.db.patch(args.id, {
+    await patchTracked(ctx, "reimbursements", args.id, {
       status: "paid",
       paymentDetails: args.paymentDetails,
       auditLogs,
     });
-    await syncRecordStorage(ctx, "reimbursements", args.id);
     return args.id;
   },
 });
@@ -211,8 +208,7 @@ export const remove = mutation({
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
     assertReimbursementDeletable(reimbursement.status);
-    await ctx.db.delete(args.id);
-    await syncRecordStorage(ctx, "reimbursements", args.id);
+    await deleteTracked(ctx, "reimbursements", args.id);
     return args.id;
   },
 });

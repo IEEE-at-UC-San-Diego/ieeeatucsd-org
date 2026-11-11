@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { syncRecordStorage } from "./storageReferences";
+import { deleteTracked, insertTracked, patchTracked } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -171,7 +171,7 @@ export const completeOnboarding = mutation({
     }
 
     const policyAcceptance = serverPolicyAcceptance(now);
-    await ctx.db.patch(user._id, {
+    await patchTracked(ctx, "users", user._id, {
       pid: args.pid,
       major: args.major,
       graduationYear: args.graduationYear,
@@ -182,7 +182,6 @@ export const completeOnboarding = mutation({
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
       ...(resume && { resume }),
     });
-    await syncRecordStorage(ctx, "users", user._id);
 
     // Create/update public profile
     const existingProfile = await ctx.db
@@ -238,8 +237,7 @@ export const updateProfile = mutation({
       lastUpdated: Date.now(),
     };
 
-    await ctx.db.patch(user._id, updateData);
-    await syncRecordStorage(ctx, "users", user._id);
+    await patchTracked(ctx, "users", user._id, updateData);
 
     // Sync public profile if requested and name/major/graduationYear changed
     if (syncPublicProfile) {
@@ -288,13 +286,12 @@ export const setIEEEEmail = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    await ctx.db.patch(user._id, {
+    await patchTracked(ctx, "users", user._id, {
       hasIEEEEmail: true,
       ieeeEmail: args.ieeeEmail,
       ieeeEmailCreatedAt: Date.now(),
       lastUpdated: Date.now(),
     });
-    await syncRecordStorage(ctx, "users", user._id);
     return user._id;
   },
 });
@@ -310,8 +307,7 @@ export const acceptPolicyUpdate = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const now = Date.now();
 
-    await ctx.db.patch(user._id, serverPolicyAcceptance(now));
-    await syncRecordStorage(ctx, "users", user._id);
+    await patchTracked(ctx, "users", user._id, serverPolicyAcceptance(now));
 
     return user._id;
   },
@@ -345,8 +341,7 @@ export const setResume = mutation({
       await deleteResumeStorage(ctx, user.resume.storageId);
     }
 
-    await ctx.db.patch(user._id, { resume, lastUpdated: Date.now() });
-    await syncRecordStorage(ctx, "users", user._id);
+    await patchTracked(ctx, "users", user._id, { resume, lastUpdated: Date.now() });
     return user._id;
   },
 });
@@ -360,8 +355,7 @@ export const deleteResume = mutation({
       await deleteResumeStorage(ctx, user.resume.storageId);
     }
 
-    await ctx.db.patch(user._id, { resume: undefined, lastUpdated: Date.now() });
-    await syncRecordStorage(ctx, "users", user._id);
+    await patchTracked(ctx, "users", user._id, { resume: undefined, lastUpdated: Date.now() });
     return user._id;
   },
 });
@@ -441,14 +435,13 @@ export const updateRole = mutation({
       target: targetUser,
     });
 
-    await ctx.db.patch(args.userId, {
+    await patchTracked(ctx, "users", args.userId, {
       role: args.role,
       ...(args.position !== undefined && { position: args.position }),
       ...(args.team !== undefined && { team: args.team }),
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });
-    await syncRecordStorage(ctx, "users", args.userId);
 
     return args.userId;
   },
@@ -482,7 +475,7 @@ export const createPlaceholder = mutation({
       return existingUser._id;
     }
 
-    const userId = await ctx.db.insert("users", {
+    const userId = await insertTracked(ctx, "users", {
       email: normalizedEmail,
       emailVisibility: true,
       verified: true,
@@ -503,7 +496,6 @@ export const createPlaceholder = mutation({
       eventsAttended: 0,
       points: 0,
     });
-    await syncRecordStorage(ctx, "users", userId);
     return userId;
   },
 });
@@ -525,12 +517,11 @@ export const updateStatus = mutation({
     if (!existing) throw new Error("User not found");
     const nextStatus = transitionAccountStatus(existing.status, args.status);
 
-    await ctx.db.patch(args.userId, {
+    await patchTracked(ctx, "users", args.userId, {
       status: nextStatus,
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });
-    await syncRecordStorage(ctx, "users", args.userId);
 
     return args.userId;
   },
@@ -559,8 +550,7 @@ export const updateProfileForAdmin = mutation({
       lastUpdatedBy: admin.logtoId,
     };
 
-    await ctx.db.patch(args.userId, updateData);
-    await syncRecordStorage(ctx, "users", args.userId);
+    await patchTracked(ctx, "users", args.userId, updateData);
 
     const existingProfile = await ctx.db
       .query("publicProfiles")
@@ -634,8 +624,7 @@ export const deleteUser = mutation({
     }
 
     // Delete the user
-    await ctx.db.delete(args.userId);
-    await syncRecordStorage(ctx, "users", args.userId);
+    await deleteTracked(ctx, "users", args.userId);
 
     return { success: true, deletedUserId: args.userId };
   },
