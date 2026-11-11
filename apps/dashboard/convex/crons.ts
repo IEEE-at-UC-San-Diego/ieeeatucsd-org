@@ -9,4 +9,10 @@ crons.interval(
   internal.googleCalendar.scheduledSync,
 );
 
+crons.interval(
+  "index storage references",
+  { minutes: 1 },
+  internal.storageReferenceBackfill.backfillStorageReferences,
+);
+
 export default crons;

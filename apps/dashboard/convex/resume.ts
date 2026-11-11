@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import {
+  otherRecordHoldsStorageId,
+  storageReferenceIndexReady,
+} from "./storageReferences";
 
 export const resumeObject = v.object({
   storageId: v.id("_storage"),
@@ -12,71 +16,16 @@ export const resumeObject = v.object({
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPE = "application/pdf";
 
-const STORAGE_TABLES = [
-  "users",
-  "events",
-  "reimbursements",
-  "fundDeposits",
-  "fundRequests",
-] as const;
-
-export type StorageRecord = {
-  recordId: string;
-  body: unknown;
-};
-
-function stringHoldsStorageId(value: string, storageId: string): boolean {
-  if (value === storageId) return true;
-  const path = value.split(/[?#]/, 1)[0] ?? value;
-  return path.split("/").some((segment) => segment === storageId);
-}
-
-function recordHoldsStorageId(value: unknown, storageId: string): boolean {
-  if (typeof value === "string") return stringHoldsStorageId(value, storageId);
-  if (Array.isArray(value)) {
-    return value.some((item) => recordHoldsStorageId(item, storageId));
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.values(value).some((item) =>
-      recordHoldsStorageId(item, storageId),
-    );
-  }
-  return false;
-}
-
-export function storageIdTakenBySomeoneElse(
-  storageId: string,
-  callerUserId: string,
-  records: readonly StorageRecord[],
-): boolean {
-  return records.some(
-    (record) =>
-      record.recordId !== callerUserId &&
-      recordHoldsStorageId(record.body, storageId),
-  );
-}
-
-async function loadStorageRecords(ctx: MutationCtx): Promise<StorageRecord[]> {
-  const groups = await Promise.all(
-    STORAGE_TABLES.map(async (table) => {
-      const docs = await ctx.db.query(table).collect();
-      return docs.map((doc) => ({
-        recordId: String(doc._id),
-        body: doc,
-      }));
-    }),
-  );
-  return groups.flat();
-}
-
 export async function validateAndBuildResume(
   ctx: MutationCtx,
   storageId: Id<"_storage">,
   fileName: string,
   callerUserId: Id<"users">,
 ) {
-  const records = await loadStorageRecords(ctx);
-  if (storageIdTakenBySomeoneElse(storageId, callerUserId, records)) {
+  if (!(await storageReferenceIndexReady(ctx))) {
+    throw new Error("File ownership index is not ready");
+  }
+  if (await otherRecordHoldsStorageId(ctx, storageId, callerUserId)) {
     throw new Error("Unauthorized");
   }
 

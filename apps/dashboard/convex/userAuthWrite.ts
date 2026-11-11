@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import { wrapMutationCtx } from "./storageReferences";
 import { UserAuth } from "./userAuth";
 
 export const applyVerifiedAuthUpsert = internalMutation({
@@ -11,6 +12,6 @@ export const applyVerifiedAuthUpsert = internalMutation({
     signInMethod: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await UserAuth.applyVerifiedAuthUpsert(ctx, args);
+    return await UserAuth.applyVerifiedAuthUpsert(wrapMutationCtx(ctx), args);
   },
 });
