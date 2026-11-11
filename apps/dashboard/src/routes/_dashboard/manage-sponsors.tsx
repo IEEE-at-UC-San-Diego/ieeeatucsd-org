@@ -4,6 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	PageHeader,
@@ -12,7 +14,6 @@ import { SponsorModal } from "@/components/dashboard/manage-sponsors/SponsorModa
 import { SponsorStatsCards } from "@/components/dashboard/manage-sponsors/SponsorStatsCards";
 import { SponsorTable } from "@/components/dashboard/manage-sponsors/SponsorTable";
 import type {
-	SortConfig,
 	SponsorDomain,
 	SponsorFormData,
 } from "@/components/dashboard/manage-sponsors/types";
@@ -30,7 +31,18 @@ import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
+const searchSchema = z.object({
+	q: z.string().catch(""),
+	sort: z
+		.enum(["organizationName", "domain", "sponsorTier"])
+		.catch("organizationName"),
+	dir: z.enum(["asc", "desc"]).catch("asc"),
+});
+
+type SponsorSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/manage-sponsors")({
+	validateSearch: searchSchema,
 	loader: (ctx) => prefetchAuthedQuery(api.sponsorDomains.list, undefined, ctx),
 	component: ManageSponsorsPage,
 });
@@ -41,11 +53,12 @@ function ManageSponsorsPage() {
 	const [editingSponsor, setEditingSponsor] = useState<SponsorDomain | null>(
 		null,
 	);
-	const [searchTerm, setSearchTerm] = useState("");
-	const [sortConfig, setSortConfig] = useState<SortConfig>({
-		field: "organizationName",
-		direction: "asc",
-	});
+	const { q: searchTerm, sort, dir } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearch = (patch: Partial<SponsorSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const sortConfig = { field: sort, direction: dir };
+	const confirm = useConfirm();
 
 	const domains = useAuthedQuery(
 		api.sponsorDomains.list,
@@ -61,9 +74,13 @@ function ManageSponsorsPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<output
+				aria-live="polite"
+				className="flex items-center justify-center min-h-[60vh]"
+			>
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
@@ -74,7 +91,8 @@ function ManageSponsorsPage() {
 					<DialogHeader>
 						<DialogTitle>Access Denied</DialogTitle>
 						<DialogDescription>
-							You don't have permission to manage sponsors.
+							You don’t have permission to manage sponsors. Ask an administrator
+							for access.
 						</DialogDescription>
 					</DialogHeader>
 				</DialogContent>
@@ -113,7 +131,10 @@ function ManageSponsorsPage() {
 			setShowModal(false);
 			setEditingSponsor(null);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to save sponsor domain");
+			toast.error(
+				error.message ||
+					"Failed to save sponsor domain. Check your connection and try again.",
+			);
 		}
 	};
 
@@ -121,16 +142,24 @@ function ManageSponsorsPage() {
 		if (!logtoId) return;
 
 		if (
-			window.confirm(
-				"Are you sure you want to delete this sponsor domain? Users with this domain will no longer be auto-assigned as sponsors.",
-			)
-		) {
-			try {
-				await removeDomain({ logtoId, id: sponsorId });
-				toast.success("Sponsor domain deleted successfully");
-			} catch (error: any) {
-				toast.error(error.message || "Failed to delete sponsor domain");
-			}
+			!(await confirm({
+				title: "Delete Sponsor Domain?",
+				description:
+					"Users with this domain will no longer be auto-assigned as sponsors. This can’t be undone.",
+				confirmLabel: "Delete Domain",
+				destructive: true,
+			}))
+		)
+			return;
+
+		try {
+			await removeDomain({ logtoId, id: sponsorId });
+			toast.success("Sponsor domain deleted successfully");
+		} catch (error: any) {
+			toast.error(
+				error.message ||
+					"Failed to delete sponsor domain. Check your connection and try again.",
+			);
 		}
 	};
 
@@ -166,11 +195,12 @@ function ManageSponsorsPage() {
 	};
 
 	const handleSort = (field: string) => {
-		setSortConfig((prev) => ({
-			field,
-			direction:
-				prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-		}));
+		const parsed = searchSchema.shape.sort.safeParse(field);
+		if (!parsed.success) return;
+		setSearch({
+			sort: parsed.data,
+			dir: sort === parsed.data && dir === "asc" ? "desc" : "asc",
+		});
 	};
 
 	const visibleDomains = filteredAndSortedDomains();
@@ -208,9 +238,13 @@ function ManageSponsorsPage() {
 					<div className="relative w-full sm:max-w-sm">
 						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
-							placeholder="Search organization, domain or tier"
+							type="search"
+							name="q"
+							aria-label="Search sponsor domains"
+							autoComplete="off"
+							placeholder="Search organization, domain, or tier…"
 							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
+							onChange={(e) => setSearch({ q: e.target.value })}
 							className="pl-9"
 						/>
 					</div>

@@ -38,7 +38,6 @@ export function BudgetTrackingCard({
 					? "hover:bg-muted/40"
 					: "cursor-not-allowed bg-muted/40 opacity-75",
 			)}
-			aria-label={`${DEPARTMENT_LABELS[department]} budget details`}
 		>
 			<div className="flex w-full items-center justify-between gap-3">
 				<span className="truncate text-sm font-medium text-muted-foreground">

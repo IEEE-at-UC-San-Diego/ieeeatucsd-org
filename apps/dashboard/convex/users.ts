@@ -11,6 +11,12 @@ import {
   validateAndBuildResume,
 } from "./resume";
 import { UserAuth } from "./userAuth";
+import {
+  UserRoleAssignment,
+  assignableUserRoleValidator,
+} from "./userRoleAssignment";
+import { transitionAccountStatus } from "./accountStatusTransition";
+import { serverPolicyAcceptance } from "./legalVersions";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -135,24 +141,6 @@ export const getByIdForAdmin = query({
   },
 });
 
-export const getUserInfo = query({
-  args: { logtoId: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_logtoId", (q) => q.eq("logtoId", args.logtoId))
-      .first();
-    
-    if (!user) return null;
-    
-    return {
-      name: user.name,
-      zelleInformation: user.zelleInformation,
-      email: user.email,
-    };
-  },
-});
-
 export const completeOnboarding = mutation({
   args: {
     logtoId: v.string(),
@@ -180,16 +168,14 @@ export const completeOnboarding = mutation({
       );
     }
 
+    const policyAcceptance = serverPolicyAcceptance(now);
     await ctx.db.patch(user._id, {
       pid: args.pid,
       major: args.major,
       graduationYear: args.graduationYear,
       signedUp: true,
       joinDate: now,
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
+      ...policyAcceptance,
       ...(args.memberId && { memberId: args.memberId }),
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
       ...(resume && { resume }),
@@ -319,12 +305,7 @@ export const acceptPolicyUpdate = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const now = Date.now();
 
-    await ctx.db.patch(user._id, {
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
-    });
+    await ctx.db.patch(user._id, serverPolicyAcceptance(now));
 
     return user._id;
   },
@@ -429,15 +410,7 @@ export const updateRole = mutation({
     logtoId: v.string(),
     authToken: v.string(),
     userId: v.id("users"),
-    role: v.union(
-      v.literal("Member"),
-      v.literal("General Officer"),
-      v.literal("Executive Officer"),
-      v.literal("Member at Large"),
-      v.literal("Past Officer"),
-      v.literal("Sponsor"),
-      v.literal("Administrator"),
-    ),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(
       v.union(
@@ -453,21 +426,11 @@ export const updateRole = mutation({
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("Target user not found");
 
-    // Nuanced restrictions for Executive Officers (non-Admin)
-    if (admin.role === "Executive Officer") {
-      // Executive Officers cannot change Administrator users
-      if (targetUser.role === "Administrator") {
-        throw new Error("Executive Officers cannot modify Administrator accounts");
-      }
-      // Executive Officers cannot change their own role
-      if (targetUser._id === admin._id) {
-        throw new Error("Executive Officers cannot change their own role");
-      }
-      // Executive Officers cannot assign the Administrator role
-      if (args.role === "Administrator") {
-        throw new Error("Only Administrators can assign the Administrator role");
-      }
-    }
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+      target: targetUser,
+    });
 
     await ctx.db.patch(args.userId, {
       role: args.role,
@@ -487,12 +450,16 @@ export const createPlaceholder = mutation({
     authToken: v.string(),
     email: v.string(),
     name: v.string(),
-    role: v.string(),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+    });
     const normalizedEmail = args.email.trim().toLowerCase();
     const now = Date.now();
 
@@ -510,7 +477,7 @@ export const createPlaceholder = mutation({
       emailVisibility: true,
       verified: true,
       name: args.name,
-      role: args.role as any,
+      role: args.role,
       position: args.position,
       team: args.team as any,
       status: "active",
@@ -542,9 +509,12 @@ export const updateStatus = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const existing = await ctx.db.get(args.userId);
+    if (!existing) throw new Error("User not found");
+    const nextStatus = transitionAccountStatus(existing.status, args.status);
 
     await ctx.db.patch(args.userId, {
-      status: args.status,
+      status: nextStatus,
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });

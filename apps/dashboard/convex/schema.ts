@@ -381,6 +381,7 @@ export default defineSchema({
     ),
     submittedBy: v.string(),
     additionalInfo: v.string(),
+    businessPurpose: v.optional(v.string()),
     department: v.union(
       v.literal("internal"),
       v.literal("external"),

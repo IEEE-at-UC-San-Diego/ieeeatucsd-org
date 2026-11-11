@@ -11,6 +11,7 @@ import { DotLabel, type DotTone } from "@/components/dashboard/DotLabel";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { downloadEventIcs } from "@/lib/calendarLinks";
+import { formatLongDate, formatTime } from "@/lib/formatters";
 import { EVENT_TYPE_LABELS, type Event, getEventStatus } from "./types";
 
 interface EventDetailModalProps {
@@ -42,7 +43,9 @@ function DetailRow({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
 	return (
-		<h3 className="mb-2 text-sm font-semibold text-foreground">{children}</h3>
+		<h3 className="mb-2 text-balance text-sm font-semibold text-foreground">
+			{children}
+		</h3>
 	);
 }
 
@@ -71,7 +74,7 @@ export function EventDetailModal({
 	const statusLabel = userHasAttended
 		? "Attended"
 		: isLive
-			? "Live now"
+			? "Live Now"
 			: isUpcoming
 				? "Upcoming"
 				: "Ended";
@@ -82,21 +85,10 @@ export function EventDetailModal({
 		return "File";
 	};
 
-	const dateLabel = new Date(event.startDate).toLocaleDateString(undefined, {
-		weekday: "long",
-		month: "long",
-		day: "numeric",
-	});
+	const dateLabel = formatLongDate(event.startDate);
 
-	const formatTimeRange = () => {
-		const opts: Intl.DateTimeFormatOptions = {
-			hour: "numeric",
-			minute: "2-digit",
-		};
-		const start = new Date(event.startDate).toLocaleTimeString([], opts);
-		const end = new Date(event.endDate).toLocaleTimeString([], opts);
-		return `${start} – ${end}`;
-	};
+	const formatTimeRange = () =>
+		`${formatTime(event.startDate)} – ${formatTime(event.endDate)}`;
 
 	const handleDownloadIcs = () => {
 		downloadEventIcs(
@@ -136,7 +128,7 @@ export function EventDetailModal({
 				showCheckIn ? (
 					<Button onClick={onCheckIn} className="h-11 w-full sm:h-9">
 						<UserCheck className="mr-2 h-4 w-4" />
-						Check in
+						Check In
 					</Button>
 				) : undefined
 			}
@@ -152,7 +144,9 @@ export function EventDetailModal({
 				</div>
 
 				<dl className="divide-y rounded-md border">
-					<DetailRow label="Location">{event.location}</DetailRow>
+					<DetailRow label="Location">
+						<span className="break-words">{event.location}</span>
+					</DetailRow>
 					<DetailRow label="Points">
 						<span className="tabular-nums">{event.pointsToReward}</span>
 					</DetailRow>
@@ -168,14 +162,14 @@ export function EventDetailModal({
 				{event.eventDescription && (
 					<section>
 						<SectionTitle>About</SectionTitle>
-						<p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+						<p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
 							{event.eventDescription}
 						</p>
 					</section>
 				)}
 
 				<section>
-					<SectionTitle>Add to calendar</SectionTitle>
+					<SectionTitle>Add to Calendar</SectionTitle>
 					<div className="flex flex-wrap gap-2">
 						{event.publicGoogleEventUrl && (
 							<Button

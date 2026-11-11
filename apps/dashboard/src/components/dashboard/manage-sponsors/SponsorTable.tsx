@@ -114,13 +114,24 @@ export function SponsorTable({
 								className="group cursor-pointer transition-colors hover:bg-muted/50"
 								onClick={() => onRowClick?.(sponsor)}
 							>
-								<td className="px-4 py-3">
-									<span className="font-medium text-foreground">
+								<td className="max-w-xs px-4 py-3">
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											onRowClick?.(sponsor);
+										}}
+										className="block w-full min-w-0 truncate rounded-sm text-left font-medium text-foreground"
+										title={sponsor.organizationName}
+									>
 										{sponsor.organizationName}
-									</span>
+									</button>
 								</td>
-								<td className="px-4 py-3">
-									<span className="text-sm text-muted-foreground">
+								<td className="max-w-xs px-4 py-3">
+									<span
+										className="block truncate text-sm text-muted-foreground"
+										translate="no"
+									>
 										{sponsor.domain}
 									</span>
 								</td>

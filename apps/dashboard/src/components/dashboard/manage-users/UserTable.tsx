@@ -12,6 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { OfficerTeam, SortConfig, UserRole, UserStatus } from "./types";
 
@@ -111,7 +112,7 @@ export function UserTable({
 		return (
 			<div className="flex flex-col items-center rounded-md border border-dashed px-6 py-14 text-center">
 				<h3 className="text-sm font-semibold text-foreground">
-					No users found
+					No Users Found
 				</h3>
 				<p className="mt-1 text-sm text-muted-foreground">
 					Try adjusting your search or filter criteria.
@@ -161,7 +162,7 @@ export function UserTable({
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
 									<DropdownMenuItem onSelect={() => onRowClick?.(user)}>
-										<Pencil /> View and edit
+										<Pencil /> View and Edit
 									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>
@@ -227,8 +228,10 @@ export function UserTable({
 										</div>
 									</div>
 								</td>
-								<td className="hidden px-4 py-3 md:table-cell">
-									<div className="text-sm text-foreground">{user.email}</div>
+								<td className="hidden max-w-xs px-4 py-3 md:table-cell">
+									<div className="truncate text-sm text-foreground">
+										{user.email}
+									</div>
 									{user.memberId && (
 										<div className="font-mono text-xs text-muted-foreground">
 											ID {user.memberId}
@@ -243,10 +246,8 @@ export function UserTable({
 										{user.points || 0}
 									</span>
 								</td>
-								<td className="hidden px-4 py-3 text-muted-foreground xl:table-cell">
-									{user.lastLogin
-										? new Date(user.lastLogin).toLocaleDateString()
-										: "Never"}
+								<td className="hidden px-4 py-3 tabular-nums text-muted-foreground xl:table-cell">
+									{user.lastLogin ? formatDate(user.lastLogin) : "Never"}
 								</td>
 								<td className="px-3 py-3 text-right">
 									<DropdownMenu>
@@ -261,7 +262,7 @@ export function UserTable({
 										</DropdownMenuTrigger>
 										<DropdownMenuContent align="end">
 											<DropdownMenuItem onSelect={() => onRowClick?.(user)}>
-												<Pencil /> View and edit
+												<Pencil /> View and Edit
 											</DropdownMenuItem>
 										</DropdownMenuContent>
 									</DropdownMenu>

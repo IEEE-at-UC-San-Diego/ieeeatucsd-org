@@ -1,4 +1,5 @@
 import { Camera, Image, Printer } from "lucide-react";
+import { useId } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ interface MarketingSectionProps {
 }
 
 export function MarketingSection({ data, onChange }: MarketingSectionProps) {
+	const formId = useId();
 	const formatDateForInput = (timestamp: number) => {
 		if (!timestamp) return "";
 		return new Date(timestamp).toISOString().slice(0, 16);
@@ -68,13 +70,13 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 		<div className="space-y-6">
 			<div className="grid gap-6">
 				<div className="space-y-4">
-					<h3 className="text-sm font-medium text-foreground">
+					<h3 className="text-balance text-sm font-medium text-foreground">
 						Marketing Materials
 					</h3>
 
 					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
-							id="needsFlyers"
+							id={`${formId}-needsFlyers`}
 							checked={data.needsFlyers}
 							onCheckedChange={(checked) =>
 								onChange({ needsFlyers: checked as boolean })
@@ -84,7 +86,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							<div className="flex items-center gap-2">
 								<Printer className="h-4 w-4 text-muted-foreground" />
 								<Label
-									htmlFor="needsFlyers"
+									htmlFor={`${formId}-needsFlyers`}
 									className="cursor-pointer font-medium"
 								>
 									Flyers Needed
@@ -129,27 +131,31 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 								"Other (please specify in additional requests)",
 							) && (
 								<div className="space-y-2">
-									<Label htmlFor="otherFlyerType">
+									<Label htmlFor={`${formId}-otherFlyerType`}>
 										Please specify the other flyer type
 									</Label>
 									<Input
-										id="otherFlyerType"
+										id={`${formId}-otherFlyerType`}
+										name="otherFlyerType"
+										autoComplete="off"
 										value={data.otherFlyerType}
 										onChange={(e) =>
 											onChange({ otherFlyerType: e.target.value })
 										}
-										placeholder="Specify other flyer type..."
+										placeholder="Specify other flyer type…"
 									/>
 								</div>
 							)}
 
 							{data.needsFlyers && (
 								<div className="space-y-2">
-									<Label htmlFor="flyerAdvertisingStartDate">
+									<Label htmlFor={`${formId}-flyerAdvertisingStartDate`}>
 										Advertising Start Date
 									</Label>
 									<Input
-										id="flyerAdvertisingStartDate"
+										id={`${formId}-flyerAdvertisingStartDate`}
+										name="flyerAdvertisingStartDate"
+										autoComplete="off"
 										type="datetime-local"
 										value={formatDateForInput(data.flyerAdvertisingStartDate)}
 										onChange={(e) =>
@@ -167,16 +173,18 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							)}
 
 							<div className="space-y-2">
-								<Label htmlFor="flyerAdditionalRequests">
+								<Label htmlFor={`${formId}-flyerAdditionalRequests`}>
 									Additional Flyer Requests
 								</Label>
 								<Textarea
-									id="flyerAdditionalRequests"
+									id={`${formId}-flyerAdditionalRequests`}
+									name="flyerAdditionalRequests"
+									autoComplete="off"
 									value={data.flyerAdditionalRequests}
 									onChange={(e) =>
 										onChange({ flyerAdditionalRequests: e.target.value })
 									}
-									placeholder="Any specific design requirements, dimensions, or other flyer needs..."
+									placeholder="Any specific design requirements, dimensions, or other flyer needs…"
 									rows={2}
 								/>
 							</div>
@@ -185,7 +193,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 
 					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
-							id="needsGraphics"
+							id={`${formId}-needsGraphics`}
 							checked={data.needsGraphics}
 							onCheckedChange={(checked) =>
 								onChange({ needsGraphics: checked as boolean })
@@ -195,7 +203,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							<div className="flex items-center gap-2">
 								<Image className="h-4 w-4 text-muted-foreground" />
 								<Label
-									htmlFor="needsGraphics"
+									htmlFor={`${formId}-needsGraphics`}
 									className="cursor-pointer font-medium"
 								>
 									Graphics Needed
@@ -211,16 +219,17 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 					{(data.needsFlyers || data.needsGraphics) && (
 						<div className="ml-7 space-y-4 p-4 border rounded-lg bg-muted/50">
 							<div className="space-y-2">
-								<Label htmlFor="advertisingFormat">
+								<Label htmlFor={`${formId}-advertisingFormat`}>
 									Preferred file format for final graphics
 								</Label>
 								<Select
+									name="advertisingFormat"
 									value={data.advertisingFormat}
 									onValueChange={(value) =>
 										onChange({ advertisingFormat: value })
 									}
 								>
-									<SelectTrigger id="advertisingFormat">
+									<SelectTrigger id={`${formId}-advertisingFormat`}>
 										<SelectValue placeholder="Select format" />
 									</SelectTrigger>
 									<SelectContent>
@@ -234,32 +243,37 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							</div>
 
 							<div className="space-y-2">
-								<Label htmlFor="additionalSpecifications">
+								<Label htmlFor={`${formId}-additionalSpecifications`}>
 									Additional specifications or requests
 								</Label>
 								<Textarea
-									id="additionalSpecifications"
+									id={`${formId}-additionalSpecifications`}
+									name="additionalSpecifications"
+									autoComplete="off"
 									value={data.additionalSpecifications}
 									onChange={(e) =>
 										onChange({ additionalSpecifications: e.target.value })
 									}
-									placeholder="Any specific design requirements, colors, themes, or other details..."
+									placeholder="Any specific design requirements, colors, themes, or other details…"
 									rows={3}
 								/>
 							</div>
 
 							{data.needsGraphics && (
 								<div className="space-y-2">
-									<Label htmlFor="graphicsUploadNote">
+									<Label htmlFor={`${formId}-graphicsUploadNote`}>
 										Graphics delivery note (optional)
 									</Label>
 									<Input
-										id="graphicsUploadNote"
+										id={`${formId}-graphicsUploadNote`}
+										name="graphicsUploadNote"
+										autoComplete="off"
+										spellCheck={false}
 										value={data.graphicsUploadNote}
 										onChange={(e) =>
 											onChange({ graphicsUploadNote: e.target.value })
 										}
-										placeholder="Paste delivery link or note where graphics were uploaded"
+										placeholder="Paste delivery link or note where graphics were uploaded…"
 									/>
 								</div>
 							)}
@@ -268,7 +282,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 
 					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
-							id="photographyNeeded"
+							id={`${formId}-photographyNeeded`}
 							checked={data.photographyNeeded}
 							onCheckedChange={(checked) =>
 								onChange({ photographyNeeded: checked as boolean })
@@ -278,7 +292,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							<div className="flex items-center gap-2">
 								<Camera className="h-4 w-4 text-muted-foreground" />
 								<Label
-									htmlFor="photographyNeeded"
+									htmlFor={`${formId}-photographyNeeded`}
 									className="cursor-pointer font-medium"
 								>
 									Photography Needed
@@ -293,7 +307,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 				</div>
 
 				<div className="space-y-4 pt-4 border-t">
-					<h3 className="text-sm font-medium text-foreground">
+					<h3 className="text-balance text-sm font-medium text-foreground">
 						Required Logos
 					</h3>
 					<div className="flex flex-col space-y-2">
@@ -323,17 +337,20 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 				</div>
 
 				<div className="space-y-4 pt-4 border-t">
-					<h3 className="text-sm font-medium text-foreground">
+					<h3 className="text-balance text-sm font-medium text-foreground">
 						Expected Attendance
 					</h3>
 
 					<div className="space-y-2">
-						<Label htmlFor="estimatedAttendance">
+						<Label htmlFor={`${formId}-estimatedAttendance`}>
 							Estimated Number of Attendees
 						</Label>
 						<Input
-							id="estimatedAttendance"
+							id={`${formId}-estimatedAttendance`}
+							name="estimatedAttendance"
+							autoComplete="off"
 							type="number"
+							inputMode="numeric"
 							min={1}
 							value={data.estimatedAttendance || ""}
 							onChange={(e) =>

@@ -1,7 +1,6 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { createFileRoute } from "@tanstack/react-router";
-import { format, formatDistanceToNow } from "date-fns";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -24,8 +23,18 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	EmptyState,
@@ -43,6 +52,8 @@ import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -60,7 +71,40 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { useGoogleMapsPlacesLoader } from "@/hooks/useGoogleMapsPlacesLoader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import {
+	formatCurrencyUSD,
+	formatDate,
+	formatDateDisplay,
+	formatDateTime,
+	formatDateTimeDisplay,
+	formatNumber,
+	formatRelativeTime,
+} from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
+import {
+	deriveMileagePhase,
+	describeCalculatedRoute,
+	type MileageCalculationResult,
+	resolveMileagePrerequisite,
+} from "@/lib/reimbursement/mileageCalculation";
+import {
+	getReceiptOperation,
+	isCurrentReceiptRequest,
+	type ReceiptOperationAction,
+	type ReceiptOperations,
+	receiptOperationsReducer,
+} from "@/lib/reimbursement/receiptOperations";
+import {
+	findFirstInvalidStep,
+	findReachableStep,
+	initialWizardState,
+	maxJumpableStep,
+	parseWizardStep,
+	validateExpenses,
+	validateReportDetails,
+	wizardReducer,
+} from "@/lib/reimbursement/reimbursementWizard";
 import {
 	computeMileageTotal,
 	formatMileageRoute,
@@ -150,7 +194,19 @@ const AUDIT_ICONS = {
 	Receipt,
 };
 
+const searchSchema = z.object({
+	view: z.enum(["list", "create", "detail"]).catch("list"),
+	id: z.string().optional().catch(undefined),
+	q: z.string().catch(""),
+	status: z
+		.enum(["all", "submitted", "approved", "paid", "declined"])
+		.catch("all"),
+});
+
+type ReimbursementSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/reimbursement")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.reimbursements.listMine, undefined, ctx),
 	component: ReimbursementPage,
@@ -230,18 +286,6 @@ interface ReceiptEntry {
 	mileageTo?: string;
 	mileageStops?: string[];
 }
-
-interface ReceiptParseResult {
-	success: boolean;
-	message: string;
-}
-
-type MileageCalculationState = {
-	receiptId: string | null;
-	routeKey: string;
-	status: "idle" | "waiting" | "calculating" | "calculated" | "error";
-	message: string;
-};
 
 type RoutesLibraryLike = {
 	Route?: {
@@ -356,7 +400,7 @@ function recalcReceipt(r: ReceiptEntry): ReceiptEntry {
 					id: firstId,
 					description:
 						miles > 0
-							? `Mileage (${miles} mi × $${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi)`
+							? `Mileage (${miles} mi × ${formatCurrencyUSD(MILEAGE_RATE_PER_MILE)}/mi)`
 							: "Mileage",
 					category: "Transportation",
 					amount: total,
@@ -421,11 +465,11 @@ async function calculateDrivingMiles({
 // Step Progress Indicator Component
 function StepIndicator({
 	currentStep,
-	maxVisitedStep,
+	maxJumpableStep,
 	onStepClick,
 }: {
 	currentStep: number;
-	maxVisitedStep: number;
+	maxJumpableStep: number;
 	onStepClick: (step: number) => void;
 }) {
 	const current = STEPS.find((s) => s.id === currentStep);
@@ -437,7 +481,7 @@ function StepIndicator({
 				currentStep={currentStep}
 				totalSteps={STEPS.length}
 				stepTitle={current?.name ?? `Step ${currentStep}`}
-				maxVisitedStep={maxVisitedStep}
+				maxVisitedStep={maxJumpableStep}
 				onStepClick={onStepClick}
 				className="mb-6"
 			/>
@@ -451,7 +495,7 @@ function StepIndicator({
 					{STEPS.map((step, index) => {
 						const isActive = step.id === currentStep;
 						const isCompleted = step.id < currentStep;
-						const isClickable = step.id <= maxVisitedStep;
+						const isClickable = step.id <= maxJumpableStep;
 						const isLast = index === STEPS.length - 1;
 
 						return (
@@ -509,6 +553,7 @@ function StepIndicator({
 								</Button>
 								{!isLast && (
 									<div
+										aria-hidden="true"
 										className={cn(
 											"h-1 mx-2 sm:mx-3 transition-colors rounded-full w-8 sm:w-16",
 											step.id < currentStep ? "bg-primary" : "bg-muted",
@@ -594,16 +639,6 @@ function ReimbursementDetailView({
 	const receiptFileUrl = currentReceipt.receiptFile;
 	const currentIsMileage = currentReceipt.expenseType === "mileage";
 
-	const formatDate = (dateVal: number | undefined) => {
-		if (!dateVal) return "N/A";
-		return new Date(dateVal).toLocaleDateString();
-	};
-
-	const formatDateTime = (dateVal: number | undefined) => {
-		if (!dateVal) return "N/A";
-		return new Date(dateVal).toLocaleString();
-	};
-
 	return (
 		<div className="h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
 			{/* Header */}
@@ -614,6 +649,7 @@ function ReimbursementDetailView({
 						size="icon"
 						onClick={onBack}
 						className="-ml-2 shrink-0"
+						aria-label="Back to Reimbursements"
 					>
 						<ArrowLeft className="w-5 h-5" />
 					</Button>
@@ -635,20 +671,26 @@ function ReimbursementDetailView({
 								{reimbursement.status}
 							</Badge>
 						</div>
-						<div className="flex items-center gap-2 mt-0.5 text-sm text-muted-foreground">
+						<div className="flex flex-wrap items-center gap-x-2 mt-0.5 text-sm text-muted-foreground">
 							{userName && (
 								<>
 									<span className="font-medium text-foreground">
 										{userName}
 									</span>
-									<span className="text-muted-foreground/40">·</span>
+									<span aria-hidden="true" className="text-muted-foreground/40">
+										·
+									</span>
 								</>
 							)}
 							<span className="capitalize">{reimbursement.department}</span>
-							<span className="text-muted-foreground/40">·</span>
+							<span aria-hidden="true" className="text-muted-foreground/40">
+								·
+							</span>
 							<span>{reimbursement.paymentMethod}</span>
-							<span className="text-muted-foreground/40">·</span>
-							<span>{formatDateTime(reimbursement._creationTime)}</span>
+							<span aria-hidden="true" className="text-muted-foreground/40">
+								·
+							</span>
+							<span>{formatDateTimeDisplay(reimbursement._creationTime)}</span>
 						</div>
 					</div>
 				</div>
@@ -657,7 +699,7 @@ function ReimbursementDetailView({
 						Total Amount
 					</p>
 					<p className="text-xl font-bold tabular-nums">
-						${reimbursement.totalAmount?.toFixed(2)}
+						{formatCurrencyUSD(reimbursement.totalAmount ?? 0)}
 					</p>
 				</div>
 			</div>
@@ -669,7 +711,7 @@ function ReimbursementDetailView({
 					{/* Receipt Navigation */}
 					{hasReceipts && (
 						<div className="flex items-center justify-between px-6 py-3 border-b border-border bg-muted/50">
-							<span className="text-xs font-medium text-muted-foreground">
+							<span className="text-xs font-medium text-muted-foreground tabular-nums">
 								Expense {activeReceiptIndex + 1} of {receipts.length}
 							</span>
 							<div className="flex gap-1">
@@ -679,6 +721,7 @@ function ReimbursementDetailView({
 									className="h-7 w-7"
 									disabled={activeReceiptIndex === 0}
 									onClick={() => setActiveReceiptIndex((prev) => prev - 1)}
+									aria-label="Previous Expense"
 								>
 									<ChevronLeft className="w-4 h-4" />
 								</Button>
@@ -688,6 +731,7 @@ function ReimbursementDetailView({
 									className="h-7 w-7"
 									disabled={activeReceiptIndex === receipts.length - 1}
 									onClick={() => setActiveReceiptIndex((prev) => prev + 1)}
+									aria-label="Next Expense"
 								>
 									<ChevronRight className="w-4 h-4" />
 								</Button>
@@ -711,7 +755,7 @@ function ReimbursementDetailView({
 											<p className="text-xs font-medium text-tone-success mb-1">
 												Confirmation Number
 											</p>
-											<p className="text-sm font-mono font-medium bg-background/50 px-2 py-1 rounded border border-ds-green-100 inline-block">
+											<p className="text-sm font-mono font-medium bg-background/50 px-2 py-1 rounded border border-ds-green-100 inline-block break-all">
 												{reimbursement.paymentDetails.confirmationNumber}
 											</p>
 										</div>
@@ -722,7 +766,9 @@ function ReimbursementDetailView({
 											<div className="flex items-center gap-1.5 text-sm">
 												<Calendar className="w-4 h-4 text-tone-success" />
 												<span>
-													{formatDate(reimbursement.paymentDetails.paymentDate)}
+													{formatDateDisplay(
+														reimbursement.paymentDetails.paymentDate,
+													)}
 												</span>
 											</div>
 										</div>
@@ -730,9 +776,10 @@ function ReimbursementDetailView({
 											<p className="text-xs font-medium text-tone-success mb-1">
 												Amount Paid
 											</p>
-											<p className="text-lg font-bold flex items-center gap-1">
-												<span className="text-tone-success text-sm">$</span>
-												{reimbursement.paymentDetails.amountPaid?.toFixed(2)}
+											<p className="text-lg font-bold tabular-nums">
+												{formatCurrencyUSD(
+													reimbursement.paymentDetails.amountPaid ?? 0,
+												)}
 											</p>
 										</div>
 										<div>
@@ -761,7 +808,7 @@ function ReimbursementDetailView({
 												<p className="text-xs font-medium text-tone-success mb-1">
 													Memo
 												</p>
-												<p className="text-sm bg-background/50 p-2 rounded border border-ds-green-100">
+												<p className="text-sm bg-background/50 p-2 rounded border border-ds-green-100 break-words">
 													{reimbursement.paymentDetails.memo}
 												</p>
 											</div>
@@ -773,14 +820,14 @@ function ReimbursementDetailView({
 						{/* Expense details */}
 						<section className="space-y-3">
 							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
-								{currentIsMileage ? "Mileage details" : "Receipt details"}
+								{currentIsMileage ? "Mileage Details" : "Receipt Details"}
 							</h3>
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground">
 										{currentIsMileage ? "Trip or purpose" : "Vendor"}
 									</p>
-									<p className="text-sm">
+									<p className="text-sm break-words">
 										{currentReceipt.vendorName || "N/A"}
 									</p>
 								</div>
@@ -789,11 +836,7 @@ function ReimbursementDetailView({
 										{currentIsMileage ? "Date of trip" : "Date of purchase"}
 									</p>
 									<p className="text-sm">
-										{currentReceipt.dateOfPurchase
-											? new Date(
-													currentReceipt.dateOfPurchase,
-												).toLocaleDateString()
-											: "N/A"}
+										{formatDateDisplay(currentReceipt.dateOfPurchase)}
 									</p>
 								</div>
 								{currentIsMileage ? (
@@ -803,10 +846,8 @@ function ReimbursementDetailView({
 												Miles
 											</p>
 											<p className="text-sm tabular-nums">
-												{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
-													maximumFractionDigits: 2,
-												})}{" "}
-												mi @ ${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi
+												{formatNumber(currentReceipt.miles ?? 0)} mi @{" "}
+												{formatCurrencyUSD(MILEAGE_RATE_PER_MILE)}/mi
 											</p>
 										</div>
 										<div className="space-y-0.5">
@@ -814,11 +855,10 @@ function ReimbursementDetailView({
 												Rate
 											</p>
 											<p className="text-sm tabular-nums">
-												$
-												{(
+												{formatCurrencyUSD(
 													currentReceipt.mileageRatePerMile ??
-													MILEAGE_RATE_PER_MILE
-												).toFixed(2)}
+														MILEAGE_RATE_PER_MILE,
+												)}
 												/mi
 											</p>
 										</div>
@@ -826,7 +866,7 @@ function ReimbursementDetailView({
 											<p className="text-xs font-medium text-muted-foreground">
 												From
 											</p>
-											<p className="text-sm">
+											<p className="text-sm break-words">
 												{currentReceipt.mileageFrom?.trim() || "—"}
 											</p>
 										</div>
@@ -834,7 +874,7 @@ function ReimbursementDetailView({
 											<p className="text-xs font-medium text-muted-foreground">
 												To
 											</p>
-											<p className="text-sm">
+											<p className="text-sm break-words">
 												{currentReceipt.mileageTo?.trim() || "—"}
 											</p>
 										</div>
@@ -844,7 +884,7 @@ function ReimbursementDetailView({
 												<p className="text-xs font-medium text-muted-foreground">
 													Stops
 												</p>
-												<ol className="list-decimal list-inside text-sm space-y-0.5">
+												<ol className="list-decimal list-inside text-sm space-y-0.5 break-words">
 													{currentReceipt.mileageStops.map(
 														(s: string, idx: number) => (
 															<li key={idx}>{s}</li>
@@ -864,7 +904,9 @@ function ReimbursementDetailView({
 													<p className="text-xs font-medium text-muted-foreground">
 														Route
 													</p>
-													<p className="text-sm">{currentReceipt.location}</p>
+													<p className="text-sm break-words">
+														{currentReceipt.location}
+													</p>
 												</div>
 											)}
 									</>
@@ -873,7 +915,7 @@ function ReimbursementDetailView({
 										<p className="text-xs font-medium text-muted-foreground">
 											Location
 										</p>
-										<p className="text-sm">
+										<p className="text-sm break-words">
 											{currentReceipt.location || "N/A"}
 										</p>
 									</div>
@@ -898,7 +940,7 @@ function ReimbursementDetailView({
 										Submitted On
 									</p>
 									<p className="text-sm">
-										{formatDateTime(reimbursement._creationTime)}
+										{formatDateTimeDisplay(reimbursement._creationTime)}
 									</p>
 								</div>
 								{reimbursement.businessPurpose && (
@@ -906,7 +948,9 @@ function ReimbursementDetailView({
 										<p className="text-xs font-medium text-muted-foreground">
 											Business Purpose
 										</p>
-										<p className="text-sm">{reimbursement.businessPurpose}</p>
+										<p className="text-sm break-words">
+											{reimbursement.businessPurpose}
+										</p>
 									</div>
 								)}
 								{reimbursement.additionalInfo && (
@@ -914,7 +958,9 @@ function ReimbursementDetailView({
 										<p className="text-xs font-medium text-muted-foreground">
 											Additional Info
 										</p>
-										<p className="text-sm">{reimbursement.additionalInfo}</p>
+										<p className="text-sm break-words">
+											{reimbursement.additionalInfo}
+										</p>
 									</div>
 								)}
 							</div>
@@ -931,7 +977,7 @@ function ReimbursementDetailView({
 										Subtotal
 									</p>
 									<p className="text-sm tabular-nums">
-										${(currentReceipt.subtotal || 0).toFixed(2)}
+										{formatCurrencyUSD(currentReceipt.subtotal || 0)}
 									</p>
 								</div>
 								<div className="space-y-0.5">
@@ -939,7 +985,7 @@ function ReimbursementDetailView({
 										Tax
 									</p>
 									<p className="text-sm tabular-nums">
-										${(currentReceipt.tax || 0).toFixed(2)}
+										{formatCurrencyUSD(currentReceipt.tax || 0)}
 									</p>
 								</div>
 								<div className="space-y-0.5">
@@ -947,7 +993,7 @@ function ReimbursementDetailView({
 										Tip
 									</p>
 									<p className="text-sm tabular-nums">
-										${(currentReceipt.tip || 0).toFixed(2)}
+										{formatCurrencyUSD(currentReceipt.tip || 0)}
 									</p>
 								</div>
 								<div className="space-y-0.5">
@@ -955,13 +1001,13 @@ function ReimbursementDetailView({
 										Shipping
 									</p>
 									<p className="text-sm tabular-nums">
-										${(currentReceipt.shipping || 0).toFixed(2)}
+										{formatCurrencyUSD(currentReceipt.shipping || 0)}
 									</p>
 								</div>
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-tone-success">Total</p>
 									<p className="text-base font-bold tabular-nums text-tone-success">
-										${(currentReceipt.total || 0).toFixed(2)}
+										{formatCurrencyUSD(currentReceipt.total || 0)}
 									</p>
 								</div>
 							</div>
@@ -971,7 +1017,7 @@ function ReimbursementDetailView({
 						<section className="space-y-3">
 							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground flex justify-between items-center">
 								<span>Line Items</span>
-								<span className="text-[10px] font-normal text-muted-foreground/70 normal-case">
+								<span className="text-[10px] font-normal text-muted-foreground/70 normal-case tabular-nums">
 									{currentLineItems.length} items
 								</span>
 							</h3>
@@ -989,18 +1035,18 @@ function ReimbursementDetailView({
 											{currentLineItems.map((item: LineItem, idx: number) => (
 												<tr key={idx} className="bg-background">
 													<td className="px-3 py-2">
-														<div className="font-medium">
+														<div className="font-medium break-words">
 															{item.description}
 														</div>
 														<div className="text-xs text-muted-foreground">
 															{item.category}
 														</div>
 													</td>
-													<td className="px-3 py-2 text-center text-muted-foreground">
+													<td className="px-3 py-2 text-center text-muted-foreground tabular-nums">
 														{1}
 													</td>
-													<td className="px-3 py-2 text-right font-medium">
-														${(item.amount || 0).toFixed(2)}
+													<td className="px-3 py-2 text-right font-medium tabular-nums">
+														{formatCurrencyUSD(item.amount || 0)}
 													</td>
 												</tr>
 											))}
@@ -1033,7 +1079,10 @@ function ReimbursementDetailView({
 													className="relative flex gap-3 pb-5 last:pb-0"
 												>
 													{!isLast && (
-														<div className="absolute left-[11px] top-7 bottom-0 w-px bg-border" />
+														<div
+															aria-hidden="true"
+															className="absolute left-[11px] top-7 bottom-0 w-px bg-border"
+														/>
 													)}
 													<div
 														className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-background`}
@@ -1046,9 +1095,7 @@ function ReimbursementDetailView({
 																{info.label}
 															</span>
 															<span className="text-[11px] text-muted-foreground whitespace-nowrap">
-																{formatDistanceToNow(entry.timestamp, {
-																	addSuffix: true,
-																})}
+																{formatRelativeTime(entry.timestamp)}
 															</span>
 														</div>
 														{info.description && (
@@ -1057,10 +1104,7 @@ function ReimbursementDetailView({
 															</p>
 														)}
 														<p className="text-[11px] text-muted-foreground/60 mt-1">
-															{format(
-																entry.timestamp,
-																"MMM d, yyyy 'at' h:mm a",
-															)}
+															{formatDateTime(entry.timestamp)}
 															{entry.userName && (
 																<span className="ml-1.5 inline-flex items-center bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px]">
 																	{entry.userName}
@@ -1068,7 +1112,7 @@ function ReimbursementDetailView({
 															)}
 														</p>
 														{entry.details && (
-															<p className="text-xs text-muted-foreground mt-1">
+															<p className="text-xs text-muted-foreground mt-1 break-words">
 																{entry.details}
 															</p>
 														)}
@@ -1090,9 +1134,9 @@ function ReimbursementDetailView({
 								<Car className="h-7 w-7 text-primary" />
 							</div>
 							<p className="text-xs font-medium text-muted-foreground">
-								Mileage reimbursement
+								Mileage Reimbursement
 							</p>
-							<p className="mt-2 max-w-md text-center text-sm leading-snug text-muted-foreground">
+							<p className="mt-2 max-w-md text-center text-sm leading-snug text-muted-foreground break-words">
 								{formatMileageRoute(
 									currentReceipt.mileageFrom,
 									currentReceipt.mileageTo,
@@ -1101,18 +1145,15 @@ function ReimbursementDetailView({
 									currentReceipt.location?.trim() ||
 									"No route entered"}
 							</p>
-							<p className="mt-3 text-center text-sm text-muted-foreground">
-								{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
-									maximumFractionDigits: 2,
-								})}{" "}
-								mi × $
-								{(
-									currentReceipt.mileageRatePerMile ?? MILEAGE_RATE_PER_MILE
-								).toFixed(2)}
+							<p className="mt-3 text-center text-sm text-muted-foreground tabular-nums">
+								{formatNumber(currentReceipt.miles ?? 0)} mi ×{" "}
+								{formatCurrencyUSD(
+									currentReceipt.mileageRatePerMile ?? MILEAGE_RATE_PER_MILE,
+								)}
 								/mi
 							</p>
 							<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-foreground">
-								${(currentReceipt.total ?? 0).toFixed(2)}
+								{formatCurrencyUSD(currentReceipt.total ?? 0)}
 							</p>
 						</div>
 					) : isMobile ? (
@@ -1130,7 +1171,7 @@ function ReimbursementDetailView({
 								</p>
 								<span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
 									<Eye className="h-4 w-4" />
-									View receipt
+									View Receipt
 								</span>
 							</button>
 							<ResponsiveOverlay
@@ -1143,7 +1184,7 @@ function ReimbursementDetailView({
 										className="h-11 w-full"
 										onClick={() => setReceiptOverlayOpen(false)}
 									>
-										Done
+										Close Receipt
 									</Button>
 								}
 							>
@@ -1182,7 +1223,9 @@ function AIWarningStep({
 					<AlertTriangle className="w-10 h-10 text-primary" />
 				</div>
 				<div>
-					<h2 className="text-2xl font-bold mb-2">Before you start</h2>
+					<h2 className="text-2xl font-bold mb-2 text-balance">
+						Before You Start
+					</h2>
 					<p className="text-muted-foreground leading-relaxed">
 						{aiEnabled
 							? "Our system uses AI to automatically parse details from your receipts. Please review all extracted information carefully before submitting."
@@ -1224,15 +1267,15 @@ function BasicInfoStep({
 	onBack: () => void;
 	onNext: () => void;
 }) {
-	const canProceed =
-		formData.title && formData.department && formData.paymentMethod;
+	const formId = useId();
+	const canProceed = validateReportDetails(formData) === null;
 
 	return (
 		<div className="flex flex-col items-center justify-center flex-1 p-6">
 			<Card className="w-full max-w-2xl">
 				<CardContent className="gap-8 p-8">
 					<div className="border-b pb-4">
-						<h2 className="text-xl font-bold">Report Details</h2>
+						<h2 className="text-xl font-bold text-balance">Report Details</h2>
 						<p className="text-sm text-muted-foreground">
 							Enter the high-level details for this reimbursement request.
 						</p>
@@ -1240,9 +1283,11 @@ function BasicInfoStep({
 
 					<div className="space-y-6 pt-4">
 						<div className="space-y-2">
-							<Label htmlFor="title">Report Title *</Label>
+							<Label htmlFor={`${formId}-title`}>Report Title *</Label>
 							<Input
-								id="title"
+								id={`${formId}-title`}
+								name="title"
+								autoComplete="off"
 								placeholder="e.g. Flight to conference"
 								value={formData.title}
 								onChange={(e) =>
@@ -1252,14 +1297,14 @@ function BasicInfoStep({
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<div className="space-y-2">
-								<Label htmlFor="department">Department *</Label>
+								<Label htmlFor={`${formId}-department`}>Department *</Label>
 								<Select
 									value={formData.department}
 									onValueChange={(val) =>
 										setFormData((prev) => ({ ...prev, department: val }))
 									}
 								>
-									<SelectTrigger>
+									<SelectTrigger id={`${formId}-department`}>
 										<SelectValue placeholder="Select Department" />
 									</SelectTrigger>
 									<SelectContent>
@@ -1272,14 +1317,16 @@ function BasicInfoStep({
 								</Select>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="paymentMethod">Payment Method *</Label>
+								<Label htmlFor={`${formId}-paymentMethod`}>
+									Payment Method *
+								</Label>
 								<Select
 									value={formData.paymentMethod}
 									onValueChange={(val) =>
 										setFormData((prev) => ({ ...prev, paymentMethod: val }))
 									}
 								>
-									<SelectTrigger>
+									<SelectTrigger id={`${formId}-paymentMethod`}>
 										<SelectValue placeholder="Select Method" />
 									</SelectTrigger>
 									<SelectContent>
@@ -1294,10 +1341,14 @@ function BasicInfoStep({
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="businessPurpose">Business Purpose *</Label>
+							<Label htmlFor={`${formId}-businessPurpose`}>
+								Business Purpose *
+							</Label>
 							<Textarea
-								id="businessPurpose"
-								placeholder="Explain business reason..."
+								id={`${formId}-businessPurpose`}
+								name="businessPurpose"
+								autoComplete="off"
+								placeholder="Explain the business reason…"
 								value={formData.businessPurpose}
 								onChange={(e) =>
 									setFormData((prev) => ({
@@ -1314,7 +1365,7 @@ function BasicInfoStep({
 						currentStep={2}
 						onBack={onBack}
 						onNext={onNext}
-						canGoNext={!!canProceed}
+						canGoNext={canProceed}
 						nextLabel="Next: Expenses"
 					/>
 				</CardContent>
@@ -1345,24 +1396,21 @@ function ReceiptsStep({
 }) {
 	const { getAuthHeaders } = useAuth();
 	const isMobile = useIsMobile();
+	const confirm = useConfirm();
 	const [activeReceiptId, setActiveReceiptId] = useState<string | null>(
 		receipts[0]?.id ?? null,
 	);
-	const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-	const [parsingReceipts, setParsingReceipts] = useState<Set<string>>(
-		new Set(),
+	const receiptOperationsRef = useRef<ReceiptOperations>({});
+	const [receiptOperations, setReceiptOperations] = useState<ReceiptOperations>(
+		{},
 	);
-	const [parseResults, setParseResults] = useState<
-		Record<string, ReceiptParseResult>
-	>({});
-	const mileageRequestIdRef = useRef(0);
-	const [mileageCalculation, setMileageCalculation] =
-		useState<MileageCalculationState>({
-			receiptId: null,
-			routeKey: "",
-			status: "idle",
-			message: "",
-		});
+	const receiptOperationTokenRef = useRef(0);
+	const receiptUploadLock = useRef(false);
+	const [receiptPickerMessage, setReceiptPickerMessage] = useState<
+		string | null
+	>(null);
+	const [mileageResult, setMileageResult] =
+		useState<MileageCalculationResult | null>(null);
 	const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
 		| string
 		| undefined;
@@ -1400,127 +1448,72 @@ function ReceiptsStep({
 		[setReceipts],
 	);
 
+	const hasGoogleMapsApiKey = !!googleMapsApiKey?.trim();
+	const mileagePrerequisite = useMemo(
+		() =>
+			resolveMileagePrerequisite(
+				{
+					isMileage: activeMileageExpenseType === "mileage",
+					from: activeMileageFrom,
+					to: activeMileageTo,
+					stops: JSON.parse(activeMileageStopsKey) as string[],
+				},
+				{ hasApiKey: hasGoogleMapsApiKey, maps },
+			),
+		[
+			activeMileageExpenseType,
+			activeMileageFrom,
+			activeMileageStopsKey,
+			activeMileageTo,
+			hasGoogleMapsApiKey,
+			maps,
+		],
+	);
+
 	useEffect(() => {
-		if (!activeMileageReceiptId || activeMileageExpenseType !== "mileage") {
-			setMileageCalculation({
-				receiptId: null,
-				routeKey: "",
-				status: "idle",
-				message: "",
-			});
+		if (!activeMileageReceiptId) return;
+		if (mileagePrerequisite.status !== "ready") {
+			if (
+				mileagePrerequisite.status === "incomplete" ||
+				mileagePrerequisite.status === "unavailable"
+			) {
+				setReceiptMileageMiles(activeMileageReceiptId, 0);
+			}
 			return;
 		}
 
-		const from = activeMileageFrom.trim();
-		const to = activeMileageTo.trim();
-		const rawStops = JSON.parse(activeMileageStopsKey) as string[];
-		const hasEmptyStops = rawStops.some((stop) => stop.trim().length === 0);
-		const stops = rawStops.map((stop) => stop.trim()).filter(Boolean);
-		const routeKey = [from, ...stops, to].join("\u001f");
-		const requestId = mileageRequestIdRef.current + 1;
-		mileageRequestIdRef.current = requestId;
-
-		if (!from || !to) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "waiting",
-				message: "Enter From and To addresses to calculate mileage.",
-			});
-			return;
-		}
-
-		if (hasEmptyStops) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "waiting",
-				message: "Fill every stop address to calculate the full route.",
-			});
-			return;
-		}
-
-		if (!googleMapsApiKey?.trim()) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "error",
-				message:
-					"Automatic mileage calculation needs VITE_GOOGLE_MAPS_API_KEY.",
-			});
-			return;
-		}
-
-		if (maps.error) {
-			setReceiptMileageMiles(activeMileageReceiptId, 0);
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "error",
-				message: maps.error,
-			});
-			return;
-		}
-
-		if (maps.loading || !maps.ready) {
-			setMileageCalculation({
-				receiptId: activeMileageReceiptId,
-				routeKey,
-				status: "calculating",
-				message: "Loading route calculation...",
-			});
-			return;
-		}
-
-		setMileageCalculation({
-			receiptId: activeMileageReceiptId,
-			routeKey,
-			status: "calculating",
-			message: "Calculating driving distance...",
-		});
-
+		const { route } = mileagePrerequisite;
+		setMileageResult(null);
+		let cancelled = false;
 		const timeout = window.setTimeout(() => {
-			calculateDrivingMiles({ from, to, stops })
+			calculateDrivingMiles(route)
 				.then((miles) => {
-					if (mileageRequestIdRef.current !== requestId) return;
+					if (cancelled) return;
 					setReceiptMileageMiles(activeMileageReceiptId, miles);
-					setMileageCalculation({
+					setMileageResult({
 						receiptId: activeMileageReceiptId,
-						routeKey,
+						routeKey: route.key,
 						status: "calculated",
-						message:
-							stops.length > 0
-								? "Calculated from From through every stop to To."
-								: "Calculated from From to To.",
+						message: describeCalculatedRoute(route),
 					});
 				})
 				.catch((error) => {
-					if (mileageRequestIdRef.current !== requestId) return;
+					if (cancelled) return;
 					setReceiptMileageMiles(activeMileageReceiptId, 0);
-					setMileageCalculation({
+					setMileageResult({
 						receiptId: activeMileageReceiptId,
-						routeKey,
+						routeKey: route.key,
 						status: "error",
 						message: getRouteCalculationErrorMessage(error),
 					});
 				});
 		}, 450);
 
-		return () => window.clearTimeout(timeout);
-	}, [
-		activeMileageExpenseType,
-		activeMileageFrom,
-		activeMileageReceiptId,
-		activeMileageStopsKey,
-		activeMileageTo,
-		maps.error,
-		maps.loading,
-		maps.ready,
-		setReceiptMileageMiles,
-	]);
+		return () => {
+			cancelled = true;
+			window.clearTimeout(timeout);
+		};
+	}, [activeMileageReceiptId, mileagePrerequisite, setReceiptMileageMiles]);
 
 	const updateReceipt = (id: string, updates: Partial<ReceiptEntry>) => {
 		setReceipts((prev) =>
@@ -1587,7 +1580,18 @@ function ReceiptsStep({
 		);
 	};
 
-	const removeMileageStop = (id: string, index: number) => {
+	const removeMileageStop = async (id: string, index: number) => {
+		const stop = receipts.find((r) => r.id === id)?.mileageStops?.[index] ?? "";
+		if (
+			stop.trim() &&
+			!(await confirm({
+				title: `Remove Stop ${index + 1}?`,
+				description: "The stop address will be removed from this route.",
+				confirmLabel: "Remove Stop",
+				destructive: true,
+			}))
+		)
+			return;
 		setReceipts((prev) =>
 			prev.map((r) => {
 				if (r.id !== id) return r;
@@ -1632,51 +1636,48 @@ function ReceiptsStep({
 		);
 	};
 
-	const removeLineItem = (receiptId: string, lineItemId: string) => {
+	const removeLineItem = async (receiptId: string, lineItem: LineItem) => {
+		if (
+			(lineItem.description.trim() || lineItem.amount) &&
+			!(await confirm({
+				title: "Remove Line Item?",
+				description: `“${lineItem.description.trim() || "Untitled item"}” will be removed from this receipt.`,
+				confirmLabel: "Remove Line Item",
+				destructive: true,
+			}))
+		)
+			return;
 		setReceipts((prev) =>
 			prev.map((r) => {
 				if (r.id !== receiptId) return r;
 				const updated = {
 					...r,
-					lineItems: r.lineItems.filter((li) => li.id !== lineItemId),
+					lineItems: r.lineItems.filter((li) => li.id !== lineItem.id),
 				};
 				return recalcReceipt(updated);
 			}),
 		);
 	};
 
-	const setReceiptUploading = (receiptId: string, uploading: boolean) => {
-		setUploadingFiles((prev) => {
-			const next = new Set(prev);
-			if (uploading) {
-				next.add(receiptId);
-			} else {
-				next.delete(receiptId);
-			}
-			return next;
-		});
+	// The ref is authoritative so async callbacks can check request tokens
+	// synchronously; state mirrors it for rendering.
+	const dispatchReceiptOperation = (action: ReceiptOperationAction) => {
+		const next = receiptOperationsReducer(receiptOperationsRef.current, action);
+		if (next === receiptOperationsRef.current) return;
+		receiptOperationsRef.current = next;
+		setReceiptOperations(next);
 	};
 
-	const setReceiptParsing = (receiptId: string, parsing: boolean) => {
-		setParsingReceipts((prev) => {
-			const next = new Set(prev);
-			if (parsing) {
-				next.add(receiptId);
-			} else {
-				next.delete(receiptId);
-			}
-			return next;
-		});
+	const nextReceiptOperationToken = () => {
+		receiptOperationTokenRef.current += 1;
+		return receiptOperationTokenRef.current;
 	};
 
-	const parseReceipt = async (receiptId: string, receiptUrl: string) => {
-		setReceiptParsing(receiptId, true);
-		setParseResults((prev) => {
-			const next = { ...prev };
-			delete next[receiptId];
-			return next;
-		});
-
+	const requestReceiptParse = async (
+		receiptId: string,
+		receiptUrl: string,
+		token: number,
+	) => {
 		try {
 			const response = await fetch("/api/parse-receipt", {
 				method: "POST",
@@ -1736,6 +1737,17 @@ function ReceiptsStep({
 							]
 						: [];
 
+			if (
+				!isCurrentReceiptRequest(
+					receiptOperationsRef.current,
+					receiptId,
+					token,
+					"parsing",
+				)
+			) {
+				return;
+			}
+
 			updateReceipt(receiptId, {
 				vendorName: parsed.vendorName || "",
 				location: parsed.location || "",
@@ -1748,25 +1760,27 @@ function ReceiptsStep({
 				total: Number(parsed.total) || 0,
 			});
 
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: true,
-					message: "Receipt parsed successfully. Please verify all fields.",
-				},
-			}));
+			dispatchReceiptOperation({
+				type: "parseSucceeded",
+				receiptId,
+				token,
+				message: "Receipt parsed successfully. Please verify all fields.",
+			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: false,
-					message: `AI parsing failed: ${message}. Enter details manually or try again.`,
-				},
-			}));
-		} finally {
-			setReceiptParsing(receiptId, false);
+			dispatchReceiptOperation({
+				type: "parseFailed",
+				receiptId,
+				token,
+				message: `AI parsing failed: ${message}. Enter details manually or try again.`,
+			});
 		}
+	};
+
+	const parseReceipt = (receiptId: string, receiptUrl: string) => {
+		const token = nextReceiptOperationToken();
+		dispatchReceiptOperation({ type: "parseStarted", receiptId, token });
+		return requestReceiptParse(receiptId, receiptUrl, token);
 	};
 
 	const handleFileUpload = async (receiptId: string, file: File) => {
@@ -1775,17 +1789,14 @@ function ReceiptsStep({
 		}
 		const maxSize = 10 * 1024 * 1024;
 		if (file.size > maxSize) {
-			toast.error("File too large. Maximum size is 10MB.");
+			toast.error("File too large. Choose a file under 10\u00a0MB.");
 			return;
 		}
 
-		setReceiptUploading(receiptId, true);
-		setParseResults((prev) => {
-			const next = { ...prev };
-			delete next[receiptId];
-			return next;
-		});
+		const token = nextReceiptOperationToken();
+		dispatchReceiptOperation({ type: "uploadStarted", receiptId, token });
 
+		let fileUrl: string;
 		try {
 			const uploadUrl = await generateUploadUrl({});
 
@@ -1801,32 +1812,49 @@ function ReceiptsStep({
 
 			const uploadPayload = await uploadResponse.json();
 
-			const fileUrl = await getStorageUrl({
+			const storageUrl = await getStorageUrl({
 				storageId: uploadPayload.storageId,
 			});
 
-			if (!fileUrl) {
+			if (!storageUrl) {
 				throw new Error("Failed to resolve receipt file URL");
 			}
-
-			updateReceipt(receiptId, {
-				receiptFile: fileUrl,
-				receiptFileType: file.type,
-			});
-			if (shouldAutoParseReceipt(aiEnabled)) {
-				await parseReceipt(receiptId, fileUrl);
-			}
+			fileUrl = storageUrl;
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
-			setParseResults((prev) => ({
-				...prev,
-				[receiptId]: {
-					success: false,
-					message: `Upload failed: ${message}`,
-				},
-			}));
-		} finally {
-			setReceiptUploading(receiptId, false);
+			dispatchReceiptOperation({
+				type: "uploadFailed",
+				receiptId,
+				token,
+				message: `Upload failed: ${message}. Try again or choose a different file.`,
+			});
+			return;
+		}
+
+		if (
+			!isCurrentReceiptRequest(
+				receiptOperationsRef.current,
+				receiptId,
+				token,
+				"uploading",
+			)
+		) {
+			return;
+		}
+
+		updateReceipt(receiptId, {
+			receiptFile: fileUrl,
+			receiptFileType: file.type,
+		});
+		const autoParse = shouldAutoParseReceipt(aiEnabled);
+		dispatchReceiptOperation({
+			type: "uploadSucceeded",
+			receiptId,
+			token,
+			autoParse,
+		});
+		if (autoParse) {
+			await requestReceiptParse(receiptId, fileUrl, token);
 		}
 	};
 
@@ -1834,11 +1862,7 @@ function ReceiptsStep({
 		receiptId: string,
 		next: "receipt" | "mileage",
 	) => {
-		setParseResults((prev) => {
-			const n = { ...prev };
-			delete n[receiptId];
-			return n;
-		});
+		dispatchReceiptOperation({ type: "cleared", receiptId });
 		setReceipts((prev) =>
 			prev.map((r) => {
 				if (r.id !== receiptId) return r;
@@ -1873,25 +1897,11 @@ function ReceiptsStep({
 		);
 	};
 
-	const expenseRowValid = (r: ReceiptEntry) => {
-		const nameOk = (r.vendorName ?? "").trim().length > 0;
-		if (r.expenseType === "mileage") {
-			return (r.miles ?? 0) > 0 && r.total > 0 && nameOk;
-		}
-		return !!r.receiptFile && r.total > 0 && nameOk;
-	};
-
-	const canProceed = receipts.length > 0 && receipts.every(expenseRowValid);
+	const canProceed = validateExpenses(receipts) === null;
 
 	const activeReceiptIndex = receipts.findIndex(
 		(r) => r.id === activeReceipt?.id,
 	);
-	const isActiveUploading = activeReceipt
-		? uploadingFiles.has(activeReceipt.id)
-		: false;
-	const isActiveParsing = activeReceipt
-		? parsingReceipts.has(activeReceipt.id)
-		: false;
 
 	const addReceipt = () => {
 		const nextReceipt = emptyReceipt();
@@ -1899,11 +1909,22 @@ function ReceiptsStep({
 		setActiveReceiptId(nextReceipt.id);
 	};
 
-	const removeReceipt = (receiptId: string) => {
+	const removeReceipt = async (receiptId: string, index: number) => {
 		if (receipts.length <= 1) return;
+		if (
+			!(await confirm({
+				title: `Remove Expense ${index + 1}?`,
+				description:
+					"This expense and its details will be removed from the request.",
+				confirmLabel: "Remove Expense",
+				destructive: true,
+			}))
+		)
+			return;
 		const indexToRemove = receipts.findIndex((r) => r.id === receiptId);
 		const nextReceipts = receipts.filter((r) => r.id !== receiptId);
 		setReceipts(nextReceipts);
+		dispatchReceiptOperation({ type: "cleared", receiptId });
 
 		if (activeReceiptId === receiptId) {
 			const fallbackIndex = Math.max(
@@ -1916,11 +1937,48 @@ function ReceiptsStep({
 
 	if (!activeReceipt) return null;
 
+	const activeOperation = getReceiptOperation(
+		receiptOperations,
+		activeReceipt.id,
+	);
+	const isActiveUploading = activeOperation.status === "uploading";
+	const isActiveParsing = activeOperation.status === "parsing";
+	const receiptPending = isActiveUploading || isActiveParsing;
+	const onReceiptFile = (list: FileList | null, accept: string) => {
+		if (receiptUploadLock.current || receiptPending) return;
+		const decision = filesForPicker(list, {
+			accept,
+			multiple: false,
+			maxBytes: 10 * 1024 * 1024,
+			sizeMessage: "File too large. Choose a file under 10\u00a0MB.",
+		});
+		if (decision.message || decision.files.length !== 1) {
+			setReceiptPickerMessage(decision.message);
+			return;
+		}
+		const file = decision.files[0];
+		if (!file) return;
+		setReceiptPickerMessage(null);
+		receiptUploadLock.current = true;
+		void handleFileUpload(activeReceipt.id, file).finally(() => {
+			receiptUploadLock.current = false;
+		});
+	};
+	const activeOperationOutcome =
+		activeOperation.status === "parsed" || activeOperation.status === "failed"
+			? activeOperation
+			: null;
+	const mileagePhase = deriveMileagePhase(
+		mileagePrerequisite,
+		mileageResult,
+		activeReceipt.id,
+	);
+
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
 			<div className="flex items-center justify-between mb-4">
 				<div>
-					<h2 className="text-xl font-bold">Expenses</h2>
+					<h2 className="text-xl font-bold text-balance">Expenses</h2>
 					<p className="text-xs text-muted-foreground">
 						{aiEnabled
 							? "Add receipt uploads or mileage; verify AI-filled details for receipts"
@@ -1929,7 +1987,7 @@ function ReceiptsStep({
 				</div>
 				<Button variant="outline" size="sm" onClick={addReceipt}>
 					<Plus className="w-4 h-4 mr-1" />
-					Add expense
+					Add Expense
 				</Button>
 			</div>
 
@@ -1956,7 +2014,7 @@ function ReceiptsStep({
 										) : (
 											<Receipt className="h-3.5 w-3.5 text-muted-foreground" />
 										)}
-										<span className="text-xs font-medium">
+										<span className="text-xs font-medium tabular-nums">
 											Expense {index + 1}
 										</span>
 									</div>
@@ -1965,10 +2023,10 @@ function ReceiptsStep({
 											? receipt.vendorName
 											: receipt.expenseType === "mileage"
 												? "Mileage"
-												: "Awaiting upload"}
+												: "Awaiting Upload"}
 									</div>
-									<div className="mt-0.5 text-[11px] font-mono">
-										${receipt.total.toFixed(2)}
+									<div className="mt-0.5 text-[11px] font-mono tabular-nums">
+										{formatCurrencyUSD(receipt.total)}
 									</div>
 								</Button>
 								{receipts.length > 1 && (
@@ -1976,8 +2034,8 @@ function ReceiptsStep({
 										type="button"
 										variant="ghost"
 										size="icon"
-										aria-label={`Remove expense ${index + 1}`}
-										onClick={() => removeReceipt(receipt.id)}
+										aria-label={`Remove Expense ${index + 1}`}
+										onClick={() => void removeReceipt(receipt.id, index)}
 										className="absolute right-1 top-1 h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 									>
 										<Trash2 className="h-3.5 w-3.5" />
@@ -1992,12 +2050,12 @@ function ReceiptsStep({
 			<div className="rounded-md border bg-card flex-1 min-h-[560px] overflow-hidden flex flex-col">
 				<div className="shrink-0 border-b px-4 py-3 bg-muted/10">
 					<p className="text-xs font-medium text-muted-foreground mb-2">
-						Expense type
+						Expense Type
 					</p>
 					<div
 						className="flex max-w-md w-full gap-0.5 rounded-lg border bg-background p-0.5"
 						role="radiogroup"
-						aria-label="Expense type"
+						aria-label="Expense Type"
 					>
 						<Button
 							variant={
@@ -2046,8 +2104,13 @@ function ReceiptsStep({
 							<div className="max-h-[min(560px,70vh)] space-y-5 overflow-y-auto border-b bg-background p-5 lg:max-h-none lg:border-b-0 lg:border-r">
 								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 									<div className="space-y-2 md:col-span-2">
-										<Label>Trip or purpose</Label>
+										<Label htmlFor={`mileage-purpose-${activeReceipt.id}`}>
+											Trip or Purpose
+										</Label>
 										<Input
+											id={`mileage-purpose-${activeReceipt.id}`}
+											name="tripPurpose"
+											autoComplete="off"
 											placeholder="e.g. Supply run — campus to store"
 											value={activeReceipt.vendorName}
 											onChange={(e) =>
@@ -2058,42 +2121,42 @@ function ReceiptsStep({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label>Calculated miles</Label>
+										<p className="text-sm font-medium leading-none">
+											Calculated Miles
+										</p>
 										<div
 											className={cn(
 												"flex h-9 items-center justify-between rounded-md border bg-muted/30 px-3 text-sm",
-												mileageCalculation.status === "error" &&
-													mileageCalculation.receiptId === activeReceipt.id &&
+												mileagePhase.status === "error" &&
 													"border-destructive/50 bg-destructive/5",
 											)}
 										>
 											<span className="font-mono tabular-nums">
-												{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
-													maximumFractionDigits: 2,
-												})}{" "}
-												mi
+												{formatNumber(activeReceipt.miles ?? 0)} mi
 											</span>
-											{mileageCalculation.status === "calculating" &&
-											mileageCalculation.receiptId === activeReceipt.id ? (
+											{mileagePhase.status === "calculating" ? (
 												<Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
 											) : null}
 										</div>
-										<p
+										<output
+											aria-live="polite"
 											className={cn(
-												"text-[11px] leading-snug text-muted-foreground",
-												mileageCalculation.status === "error" &&
-													mileageCalculation.receiptId === activeReceipt.id &&
-													"text-destructive",
+												"block text-[11px] leading-snug text-muted-foreground",
+												mileagePhase.status === "error" && "text-destructive",
 											)}
 										>
-											{mileageCalculation.receiptId === activeReceipt.id
-												? mileageCalculation.message
-												: "Mileage calculates automatically from the route."}
-										</p>
+											{mileagePhase.status === "idle"
+												? "Mileage calculates automatically from the route."
+												: mileagePhase.message}
+										</output>
 									</div>
 									<div className="space-y-2">
-										<Label>Date of trip</Label>
+										<Label htmlFor={`mileage-date-${activeReceipt.id}`}>
+											Date of Trip
+										</Label>
 										<Input
+											id={`mileage-date-${activeReceipt.id}`}
+											name="tripDate"
 											type="date"
 											value={
 												activeReceipt.dateOfPurchase
@@ -2112,8 +2175,9 @@ function ReceiptsStep({
 									<div className="md:col-span-2 space-y-4">
 										<AddressAutocompleteInput
 											id={`mileage-from-${activeReceipt.id}`}
-											label="From (address)"
-											placeholder="Starting address — search or type one line"
+											name="mileageFrom"
+											label="From (Address)"
+											placeholder="Starting address — search or type one line…"
 											value={activeReceipt.mileageFrom ?? ""}
 											onChange={(v) =>
 												updateMileageAddresses(activeReceipt.id, {
@@ -2123,8 +2187,9 @@ function ReceiptsStep({
 										/>
 										<AddressAutocompleteInput
 											id={`mileage-to-${activeReceipt.id}`}
-											label="To (address)"
-											placeholder="Destination address"
+											name="mileageTo"
+											label="To (Address)"
+											placeholder="Destination address…"
 											showFootnote={false}
 											value={activeReceipt.mileageTo ?? ""}
 											onChange={(v) =>
@@ -2135,9 +2200,7 @@ function ReceiptsStep({
 										/>
 										<div className="space-y-3">
 											<div className="flex flex-wrap items-end justify-between gap-2">
-												<Label className="text-xs font-medium">
-													Stops (optional)
-												</Label>
+												<p className="text-xs font-medium">Stops (Optional)</p>
 												<Button
 													type="button"
 													variant="outline"
@@ -2146,7 +2209,7 @@ function ReceiptsStep({
 													onClick={() => addMileageStop(activeReceipt.id)}
 												>
 													<Plus className="mr-1 h-3.5 w-3.5" />
-													Add stop
+													Add Stop
 												</Button>
 											</div>
 											<p className="text-[11px] text-muted-foreground -mt-1">
@@ -2172,7 +2235,7 @@ function ReceiptsStep({
 																		size="icon"
 																		className="h-7 w-7"
 																		disabled={stopIndex === 0}
-																		aria-label="Move stop up"
+																		aria-label={`Move Stop ${stopIndex + 1} Up`}
 																		onClick={() =>
 																			moveMileageStop(
 																				activeReceipt.id,
@@ -2194,7 +2257,7 @@ function ReceiptsStep({
 																				.length -
 																				1
 																		}
-																		aria-label="Move stop down"
+																		aria-label={`Move Stop ${stopIndex + 1} Down`}
 																		onClick={() =>
 																			moveMileageStop(
 																				activeReceipt.id,
@@ -2209,8 +2272,9 @@ function ReceiptsStep({
 																<div className="min-w-0 flex-1">
 																	<AddressAutocompleteInput
 																		id={`mileage-stop-${activeReceipt.id}-${stopIndex}`}
-																		label={`Stop ${stopIndex + 1} (address)`}
-																		placeholder="Stop address"
+																		name={`mileageStop${stopIndex + 1}`}
+																		label={`Stop ${stopIndex + 1} (Address)`}
+																		placeholder="Stop address…"
 																		showFootnote={false}
 																		value={stop}
 																		onChange={(v) => {
@@ -2229,9 +2293,9 @@ function ReceiptsStep({
 																	variant="ghost"
 																	size="icon"
 																	className="mt-6 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-																	aria-label="Remove stop"
+																	aria-label={`Remove Stop ${stopIndex + 1}`}
 																	onClick={() =>
-																		removeMileageStop(
+																		void removeMileageStop(
 																			activeReceipt.id,
 																			stopIndex,
 																		)
@@ -2247,9 +2311,9 @@ function ReceiptsStep({
 										</div>
 										<div className="rounded-md border border-dashed bg-muted/30 px-3 py-2">
 											<p className="text-[11px] font-medium text-muted-foreground">
-												Route preview
+												Route Preview
 											</p>
-											<p className="text-sm font-medium text-foreground">
+											<p className="text-sm font-medium text-foreground break-words">
 												{formatMileageRoute(
 													activeReceipt.mileageFrom,
 													activeReceipt.mileageTo,
@@ -2263,29 +2327,32 @@ function ReceiptsStep({
 									<div className="flex justify-between text-sm">
 										<span className="text-muted-foreground">Rate</span>
 										<span className="font-mono tabular-nums">
-											${MILEAGE_RATE_PER_MILE.toFixed(2)} / mile
+											{formatCurrencyUSD(MILEAGE_RATE_PER_MILE)} / mile
 										</span>
 									</div>
 									<div className="flex justify-between text-sm">
 										<span className="text-muted-foreground">Miles</span>
 										<span className="font-mono tabular-nums">
-											{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
-												maximumFractionDigits: 2,
-											})}
+											{formatNumber(activeReceipt.miles ?? 0)}
 										</span>
 									</div>
 									<Separator />
 									<div className="flex items-baseline justify-between">
 										<span className="font-semibold">Reimbursement</span>
 										<span className="font-mono text-xl font-bold tabular-nums">
-											${activeReceipt.total.toFixed(2)}
+											{formatCurrencyUSD(activeReceipt.total)}
 										</span>
 									</div>
 								</div>
 								<div className="space-y-2">
-									<Label>Notes</Label>
+									<Label htmlFor={`mileage-notes-${activeReceipt.id}`}>
+										Notes
+									</Label>
 									<Textarea
-										placeholder="Any notes about this trip..."
+										id={`mileage-notes-${activeReceipt.id}`}
+										name="notes"
+										autoComplete="off"
+										placeholder="Any notes about this trip…"
 										value={activeReceipt.notes}
 										onChange={(e) =>
 											updateReceipt(activeReceipt.id, { notes: e.target.value })
@@ -2302,23 +2369,20 @@ function ReceiptsStep({
 									<div className="flex justify-between text-sm">
 										<span className="text-muted-foreground">Rate</span>
 										<span className="font-mono tabular-nums">
-											${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi
+											{formatCurrencyUSD(MILEAGE_RATE_PER_MILE)}/mi
 										</span>
 									</div>
 									<div className="flex justify-between text-sm">
 										<span className="text-muted-foreground">Distance</span>
 										<span className="font-mono tabular-nums">
-											{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
-												maximumFractionDigits: 2,
-											})}{" "}
-											mi
+											{formatNumber(activeReceipt.miles ?? 0)} mi
 										</span>
 									</div>
 									<Separator />
 									<div className="flex items-baseline justify-between pt-1">
 										<span className="text-base font-semibold">Total</span>
 										<span className="font-mono text-2xl font-bold tabular-nums">
-											${activeReceipt.total.toFixed(2)}
+											{formatCurrencyUSD(activeReceipt.total)}
 										</span>
 									</div>
 								</div>
@@ -2329,7 +2393,9 @@ function ReceiptsStep({
 							<div className="border-b lg:border-b-0 lg:border-r bg-background overflow-y-auto p-5 space-y-5">
 								<div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20">
 									<div className="min-w-0">
-										<Label className="font-semibold">Receipt File</Label>
+										<p className="text-sm font-semibold leading-none">
+											Receipt File
+										</p>
 										<a
 											className="text-xs text-primary underline-offset-2 hover:underline truncate block"
 											href={activeReceipt.receiptFile}
@@ -2337,45 +2403,28 @@ function ReceiptsStep({
 											rel="noreferrer"
 										>
 											{activeReceipt.receiptFile
-												? "Open file"
-												: "No file uploaded"}
+												? "Open File"
+												: "No File Uploaded"}
 										</a>
 									</div>
 									<div className="flex items-center gap-2">
-										<label>
-											<Input
-												type="file"
-												className="hidden"
-												accept={RECEIPT_FILE_ACCEPT}
-												onChange={(e) => {
-													const file = e.target.files?.[0];
-													if (file)
-														void handleFileUpload(activeReceipt.id, file);
-													e.target.value = "";
-												}}
-											/>
-											<Button
-												variant="outline"
-												size="sm"
-												asChild
-												disabled={isActiveUploading || isActiveParsing}
-											>
-												<span>
-													{activeReceipt.receiptFile ? "Replace" : "Upload"}
-												</span>
-											</Button>
-										</label>
-										{isMobile && (
+										<FileDropTarget
+											disabled={receiptPending}
+											onFiles={(files) =>
+												onReceiptFile(files, RECEIPT_FILE_ACCEPT)
+											}
+											className="rounded-md"
+										>
 											<label>
-												<Input
+												<input
 													type="file"
-													className="hidden"
-													accept="image/*"
-													capture="environment"
+													name="receiptFile"
+													aria-label="Replace Receipt File"
+													className="sr-only"
+													accept={RECEIPT_FILE_ACCEPT}
+													disabled={receiptPending}
 													onChange={(e) => {
-														const file = e.target.files?.[0];
-														if (file)
-															void handleFileUpload(activeReceipt.id, file);
+														onReceiptFile(e.target.files, RECEIPT_FILE_ACCEPT);
 														e.target.value = "";
 													}}
 												/>
@@ -2383,7 +2432,36 @@ function ReceiptsStep({
 													variant="outline"
 													size="sm"
 													asChild
-													disabled={isActiveUploading || isActiveParsing}
+													disabled={receiptPending}
+												>
+													<span>
+														{activeReceipt.receiptFile
+															? "Replace Receipt"
+															: "Upload Receipt"}
+													</span>
+												</Button>
+											</label>
+										</FileDropTarget>
+										{isMobile && (
+											<label>
+												<input
+													type="file"
+													name="receiptPhoto"
+													aria-label="Take Receipt Photo"
+													className="sr-only"
+													accept="image/*"
+													capture="environment"
+													disabled={receiptPending}
+													onChange={(e) => {
+														onReceiptFile(e.target.files, "image/*");
+														e.target.value = "";
+													}}
+												/>
+												<Button
+													variant="outline"
+													size="sm"
+													asChild
+													disabled={receiptPending}
 												>
 													<span>
 														<Camera className="h-3.5 w-3.5 mr-1.5" />
@@ -2402,7 +2480,7 @@ function ReceiptsStep({
 														activeReceipt.receiptFile!,
 													)
 												}
-												disabled={isActiveParsing}
+												disabled={isActiveUploading || isActiveParsing}
 											>
 												{isActiveParsing && (
 													<Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -2414,29 +2492,46 @@ function ReceiptsStep({
 								</div>
 
 								{isActiveUploading && (
-									<div className="text-xs text-muted-foreground flex items-center gap-2">
+									<output
+										aria-live="polite"
+										className="text-xs text-muted-foreground flex items-center gap-2"
+									>
 										<Loader2 className="h-3.5 w-3.5 animate-spin" />
-										Uploading receipt...
-									</div>
+										Uploading receipt…
+									</output>
+								)}
+								{receiptPickerMessage && (
+									<output
+										aria-live="polite"
+										className="block text-xs text-tone-warning"
+									>
+										{receiptPickerMessage}
+									</output>
 								)}
 
-								{parseResults[activeReceipt.id] && (
-									<p
+								{activeOperationOutcome && (
+									<output
+										aria-live="polite"
 										className={cn(
-											"text-xs",
-											parseResults[activeReceipt.id].success
+											"block text-xs",
+											activeOperationOutcome.status === "parsed"
 												? "text-tone-success"
 												: "text-tone-warning",
 										)}
 									>
-										{parseResults[activeReceipt.id].message}
-									</p>
+										{activeOperationOutcome.message}
+									</output>
 								)}
 
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 									<div className="space-y-2">
-										<Label>Vendor Name</Label>
+										<Label htmlFor={`receipt-vendor-${activeReceipt.id}`}>
+											Vendor Name
+										</Label>
 										<Input
+											id={`receipt-vendor-${activeReceipt.id}`}
+											name="vendorName"
+											autoComplete="off"
 											placeholder="e.g. Amazon"
 											value={activeReceipt.vendorName}
 											onChange={(e) =>
@@ -2447,8 +2542,13 @@ function ReceiptsStep({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label>Location</Label>
+										<Label htmlFor={`receipt-location-${activeReceipt.id}`}>
+											Location
+										</Label>
 										<Input
+											id={`receipt-location-${activeReceipt.id}`}
+											name="location"
+											autoComplete="off"
 											placeholder="e.g. Online"
 											value={activeReceipt.location}
 											onChange={(e) =>
@@ -2459,8 +2559,12 @@ function ReceiptsStep({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label>Date of Purchase</Label>
+										<Label htmlFor={`receipt-date-${activeReceipt.id}`}>
+											Date of Purchase
+										</Label>
 										<Input
+											id={`receipt-date-${activeReceipt.id}`}
+											name="dateOfPurchase"
 											type="date"
 											value={
 												activeReceipt.dateOfPurchase
@@ -2480,14 +2584,16 @@ function ReceiptsStep({
 
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
-										<Label>Line Items</Label>
+										<p className="text-sm font-medium leading-none">
+											Line Items
+										</p>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => addLineItem(activeReceipt.id)}
 										>
 											<Plus className="h-3 w-3 mr-1" />
-											Add Item
+											Add Line Item
 										</Button>
 									</div>
 									<div className="rounded-lg border overflow-hidden">
@@ -2504,15 +2610,20 @@ function ReceiptsStep({
 														<th className="px-3 py-2 text-left font-medium w-28">
 															Amount
 														</th>
-														<th className="px-3 py-2 w-10" />
+														<th className="px-3 py-2 w-10">
+															<span className="sr-only">Actions</span>
+														</th>
 													</tr>
 												</thead>
 												<tbody>
-													{activeReceipt.lineItems.map((li) => (
+													{activeReceipt.lineItems.map((li, liIndex) => (
 														<tr key={li.id} className="border-t">
 															<td className="px-2 py-2">
 																<Input
-																	placeholder="Description"
+																	name={`lineItem${liIndex + 1}Description`}
+																	aria-label={`Line Item ${liIndex + 1} Description`}
+																	autoComplete="off"
+																	placeholder="Description…"
 																	value={li.description}
 																	onChange={(e) =>
 																		updateLineItem(activeReceipt.id, li.id, {
@@ -2530,7 +2641,9 @@ function ReceiptsStep({
 																		})
 																	}
 																>
-																	<SelectTrigger>
+																	<SelectTrigger
+																		aria-label={`Line Item ${liIndex + 1} Category`}
+																	>
 																		<SelectValue />
 																	</SelectTrigger>
 																	<SelectContent>
@@ -2544,14 +2657,21 @@ function ReceiptsStep({
 															</td>
 															<td className="px-2 py-2">
 																<div className="relative">
-																	<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+																	<span
+																		aria-hidden="true"
+																		className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm"
+																	>
 																		$
 																	</span>
 																	<Input
 																		type="number"
+																		inputMode="decimal"
+																		name={`lineItem${liIndex + 1}Amount`}
+																		aria-label={`Line Item ${liIndex + 1} Amount`}
+																		autoComplete="off"
 																		step="0.01"
 																		min="0"
-																		className="pl-7"
+																		className="pl-7 tabular-nums"
 																		value={li.amount || ""}
 																		onChange={(e) =>
 																			updateLineItem(activeReceipt.id, li.id, {
@@ -2566,8 +2686,9 @@ function ReceiptsStep({
 																	<Button
 																		variant="ghost"
 																		size="icon"
+																		aria-label={`Remove Line Item ${liIndex + 1}`}
 																		onClick={() =>
-																			removeLineItem(activeReceipt.id, li.id)
+																			void removeLineItem(activeReceipt.id, li)
 																		}
 																	>
 																		<Trash2 className="h-3.5 w-3.5" />
@@ -2584,16 +2705,25 @@ function ReceiptsStep({
 
 								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 									<div className="space-y-2">
-										<Label>Tax</Label>
+										<Label htmlFor={`receipt-tax-${activeReceipt.id}`}>
+											Tax
+										</Label>
 										<div className="relative">
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+											<span
+												aria-hidden="true"
+												className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm"
+											>
 												$
 											</span>
 											<Input
+												id={`receipt-tax-${activeReceipt.id}`}
+												name="tax"
 												type="number"
+												inputMode="decimal"
+												autoComplete="off"
 												step="0.01"
 												min="0"
-												className="pl-7"
+												className="pl-7 tabular-nums"
 												value={activeReceipt.tax || ""}
 												onChange={(e) =>
 													updateReceipt(activeReceipt.id, {
@@ -2604,16 +2734,25 @@ function ReceiptsStep({
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label>Tip</Label>
+										<Label htmlFor={`receipt-tip-${activeReceipt.id}`}>
+											Tip
+										</Label>
 										<div className="relative">
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+											<span
+												aria-hidden="true"
+												className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm"
+											>
 												$
 											</span>
 											<Input
+												id={`receipt-tip-${activeReceipt.id}`}
+												name="tip"
 												type="number"
+												inputMode="decimal"
+												autoComplete="off"
 												step="0.01"
 												min="0"
-												className="pl-7"
+												className="pl-7 tabular-nums"
 												value={activeReceipt.tip || ""}
 												onChange={(e) =>
 													updateReceipt(activeReceipt.id, {
@@ -2624,16 +2763,25 @@ function ReceiptsStep({
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label>Shipping</Label>
+										<Label htmlFor={`receipt-shipping-${activeReceipt.id}`}>
+											Shipping
+										</Label>
 										<div className="relative">
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+											<span
+												aria-hidden="true"
+												className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm"
+											>
 												$
 											</span>
 											<Input
+												id={`receipt-shipping-${activeReceipt.id}`}
+												name="shipping"
 												type="number"
+												inputMode="decimal"
+												autoComplete="off"
 												step="0.01"
 												min="0"
-												className="pl-7"
+												className="pl-7 tabular-nums"
 												value={activeReceipt.shipping || ""}
 												onChange={(e) =>
 													updateReceipt(activeReceipt.id, {
@@ -2644,9 +2792,9 @@ function ReceiptsStep({
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label>Subtotal</Label>
-										<div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 font-mono text-sm">
-											${activeReceipt.subtotal.toFixed(2)}
+										<p className="text-sm font-medium leading-none">Subtotal</p>
+										<div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 font-mono text-sm tabular-nums">
+											{formatCurrencyUSD(activeReceipt.subtotal)}
 										</div>
 									</div>
 								</div>
@@ -2656,16 +2804,21 @@ function ReceiptsStep({
 										<p className="text-sm text-muted-foreground">
 											Receipt Total
 										</p>
-										<p className="text-xl font-bold font-mono">
-											${activeReceipt.total.toFixed(2)}
+										<p className="text-xl font-bold font-mono tabular-nums">
+											{formatCurrencyUSD(activeReceipt.total)}
 										</p>
 									</div>
 								</div>
 
 								<div className="space-y-2">
-									<Label>Notes</Label>
+									<Label htmlFor={`receipt-notes-${activeReceipt.id}`}>
+										Notes
+									</Label>
 									<Textarea
-										placeholder="Any notes about this receipt..."
+										id={`receipt-notes-${activeReceipt.id}`}
+										name="notes"
+										autoComplete="off"
+										placeholder="Any notes about this receipt…"
 										value={activeReceipt.notes}
 										onChange={(e) =>
 											updateReceipt(activeReceipt.id, { notes: e.target.value })
@@ -2689,7 +2842,9 @@ function ReceiptsStep({
 										<img
 											src={activeReceipt.receiptFile}
 											alt={`Receipt ${activeReceiptIndex + 1}`}
-											className="max-w-full max-h-full object-contain rounded-lg border bg-black/5"
+											width={600}
+											height={800}
+											className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg border bg-black/5"
 											onError={(e) => {
 												// If image fails to load, it might be a PDF — try rendering as iframe
 												const parent = e.currentTarget.parentElement;
@@ -2709,88 +2864,114 @@ function ReceiptsStep({
 								) : (
 									<div className="text-center text-muted-foreground">
 										<Receipt className="w-12 h-12 mx-auto mb-2 opacity-50" />
-										<p className="text-sm">No receipt uploaded</p>
+										<p className="text-sm">No receipt uploaded.</p>
 									</div>
 								)}
 							</div>
 						</div>
 					) : (
 						<div className="h-full flex items-center justify-center p-8">
-							<div className="w-full max-w-md rounded-md border-2 border-dashed bg-muted/20 p-8 text-center">
-								<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-									<Upload className="h-6 w-6 text-primary" />
-								</div>
-								<h3 className="text-base font-semibold">
-									Upload receipt before entering details
-								</h3>
-								<p className="mt-2 text-sm text-muted-foreground">
-									Fields will appear after upload. Supports PDF, PNG, JPG, JPEG,
-									WEBP, HEIC.
-								</p>
-								<div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-									<label className="w-full sm:w-auto">
-										<Input
-											type="file"
-											className="hidden"
-											accept={RECEIPT_FILE_ACCEPT}
-											onChange={(e) => {
-												const file = e.target.files?.[0];
-												if (file) void handleFileUpload(activeReceipt.id, file);
-												e.target.value = "";
-											}}
-										/>
-										<Button asChild className="w-full sm:w-auto">
-											<span>Select File</span>
-										</Button>
-									</label>
-									{isMobile && (
+							<div className="w-full max-w-md text-center">
+								<FileDropTarget
+									disabled={receiptPending}
+									onFiles={(files) => onReceiptFile(files, RECEIPT_FILE_ACCEPT)}
+									className="rounded-md border-2 border-dashed bg-muted/20 p-8"
+								>
+									<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+										<Upload className="h-6 w-6 text-primary" />
+									</div>
+									<h3 className="text-base font-semibold text-balance">
+										Upload Receipt Before Entering Details
+									</h3>
+									<p className="mt-2 text-sm text-muted-foreground">
+										Fields will appear after upload. Supports PDF, PNG, JPG,
+										JPEG, WEBP, HEIC.
+									</p>
+									<div className="mt-4 flex flex-col items-center justify-center gap-2">
 										<label className="w-full sm:w-auto">
-											<Input
+											<input
 												type="file"
-												className="hidden"
-												accept="image/*"
-												capture="environment"
+												name="receiptFile"
+												aria-label="Select Receipt File"
+												className="sr-only"
+												accept={RECEIPT_FILE_ACCEPT}
+												disabled={receiptPending}
 												onChange={(e) => {
-													const file = e.target.files?.[0];
-													if (file)
-														void handleFileUpload(activeReceipt.id, file);
+													onReceiptFile(e.target.files, RECEIPT_FILE_ACCEPT);
 													e.target.value = "";
 												}}
 											/>
 											<Button
-												variant="outline"
 												asChild
 												className="w-full sm:w-auto"
+												disabled={receiptPending}
 											>
-												<span>
-													<Camera className="h-4 w-4 mr-2" />
-													Take Photo
-												</span>
+												<span>Select File</span>
 											</Button>
 										</label>
-									)}
-								</div>
+									</div>
+								</FileDropTarget>
+								{isMobile && (
+									<label className="mt-2 inline-flex w-full sm:w-auto">
+										<input
+											type="file"
+											name="receiptPhoto"
+											aria-label="Take Receipt Photo"
+											className="sr-only"
+											accept="image/*"
+											capture="environment"
+											disabled={receiptPending}
+											onChange={(e) => {
+												onReceiptFile(e.target.files, "image/*");
+												e.target.value = "";
+											}}
+										/>
+										<Button
+											variant="outline"
+											asChild
+											className="w-full sm:w-auto"
+											disabled={receiptPending}
+										>
+											<span>
+												<Camera className="h-4 w-4 mr-2" />
+												Take Photo
+											</span>
+										</Button>
+									</label>
+								)}
+								{receiptPickerMessage && (
+									<output
+										aria-live="polite"
+										className="mt-4 block text-xs text-tone-warning"
+									>
+										{receiptPickerMessage}
+									</output>
+								)}
 								{(isActiveUploading || isActiveParsing) && (
-									<div className="mt-4 text-xs text-muted-foreground flex items-center justify-center gap-2">
+									<output
+										aria-live="polite"
+										className="mt-4 text-xs text-muted-foreground flex items-center justify-center gap-2"
+									>
 										<Loader2 className="h-3.5 w-3.5 animate-spin" />
 										{isActiveUploading
-											? "Uploading receipt..."
+											? "Uploading receipt…"
 											: aiEnabled
-												? "AI is parsing receipt..."
+												? "AI is parsing receipt…"
 												: "Ready for manual entry."}
-									</div>
+									</output>
 								)}
-								{parseResults[activeReceipt.id] && (
-									<p
+								{activeOperationOutcome && (
+									<output
+										aria-live="polite"
 										className={cn(
-											"mt-3 text-xs",
-											parseResults[activeReceipt.id].success
+											"block mt-3 text-xs",
+											activeOperationOutcome.status === "parsed"
 												? "text-tone-success"
 												: "text-tone-warning",
 										)}
 									>
-										{parseResults[activeReceipt.id].message}
-									</p>
+										{activeOperationOutcome.message}
+									</output>
 								)}
 							</div>
 						</div>
@@ -2842,7 +3023,7 @@ function ReviewStep({
 	return (
 		<div className="flex flex-col h-full pb-20">
 			<div className="mb-6 shrink-0">
-				<h2 className="text-2xl font-bold">Review Request</h2>
+				<h2 className="text-2xl font-bold text-balance">Review Request</h2>
 				<p className="text-muted-foreground">
 					Please review all line items and details before submitting.
 				</p>
@@ -2857,39 +3038,39 @@ function ReviewStep({
 								<h3 className="text-sm font-medium mb-4">Report Summary</h3>
 								<div className="space-y-4">
 									<div>
-										<label className="text-xs text-muted-foreground block mb-1">
-											Title
-										</label>
-										<p className="font-medium">{formData.title}</p>
+										<p className="text-xs text-muted-foreground mb-1">Title</p>
+										<p className="font-medium break-words">{formData.title}</p>
 									</div>
 									<div>
-										<label className="text-xs text-muted-foreground block mb-1">
+										<p className="text-xs text-muted-foreground mb-1">
 											Department
-										</label>
+										</p>
 										<p className="font-medium">
 											{departmentLabels[formData.department] ||
 												formData.department}
 										</p>
 									</div>
 									<div>
-										<label className="text-xs text-muted-foreground block mb-1">
+										<p className="text-xs text-muted-foreground mb-1">
 											Payment Method
-										</label>
+										</p>
 										<p className="font-medium">{formData.paymentMethod}</p>
 									</div>
 									{formData.additionalInfo && (
 										<div>
-											<label className="text-xs text-muted-foreground block mb-1">
+											<p className="text-xs text-muted-foreground mb-1">
 												Payment Details
-											</label>
-											<p className="font-medium">{formData.additionalInfo}</p>
+											</p>
+											<p className="font-medium break-words">
+												{formData.additionalInfo}
+											</p>
 										</div>
 									)}
 									<Separator />
 									<div className="flex justify-between items-center">
 										<span className="font-bold">Total Amount</span>
-										<span className="font-bold text-xl text-tone-success">
-											${totalAmount.toFixed(2)}
+										<span className="font-bold text-xl text-tone-success tabular-nums">
+											{formatCurrencyUSD(totalAmount)}
 										</span>
 									</div>
 								</div>
@@ -2921,13 +3102,13 @@ function ReviewStep({
 						<Card key={r.id}>
 							<CardContent className="p-0">
 								<div className="px-6 py-4 bg-muted border-b flex justify-between items-center">
-									<div className="flex items-center gap-3">
-										<div className="w-8 h-8 rounded-full bg-background border flex items-center justify-center font-bold text-muted-foreground text-sm">
+									<div className="flex min-w-0 items-center gap-3">
+										<div className="w-8 h-8 shrink-0 rounded-full bg-background border flex items-center justify-center font-bold text-muted-foreground text-sm tabular-nums">
 											{i + 1}
 										</div>
-										<div>
+										<div className="min-w-0">
 											<div className="flex flex-wrap items-center gap-2">
-												<h4 className="font-bold">
+												<h4 className="font-bold break-words">
 													{r.vendorName ||
 														(r.expenseType === "mileage"
 															? "Mileage"
@@ -2942,16 +3123,12 @@ function ReviewStep({
 													</Badge>
 												)}
 											</div>
-											<p className="text-xs text-muted-foreground">
+											<p className="text-xs text-muted-foreground break-words">
 												{r.expenseType === "mileage" ? (
 													<>
-														{(r.miles ?? 0).toLocaleString(undefined, {
-															maximumFractionDigits: 2,
-														})}{" "}
-														mi × ${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi •{" "}
-														{r.dateOfPurchase
-															? new Date(r.dateOfPurchase).toLocaleDateString()
-															: "N/A"}
+														{formatNumber(r.miles ?? 0)} mi ×{" "}
+														{formatCurrencyUSD(MILEAGE_RATE_PER_MILE)}/mi •{" "}
+														{formatDateDisplay(r.dateOfPurchase)}
 														{formatMileageRoute(
 															r.mileageFrom,
 															r.mileageTo,
@@ -2972,16 +3149,16 @@ function ReviewStep({
 													</>
 												) : (
 													<>
-														{r.dateOfPurchase
-															? new Date(r.dateOfPurchase).toLocaleDateString()
-															: "N/A"}{" "}
-														• {r.location || "No location"}
+														{formatDateDisplay(r.dateOfPurchase)} •{" "}
+														{r.location || "No location"}
 													</>
 												)}
 											</p>
 										</div>
 									</div>
-									<span className="font-bold">${r.total.toFixed(2)}</span>
+									<span className="shrink-0 font-bold tabular-nums">
+										{formatCurrencyUSD(r.total)}
+									</span>
 								</div>
 								<div className="p-6">
 									<div className="border rounded-lg overflow-hidden">
@@ -3000,20 +3177,20 @@ function ReviewStep({
 													const lineTotal = (item.amount || 0) * 1;
 													return (
 														<tr key={idx} className="bg-background">
-															<td className="px-4 py-2 font-medium">
-																{item.description || "-"}
+															<td className="px-4 py-2 font-medium break-words">
+																{item.description || "—"}
 															</td>
 															<td className="px-4 py-2 text-center text-muted-foreground text-xs">
 																{item.category}
 															</td>
-															<td className="px-4 py-2 text-center text-muted-foreground">
+															<td className="px-4 py-2 text-center text-muted-foreground tabular-nums">
 																1
 															</td>
-															<td className="px-4 py-2 text-right text-muted-foreground">
-																${item.amount.toFixed(2)}
+															<td className="px-4 py-2 text-right text-muted-foreground tabular-nums">
+																{formatCurrencyUSD(item.amount)}
 															</td>
-															<td className="px-4 py-2 text-right font-medium">
-																${lineTotal.toFixed(2)}
+															<td className="px-4 py-2 text-right font-medium tabular-nums">
+																{formatCurrencyUSD(lineTotal)}
 															</td>
 														</tr>
 													);
@@ -3029,13 +3206,10 @@ function ReviewStep({
 														>
 															Additional (Tax/Tip/Ship)
 														</td>
-														<td className="px-4 py-2 text-right font-medium">
-															$
-															{(
-																(r.tax || 0) +
-																(r.tip || 0) +
-																(r.shipping || 0)
-															).toFixed(2)}
+														<td className="px-4 py-2 text-right font-medium tabular-nums">
+															{formatCurrencyUSD(
+																(r.tax || 0) + (r.tip || 0) + (r.shipping || 0),
+															)}
 														</td>
 													</tr>
 												)}
@@ -3140,15 +3314,44 @@ function ReimbursementPage() {
 	);
 	const getStorageUrl = useAuthedMutation(api.reimbursements.getStorageUrl);
 
-	const [view, setView] = useState<"list" | "create" | "detail">("list");
-	const [selectedReimbursementId, setSelectedReimbursementId] = useState<
-		string | null
-	>(null);
-	const [isSubmitting, setIsSubmitting] = useState(false);
+	const {
+		view,
+		id: selectedReimbursementId,
+		q: searchTerm,
+		status: statusFilter,
+	} = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearch = useCallback(
+		(
+			patch: Partial<ReimbursementSearch>,
+			options?: { ignoreBlocker?: boolean },
+		) =>
+			navigate({
+				search: (prev) => ({ ...prev, ...patch }),
+				replace: true,
+				...options,
+			}),
+		[navigate],
+	);
+	const setView = useCallback(
+		(
+			next: ReimbursementSearch["view"],
+			options?: { ignoreBlocker?: boolean },
+		) =>
+			setSearch(
+				next === "detail" ? { view: next } : { view: next, id: undefined },
+				options,
+			),
+		[setSearch],
+	);
+	const [searchInput, setSearchInput] = useState(searchTerm);
 
-	// Wizard step state
-	const [step, setStep] = useState(1);
-	const [maxVisitedStep, setMaxVisitedStep] = useState(1);
+	const [wizard, dispatchWizard] = useReducer(
+		wizardReducer,
+		initialWizardState,
+	);
+	const { step, maxVisitedStep } = wizard;
+	const isSubmitting = wizard.submitPhase === "submitting";
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -3161,9 +3364,16 @@ function ReimbursementPage() {
 
 	const [receipts, setReceipts] = useState<ReceiptEntry[]>([emptyReceipt()]);
 
-	// Search + filter state (must be before any early returns)
-	const [searchTerm, setSearchTerm] = useState("");
-	const [statusFilter, setStatusFilter] = useState("all");
+	const isDirty =
+		view === "create" &&
+		hasMeaningfulDraftContent({
+			formData,
+			receipts,
+			step,
+			maxVisitedStep,
+			savedAt: 0,
+		});
+	useUnsavedChangesGuard(isDirty);
 
 	const hasRestoredDraftRef = useRef(false);
 
@@ -3177,11 +3387,14 @@ function ReimbursementPage() {
 			setReceipts(
 				draft.receipts.length > 0 ? draft.receipts : [emptyReceipt()],
 			);
-			setStep(draft.step || 1);
-			setMaxVisitedStep(draft.maxVisitedStep || draft.step || 1);
+			dispatchWizard({
+				type: "restore",
+				step: draft.step,
+				maxVisitedStep: draft.maxVisitedStep,
+			});
 			setView("create");
 			toast.info(
-				"Restored your reimbursement draft (form fields). Re-attach any receipts that weren't uploaded yet.",
+				"Restored your reimbursement draft (form fields). Re-attach any receipts that weren’t uploaded yet.",
 			);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3198,7 +3411,7 @@ function ReimbursementPage() {
 		return () => setHideTabBar(false);
 	}, [view, setHideTabBar]);
 
-	const resetForm = () => {
+	const resetForm = useCallback(() => {
 		setFormData({
 			title: "",
 			department: "",
@@ -3207,69 +3420,56 @@ function ReimbursementPage() {
 			businessPurpose: "",
 		});
 		setReceipts([emptyReceipt()]);
-		setStep(1);
-		setMaxVisitedStep(1);
-	};
+		dispatchWizard({ type: "reset" });
+	}, []);
+
+	const previousViewRef = useRef(view);
+	useEffect(() => {
+		if (previousViewRef.current === "create" && view !== "create") {
+			resetForm();
+		}
+		previousViewRef.current = view;
+	}, [view, resetForm]);
 
 	const totalAmount = receipts.reduce((sum, r) => sum + r.total, 0);
 
-	const handleViewDetail = (reimbursement: ReimbursementData) => {
-		setSelectedReimbursementId(reimbursement._id);
-		setView("detail");
-	};
-
 	const handleBackToList = () => {
 		setView("list");
-		setSelectedReimbursementId(null);
 	};
 
 	const selectedReimbursement = (
 		reimbursements as ReimbursementData[] | undefined
 	)?.find((r) => r._id === selectedReimbursementId);
 
-	const handleStepChange = (newStep: number) => {
-		setStep(newStep);
-		if (newStep > maxVisitedStep) {
-			setMaxVisitedStep(newStep);
-		}
+	const reachableStep = findReachableStep(formData, receipts);
+
+	const handleStepClick = (target: number) => {
+		const parsedStep = parseWizardStep(target);
+		if (parsedStep === null) return;
+		dispatchWizard({ type: "jump", step: parsedStep, reachableStep });
 	};
 
 	const handleNext = () => {
-		if (step < STEPS.length) {
-			handleStepChange(step + 1);
-		}
+		dispatchWizard({ type: "next", reachableStep });
 	};
 
 	const handleBack = () => {
-		if (step > 1) {
-			setStep(step - 1);
-		}
+		dispatchWizard({ type: "back" });
 	};
 
 	const handleSubmit = async () => {
-		if (!logtoId) return;
+		if (!logtoId || isSubmitting) return;
 		if (!isOnline) {
-			toast.error("You're offline. Reconnect to submit your reimbursement.");
+			toast.error("You’re offline. Reconnect to submit your reimbursement.");
 			return;
 		}
-		if (!formData.title.trim()) {
-			toast.error("Title is required");
-			return;
-		}
-		if (!formData.department) {
-			toast.error("Department is required");
-			return;
-		}
-		if (!formData.paymentMethod) {
-			toast.error("Payment method is required");
-			return;
-		}
-		if (totalAmount <= 0) {
-			toast.error("Total amount must be greater than zero");
+		const invalidStep = findFirstInvalidStep(formData, receipts);
+		if (invalidStep) {
+			toast.error(invalidStep.message);
 			return;
 		}
 
-		setIsSubmitting(true);
+		dispatchWizard({ type: "submitStarted" });
 		try {
 			const formattedReceipts = receipts.map((r) => {
 				const lineItems = r.lineItems.filter((li) => li.description.trim());
@@ -3315,6 +3515,7 @@ function ReimbursementPage() {
 				totalAmount,
 				paymentMethod: formData.paymentMethod,
 				additionalInfo: formData.additionalInfo,
+				businessPurpose: formData.businessPurpose.trim(),
 				department: formData.department as any,
 				receipts: formattedReceipts,
 				dateOfPurchase: Date.now(),
@@ -3336,11 +3537,14 @@ function ReimbursementPage() {
 
 			clearReimbursementDraft();
 			resetForm();
-			setView("list");
+			setView("list", { ignoreBlocker: true });
 		} catch (error: any) {
-			toast.error(error.message || "Failed to submit reimbursement");
+			toast.error(
+				error.message ||
+					"Failed to submit reimbursement. Check your connection and try again.",
+			);
 		} finally {
-			setIsSubmitting(false);
+			dispatchWizard({ type: "submitSettled" });
 		}
 	};
 
@@ -3365,18 +3569,15 @@ function ReimbursementPage() {
 						variant="ghost"
 						size="icon"
 						className="size-11 shrink-0 sm:size-9"
-						onClick={() => {
-							setView("list");
-							resetForm();
-						}}
-						aria-label="Back to reimbursements"
+						onClick={() => setView("list")}
+						aria-label="Back to Reimbursements"
 					>
 						<ArrowLeft className="h-4 w-4" />
 					</Button>
 					<div className="min-w-0">
 						<h1
 							className={cn(
-								"text-xl font-semibold tracking-tight sm:text-2xl",
+								"text-xl font-semibold tracking-tight text-balance sm:text-2xl",
 								isMobile && "sr-only",
 							)}
 						>
@@ -3393,8 +3594,8 @@ function ReimbursementPage() {
 				{/* Step Progress Indicator */}
 				<StepIndicator
 					currentStep={step}
-					maxVisitedStep={maxVisitedStep}
-					onStepClick={handleStepChange}
+					maxJumpableStep={maxJumpableStep(wizard, reachableStep)}
+					onStepClick={handleStepClick}
 				/>
 
 				{/* Step Content */}
@@ -3470,12 +3671,15 @@ function ReimbursementPage() {
 				title="Reimbursements"
 				description="Submit and track your reimbursement requests."
 				actions={
-					<Button
-						className="h-11 w-full sm:h-9 sm:w-auto"
-						onClick={() => setView("create")}
-					>
-						<Plus className="h-4 w-4 mr-2" />
-						New Request
+					<Button className="h-11 w-full sm:h-9 sm:w-auto" asChild>
+						<Link
+							from={Route.fullPath}
+							to="/reimbursement"
+							search={(prev) => ({ ...prev, view: "create", id: undefined })}
+						>
+							<Plus className="h-4 w-4 mr-2" />
+							New Request
+						</Link>
 					</Button>
 				}
 			/>
@@ -3484,11 +3688,11 @@ function ReimbursementPage() {
 					items={[
 						{
 							label: `submitted · ${allReimbursements.length} requests`,
-							value: `$${statsTotal.toFixed(2)}`,
+							value: formatCurrencyUSD(statsTotal),
 						},
-						{ label: "pending", value: `$${statsPendingAmt.toFixed(2)}` },
-						{ label: "approved", value: `$${statsApprovedAmt.toFixed(2)}` },
-						{ label: "paid", value: `$${statsPaidAmt.toFixed(2)}` },
+						{ label: "pending", value: formatCurrencyUSD(statsPendingAmt) },
+						{ label: "approved", value: formatCurrencyUSD(statsApprovedAmt) },
+						{ label: "paid", value: formatCurrencyUSD(statsPaidAmt) },
 					]}
 				/>
 			)}
@@ -3501,14 +3705,29 @@ function ReimbursementPage() {
 						<div className="relative flex-1">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
-								placeholder="Search by title or department..."
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
+								type="search"
+								name="q"
+								aria-label="Search reimbursements"
+								autoComplete="off"
+								placeholder="Search by title or department…"
+								value={searchInput}
+								onChange={(e) => {
+									setSearchInput(e.target.value);
+									setSearch({ q: e.target.value });
+								}}
 								className="pl-9 h-9 bg-background"
 							/>
 						</div>
-						<Select value={statusFilter} onValueChange={setStatusFilter}>
-							<SelectTrigger className="w-full sm:w-[150px] h-9 bg-background">
+						<Select
+							value={statusFilter}
+							onValueChange={(value) =>
+								setSearch({ status: value as ReimbursementSearch["status"] })
+							}
+						>
+							<SelectTrigger
+								aria-label="Filter by status"
+								className="w-full sm:w-[150px] h-9 bg-background"
+							>
 								<SelectValue placeholder="All Status" />
 							</SelectTrigger>
 							<SelectContent>
@@ -3532,11 +3751,12 @@ function ReimbursementPage() {
 							/>
 						</div>
 					) : (
-						<div className="p-5 space-y-3">
+						<output className="block p-5 space-y-3" aria-live="polite">
+							<span className="sr-only">Loading reimbursements…</span>
 							{[1, 2, 3].map((i) => (
 								<Skeleton key={i} className="h-16 w-full rounded-lg" />
 							))}
-						</div>
+						</output>
 					)
 				) : filteredReimbursements.length > 0 ? (
 					<div>
@@ -3551,14 +3771,15 @@ function ReimbursementPage() {
 						</div>
 						<div className="divide-y divide-border">
 							{filteredReimbursements.map((r) => (
-								<button
-									type="button"
+								<Link
 									key={r._id}
-									className="grid w-full min-h-[52px] items-center gap-x-4 px-4 py-3.5 text-left transition-colors active:bg-accent/50 sm:px-5 md:hover:bg-accent/40 grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7.5rem_6.5rem_7rem]"
-									onClick={() => handleViewDetail(r as ReimbursementData)}
+									from={Route.fullPath}
+									to="/reimbursement"
+									search={(prev) => ({ ...prev, view: "detail", id: r._id })}
+									className="grid w-full min-h-[52px] items-center gap-x-4 px-4 py-3.5 text-left transition-colors active:bg-accent/50 sm:px-5 md:hover:bg-accent/40 grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7.5rem_6.5rem_7rem] [content-visibility:auto] [contain-intrinsic-size:auto_68px]"
 								>
 									<div className="min-w-0">
-										<p className="line-clamp-2 text-sm font-medium leading-5">
+										<p className="line-clamp-2 break-words text-sm font-medium leading-5">
 											{r.title}
 										</p>
 										<p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -3568,14 +3789,10 @@ function ReimbursementPage() {
 
 									<div className="flex flex-col items-end gap-1.5 sm:contents">
 										<span className="hidden text-sm tabular-nums text-muted-foreground sm:block">
-											{new Date(r._creationTime).toLocaleDateString(undefined, {
-												month: "short",
-												day: "numeric",
-												year: "numeric",
-											})}
+											{formatDate(r._creationTime)}
 										</span>
 										<span className="text-right text-sm font-semibold tabular-nums">
-											${r.totalAmount.toFixed(2)}
+											{formatCurrencyUSD(r.totalAmount)}
 										</span>
 										<span
 											className={cn(
@@ -3587,7 +3804,7 @@ function ReimbursementPage() {
 											{r.status}
 										</span>
 									</div>
-								</button>
+								</Link>
 							))}
 						</div>
 					</div>
@@ -3596,8 +3813,8 @@ function ReimbursementPage() {
 						icon={<Receipt />}
 						title={
 							searchTerm || statusFilter !== "all"
-								? "No matching requests"
-								: "Submit your first reimbursement"
+								? "No Matching Requests"
+								: "Submit Your First Reimbursement"
 						}
 						description={
 							searchTerm || statusFilter !== "all"
@@ -3615,8 +3832,18 @@ function ReimbursementPage() {
 						}
 						action={
 							!searchTerm && statusFilter === "all" ? (
-								<Button variant="outline" onClick={() => setView("create")}>
-									Create reimbursement
+								<Button variant="outline" asChild>
+									<Link
+										from={Route.fullPath}
+										to="/reimbursement"
+										search={(prev) => ({
+											...prev,
+											view: "create",
+											id: undefined,
+										})}
+									>
+										Create Reimbursement
+									</Link>
 								</Button>
 							) : undefined
 						}

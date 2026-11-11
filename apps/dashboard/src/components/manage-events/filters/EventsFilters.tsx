@@ -55,7 +55,7 @@ export function EventsFilters({
 		Boolean(filters.teamPreset);
 
 	const statusLabel = (() => {
-		if (selectedStatuses.length === 0) return "All statuses";
+		if (selectedStatuses.length === 0) return "All Statuses";
 		if (selectedStatuses.length === 1) {
 			return (
 				statusOptions.find((option) => option.value === selectedStatuses[0])
@@ -100,7 +100,11 @@ export function EventsFilters({
 				<div className="relative flex-1 min-w-0 max-w-md">
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
-						placeholder="Search events..."
+						type="search"
+						name="search"
+						aria-label="Search events"
+						autoComplete="off"
+						placeholder="Search events…"
 						value={filters.search}
 						onChange={(e) =>
 							onFiltersChange({ ...filters, search: e.target.value })
@@ -133,7 +137,7 @@ export function EventsFilters({
 						<SelectValue placeholder="Team" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="none">All teams</SelectItem>
+						<SelectItem value="none">All Teams</SelectItem>
 						<SelectItem value="for_events">Events</SelectItem>
 						<SelectItem value="for_internal">Internal</SelectItem>
 						<SelectItem value="for_operations">Operations</SelectItem>
@@ -178,7 +182,7 @@ export function EventsFilters({
 					className="shrink-0"
 				>
 					<X className="h-4 w-4 mr-2" />
-					Clear filters
+					Clear Filters
 				</Button>
 			)}
 		</div>

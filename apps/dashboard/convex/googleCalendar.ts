@@ -864,6 +864,22 @@ async function runGoogleCalendarSync(ctx: ActionCtx, options: RunGoogleCalendarS
   };
 }
 
+export class GoogleCalendarAccess {
+  static async requireAdmin(
+    ctx: Pick<ActionCtx, "runQuery">,
+    args: { logtoId: string; authToken: string },
+  ) {
+    if (!args.logtoId.trim() || !args.authToken.trim()) {
+      throw new Error("Authentication required");
+    }
+
+    await ctx.runQuery(internal.googleCalendarQueries.assertAdminCaller, {
+      logtoId: args.logtoId,
+      authToken: args.authToken,
+    });
+  }
+}
+
 export const syncToGoogleCalendar = action({
   args: {
     logtoId: v.string(),
@@ -871,19 +887,11 @@ export const syncToGoogleCalendar = action({
     allowEmptyPrune: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<{ publishedCount: number; internalCount: number; syncedAt: number }> => {
+    await GoogleCalendarAccess.requireAdmin(ctx, args);
     return await runGoogleCalendarSync(ctx, {
       entrypoint: "syncToGoogleCalendar",
       allowEmptyPrune: args.allowEmptyPrune ?? false,
     });
-  },
-});
-
-export const getGoogleCalendarEvents = action({
-  args: {},
-  handler: async () => {
-    const config = getGoogleCalendarConfig();
-    const accessToken = await getGoogleAccessToken(config);
-    return await fetchGoogleCalendarEvents(accessToken, config.privateCalendarId);
   },
 });
 

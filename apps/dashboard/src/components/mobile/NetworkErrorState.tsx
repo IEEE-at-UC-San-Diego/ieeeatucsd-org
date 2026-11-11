@@ -15,7 +15,7 @@ type NetworkErrorStateProps = {
  */
 export function NetworkErrorState({
 	onRetry,
-	title = "You're offline",
+	title = "You’re Offline",
 	description = "Check your connection and try again. Your work is still on this device when possible.",
 	className,
 }: NetworkErrorStateProps) {
@@ -30,7 +30,9 @@ export function NetworkErrorState({
 			<div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-ds-amber-100">
 				<WifiOff className="h-6 w-6 text-tone-warning" aria-hidden />
 			</div>
-			<h2 className="text-base font-semibold text-tone-warning">{title}</h2>
+			<h2 className="text-base font-semibold text-balance text-tone-warning">
+				{title}
+			</h2>
 			<p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
 				{description}
 			</p>

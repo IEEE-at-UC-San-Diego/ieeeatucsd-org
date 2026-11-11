@@ -1,4 +1,5 @@
 import { SummaryStrip } from "@/components/dashboard/SummaryStrip";
+import { formatNumber, formatShortDate } from "@/lib/formatters";
 
 interface UserStatsCardsProps {
 	latestEvent?: {
@@ -20,17 +21,12 @@ export function UserStatsCards({
 		<SummaryStrip
 			loading={loading}
 			items={[
-				{ label: "points", value: totalPoints.toLocaleString() },
+				{ label: "points", value: formatNumber(totalPoints) },
 				{ label: "events attended", value: eventsAttended },
 				...(latestEvent
 					? [
 							{
-								label: `latest event · ${new Date(
-									latestEvent.eventDate,
-								).toLocaleDateString(undefined, {
-									month: "short",
-									day: "numeric",
-								})}`,
+								label: `latest event · ${formatShortDate(latestEvent.eventDate)}`,
 								value: latestEvent.eventName,
 							},
 						]

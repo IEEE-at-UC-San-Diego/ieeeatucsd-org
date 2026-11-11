@@ -17,7 +17,7 @@ export function DashboardLoadingShell({
 		<div
 			className="flex h-dvh max-w-[100vw] overflow-hidden bg-background"
 			aria-busy="true"
-			aria-label="Loading dashboard"
+			aria-label="Loading dashboard…"
 		>
 			<aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar md:flex">
 				<div className="flex h-16 shrink-0 items-center border-b px-4">
@@ -73,7 +73,7 @@ export function DashboardLoadingShell({
 					</div>
 				</main>
 			</section>
-			<span className="sr-only">Loading dashboard</span>
+			<output className="sr-only">Loading dashboard…</output>
 		</div>
 	);
 }

@@ -1,7 +1,7 @@
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
-const LIGHT_THEME_COLOR = "#006bff";
+const LIGHT_THEME_COLOR = "#ffffff";
 const DARK_THEME_COLOR = "#000000";
 
 /** Keeps theme-color meta + status bar in sync with the resolved theme. */

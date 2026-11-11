@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
 	ArrowRight,
 	Calendar,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
+import { formatDate, formatTime } from "@/lib/formatters";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest } from "../types";
@@ -33,14 +33,6 @@ export function DraftViewModal({
 	onConvertToRequest,
 }: DraftViewModalProps) {
 	if (!event) return null;
-
-	const formatDate = (timestamp: number) => {
-		return format(new Date(timestamp), "MMMM d, yyyy");
-	};
-
-	const formatTime = (timestamp: number) => {
-		return format(new Date(timestamp), "h:mm a");
-	};
 
 	const footer = (
 		<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -66,7 +58,7 @@ export function DraftViewModal({
 						onClick={() => onEdit(event)}
 					>
 						<Pencil className="h-4 w-4 mr-2" />
-						Edit
+						Edit Draft
 					</Button>
 				)}
 				{onDelete && (
@@ -76,7 +68,7 @@ export function DraftViewModal({
 						onClick={() => onDelete(event)}
 					>
 						<Trash2 className="h-4 w-4 mr-2" />
-						Delete
+						Delete Draft
 					</Button>
 				)}
 				<Button onClick={onClose} className="h-11 flex-1 sm:h-9 sm:flex-none">
@@ -113,7 +105,7 @@ export function DraftViewModal({
 						</div>
 						<p className="font-medium">{formatDate(event.startDate)}</p>
 						<p className="text-sm text-muted-foreground">
-							{formatTime(event.startDate)} - {formatTime(event.endDate)}
+							{formatTime(event.startDate)} – {formatTime(event.endDate)}
 						</p>
 					</div>
 
@@ -122,7 +114,7 @@ export function DraftViewModal({
 							<MapPin className="h-4 w-4" />
 							<span className="text-xs font-medium">Location</span>
 						</div>
-						<p className="font-medium">{event.location}</p>
+						<p className="font-medium break-words">{event.location}</p>
 					</div>
 
 					<div className="space-y-1">
@@ -130,7 +122,9 @@ export function DraftViewModal({
 							<Users className="h-4 w-4" />
 							<span className="text-xs font-medium">Expected Attendees</span>
 						</div>
-						<p className="font-medium">{event.estimatedAttendance || "N/A"}</p>
+						<p className="font-medium tabular-nums">
+							{event.estimatedAttendance || "N/A"}
+						</p>
 					</div>
 
 					<div className="space-y-1">
@@ -153,9 +147,19 @@ export function DraftViewModal({
 							<FileText className="h-4 w-4" />
 							<span className="text-xs font-medium">Event Code</span>
 						</div>
-						<p className="font-mono bg-muted/50 px-2 py-0.5 rounded text-sm w-fit">
+						<p
+							translate="no"
+							className="font-mono bg-muted/50 px-2 py-0.5 rounded text-sm w-fit max-w-full break-all"
+						>
 							{event.eventCode}
 						</p>
+					</div>
+
+					<div className="space-y-1">
+						<span className="text-xs font-medium text-muted-foreground block mb-1">
+							Points to Reward
+						</span>
+						<p className="font-medium tabular-nums">{event.pointsToReward}</p>
 					</div>
 
 					{event.department && (
@@ -174,7 +178,7 @@ export function DraftViewModal({
 					<span className="text-xs font-medium text-muted-foreground block mb-2">
 						Description
 					</span>
-					<div className="bg-muted/30 p-4 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border">
+					<div className="bg-muted/30 p-4 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed border">
 						{event.eventDescription || "No description provided."}
 					</div>
 				</div>

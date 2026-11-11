@@ -1,3 +1,4 @@
+import { EventPoints } from "@convex/eventPoints";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
@@ -12,6 +13,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import {
 	DEPARTMENT_OPTIONS,
 	EVENT_TYPE_OPTIONS,
@@ -44,6 +46,7 @@ const defaultDraftData: Partial<EventRequest> = {
 	startDate: Date.now() + 86400000,
 	endDate: Date.now() + 90000000,
 	eventCode: "",
+	pointsToReward: EventPoints.DEFAULT,
 	status: "draft",
 	hasFood: false,
 	needsFlyers: false,
@@ -79,6 +82,14 @@ export function DraftEventModal({
 	const [dateError, setDateError] = useState("");
 	const [startTimeError, setStartTimeError] = useState("");
 	const [endTimeError, setEndTimeError] = useState("");
+	const [isDirty, setIsDirty] = useState(false);
+	const confirmDiscard = useUnsavedChangesGuard(isOpen && isDirty);
+
+	const handleClose = async () => {
+		if (!(await confirmDiscard())) return;
+		setIsDirty(false);
+		onClose();
+	};
 
 	// Sync when modal opens or initialData changes
 	useEffect(() => {
@@ -100,6 +111,7 @@ export function DraftEventModal({
 			setDateError("");
 			setStartTimeError("");
 			setEndTimeError("");
+			setIsDirty(false);
 		}
 	}, [isOpen, initialData]);
 
@@ -113,19 +125,22 @@ export function DraftEventModal({
 			if (!isEditing) {
 				setFormData({ ...defaultDraftData });
 			}
+			setIsDirty(false);
 			onClose();
 		}
 	};
 
 	const updateField = (field: keyof EventRequest, value: unknown) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
+		setIsDirty(true);
 	};
 
 	const handleDateBlur = () => {
 		setDateError("");
 		const parsed = parseFlexibleDate(dateText);
 		if (!parsed) {
-			if (dateText.trim()) setDateError("Invalid date. Use mm/dd/yy format.");
+			if (dateText.trim())
+				setDateError("Invalid date. Enter it as mm/dd/yy, e.g., 11/05/26.");
 			return;
 		}
 		const startTime = new Date(formData.startDate || Date.now());
@@ -146,7 +161,9 @@ export function DraftEventModal({
 		const parsed = parseFlexibleTime(startTimeText);
 		if (!parsed) {
 			if (startTimeText.trim())
-				setStartTimeError("Invalid time. Try 9am, 9:00am, 14:00, etc.");
+				setStartTimeError(
+					"Invalid time. Enter a time like 9am, 9:00am, or 14:00.",
+				);
 			return;
 		}
 		const newStart = combineDateAndTime(
@@ -162,7 +179,9 @@ export function DraftEventModal({
 		const parsed = parseFlexibleTime(endTimeText);
 		if (!parsed) {
 			if (endTimeText.trim())
-				setEndTimeError("Invalid time. Try 2pm, 2:00pm, 14:00, etc.");
+				setEndTimeError(
+					"Invalid time. Enter a time like 2pm, 2:00pm, or 14:00.",
+				);
 			return;
 		}
 		const newEnd = combineDateAndTime(
@@ -185,6 +204,7 @@ export function DraftEventModal({
 								...formData,
 								eventCode: formData.eventCode || `EVENT-${Date.now()}`,
 							});
+							setIsDirty(false);
 							onClose();
 						}}
 						className="h-11 w-full sm:h-9 sm:w-auto"
@@ -199,7 +219,7 @@ export function DraftEventModal({
 					type="button"
 					variant="outline"
 					className="h-11 flex-1 sm:h-9 sm:flex-none"
-					onClick={onClose}
+					onClick={handleClose}
 				>
 					Cancel
 				</Button>
@@ -217,7 +237,9 @@ export function DraftEventModal({
 	return (
 		<ResponsiveOverlay
 			open={isOpen}
-			onOpenChange={onClose}
+			onOpenChange={(open) => {
+				if (!open) void handleClose();
+			}}
 			title={isEditing ? "Edit Draft Event" : "Create Quick Draft"}
 			variant="fullscreen"
 			className="sm:max-w-2xl"
@@ -225,37 +247,41 @@ export function DraftEventModal({
 		>
 			<form id={formId} onSubmit={handleSubmit} className="space-y-4">
 				<div className="space-y-2">
-					<Label htmlFor="draft-name">
+					<Label htmlFor={`${formId}-draft-name`}>
 						Event Name <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
-						id="draft-name"
+						id={`${formId}-draft-name`}
 						value={formData.eventName}
+						name="eventName"
+						autoComplete="off"
 						onChange={(e) => updateField("eventName", e.target.value)}
-						placeholder="Enter event name"
+						placeholder="Enter event name…"
 						required
 					/>
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="draft-description">Description</Label>
+					<Label htmlFor={`${formId}-draft-description`}>Description</Label>
 					<Textarea
-						id="draft-description"
+						id={`${formId}-draft-description`}
 						value={formData.eventDescription}
+						name="eventDescription"
+						autoComplete="off"
 						onChange={(e) => updateField("eventDescription", e.target.value)}
-						placeholder="Brief description (optional)"
+						placeholder="Brief description (optional)…"
 						rows={3}
 					/>
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="draft-type">Event Type</Label>
+						<Label htmlFor={`${formId}-draft-type`}>Event Type</Label>
 						<Select
 							value={formData.eventType || ""}
 							onValueChange={(value) => updateField("eventType", value)}
 						>
-							<SelectTrigger id="draft-type">
+							<SelectTrigger id={`${formId}-draft-type`}>
 								<SelectValue placeholder="Select type" />
 							</SelectTrigger>
 							<SelectContent>
@@ -268,14 +294,14 @@ export function DraftEventModal({
 						</Select>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="draft-department">Department</Label>
+						<Label htmlFor={`${formId}-draft-department`}>Department</Label>
 						<Select
 							value={formData.department || "none"}
 							onValueChange={(value) =>
 								updateField("department", value === "none" ? undefined : value)
 							}
 						>
-							<SelectTrigger id="draft-department">
+							<SelectTrigger id={`${formId}-draft-department`}>
 								<SelectValue placeholder="Select department" />
 							</SelectTrigger>
 							<SelectContent>
@@ -291,71 +317,123 @@ export function DraftEventModal({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="draft-location">Location</Label>
+					<Label htmlFor={`${formId}-draft-location`}>Location</Label>
 					<Input
-						id="draft-location"
+						id={`${formId}-draft-location`}
 						value={formData.location}
+						name="location"
+						autoComplete="off"
 						onChange={(e) => updateField("location", e.target.value)}
 						placeholder="e.g., Price Center East Ballroom"
 					/>
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="draft-date">Event Date</Label>
+					<Label htmlFor={`${formId}-draft-date`}>Event Date</Label>
 					<Input
-						id="draft-date"
+						id={`${formId}-draft-date`}
 						value={dateText}
-						onChange={(e) => setDateText(e.target.value)}
+						name="eventDate"
+						autoComplete="off"
+						onChange={(e) => {
+							setDateText(e.target.value);
+							setIsDirty(true);
+						}}
 						onBlur={handleDateBlur}
 						placeholder="mm/dd/yy"
+						aria-invalid={!!dateError}
+						aria-describedby={
+							dateError ? `${formId}-draft-date-error` : undefined
+						}
 					/>
-					{dateError && <p className="text-xs text-tone-danger">{dateError}</p>}
+					<output
+						id={`${formId}-draft-date-error`}
+						aria-live="polite"
+						className="block text-xs text-tone-danger empty:hidden"
+					>
+						{dateError}
+					</output>
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="draft-start-time">Start Time</Label>
+						<Label htmlFor={`${formId}-draft-start-time`}>Start Time</Label>
 						<Input
-							id="draft-start-time"
+							id={`${formId}-draft-start-time`}
 							value={startTimeText}
-							onChange={(e) => setStartTimeText(e.target.value)}
+							name="startTime"
+							autoComplete="off"
+							onChange={(e) => {
+								setStartTimeText(e.target.value);
+								setIsDirty(true);
+							}}
 							onBlur={handleStartTimeBlur}
 							placeholder="e.g., 9am, 9:00 AM"
+							aria-invalid={!!startTimeError}
+							aria-describedby={
+								startTimeError ? `${formId}-draft-start-time-error` : undefined
+							}
 						/>
-						{startTimeError && (
-							<p className="text-xs text-tone-danger">{startTimeError}</p>
-						)}
+						<output
+							id={`${formId}-draft-start-time-error`}
+							aria-live="polite"
+							className="block text-xs text-tone-danger empty:hidden"
+						>
+							{startTimeError}
+						</output>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="draft-end-time">End Time</Label>
+						<Label htmlFor={`${formId}-draft-end-time`}>End Time</Label>
 						<Input
-							id="draft-end-time"
+							id={`${formId}-draft-end-time`}
 							value={endTimeText}
-							onChange={(e) => setEndTimeText(e.target.value)}
+							name="endTime"
+							autoComplete="off"
+							onChange={(e) => {
+								setEndTimeText(e.target.value);
+								setIsDirty(true);
+							}}
 							onBlur={handleEndTimeBlur}
 							placeholder="e.g., 2pm, 2:00 PM"
+							aria-invalid={!!endTimeError}
+							aria-describedby={
+								endTimeError ? `${formId}-draft-end-time-error` : undefined
+							}
 						/>
-						{endTimeError && (
-							<p className="text-xs text-tone-danger">{endTimeError}</p>
-						)}
+						<output
+							id={`${formId}-draft-end-time-error`}
+							aria-live="polite"
+							className="block text-xs text-tone-danger empty:hidden"
+						>
+							{endTimeError}
+						</output>
 					</div>
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="draft-eventcode">Event Code</Label>
+						<Label htmlFor={`${formId}-draft-eventcode`}>Event Code</Label>
 						<Input
-							id="draft-eventcode"
+							id={`${formId}-draft-eventcode`}
 							value={formData.eventCode}
+							name="eventCode"
+							autoComplete="off"
+							spellCheck={false}
+							translate="no"
 							onChange={(e) => updateField("eventCode", e.target.value)}
 							placeholder="e.g., TECH-WORKSHOP-2024"
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="draft-attendance">Expected Attendance</Label>
+						<Label htmlFor={`${formId}-draft-attendance`}>
+							Expected Attendance
+						</Label>
 						<Input
-							id="draft-attendance"
+							id={`${formId}-draft-attendance`}
+							name="estimatedAttendance"
 							type="number"
+							inputMode="numeric"
+							autoComplete="off"
 							min={0}
 							value={formData.estimatedAttendance || ""}
 							onChange={(e) =>
@@ -367,6 +445,32 @@ export function DraftEventModal({
 							placeholder="e.g., 50"
 						/>
 					</div>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor={`${formId}-draft-points`}>Points to Reward</Label>
+					<Input
+						id={`${formId}-draft-points`}
+						name="pointsToReward"
+						type="number"
+						inputMode="numeric"
+						autoComplete="off"
+						min={0}
+						step={1}
+						value={
+							Number.isFinite(formData.pointsToReward)
+								? formData.pointsToReward
+								: 0
+						}
+						onChange={(e) => {
+							const parsed = EventPoints.tryParseInput(e.target.value);
+							if (parsed === null) return;
+							updateField("pointsToReward", parsed);
+						}}
+					/>
+					<p className="text-xs text-muted-foreground">
+						Points awarded to attendees when they check in.
+					</p>
 				</div>
 
 				<div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">

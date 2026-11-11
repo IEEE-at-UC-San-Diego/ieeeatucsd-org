@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
 import { CheckCircle, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MobileTaskStepper, ResponsiveOverlay } from "@/components/mobile";
 import {
 	AlertDialog,
@@ -17,7 +17,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
-import { normalizeDepartment, normalizeEventType } from "../constants";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
+import { EventRequestMapping } from "../EventRequestMapping";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
 import { DisclaimerSection } from "../wizard/DisclaimerSection";
@@ -25,6 +27,11 @@ import { EventReviewSection } from "../wizard/EventReviewSection";
 import { FundingSection } from "../wizard/FundingSection";
 import { LogisticsSection } from "../wizard/LogisticsSection";
 import { MarketingSection } from "../wizard/MarketingSection";
+import {
+	canProceedFromStep,
+	canSaveEventRequest,
+	getBlockedMessage,
+} from "./eventRequestWizardSteps";
 
 interface EventRequestWizardModalProps {
 	isOpen: boolean;
@@ -44,96 +51,6 @@ const steps = [
 	{ id: 6, title: "Review", description: "Final check" },
 ];
 
-const defaultFormData: EventFormData = {
-	eventName: "",
-	eventDescription: "",
-	eventType: "",
-	department: undefined,
-	location: "",
-	startDate: Date.now(),
-	endDate: Date.now() + 3600000,
-	eventCode: "",
-	hasFood: false,
-	needsFlyers: false,
-	needsGraphics: false,
-	needsASFunding: false,
-	estimatedAttendance: 0,
-	files: [],
-	invoices: [],
-	willOrHaveRoomBooking: false,
-	roomBookingFiles: [],
-	foodDrinksBeingServed: false,
-	asFundingRequired: false,
-	flyerType: [],
-	otherFlyerType: "",
-	flyerAdvertisingStartDate: 0,
-	flyerAdditionalRequests: "",
-	photographyNeeded: false,
-	requiredLogos: [],
-	otherLogos: [],
-	advertisingFormat: "",
-	additionalSpecifications: "",
-	flyersCompleted: false,
-	graphicsUploadNote: "",
-};
-
-function buildFormDataFromInitial(
-	initialData?: Partial<EventRequest>,
-): EventFormData {
-	if (!initialData) return { ...defaultFormData };
-	return {
-		eventName: initialData.eventName || defaultFormData.eventName,
-		eventDescription:
-			initialData.eventDescription || defaultFormData.eventDescription,
-		eventType: initialData.eventType
-			? normalizeEventType(initialData.eventType)
-			: defaultFormData.eventType,
-		department: normalizeDepartment(initialData.department),
-		location: initialData.location || defaultFormData.location,
-		startDate: initialData.startDate || Date.now(),
-		endDate: initialData.endDate || Date.now() + 3600000,
-		eventCode: initialData.eventCode || defaultFormData.eventCode,
-		hasFood:
-			initialData.hasFood ??
-			initialData.foodDrinksBeingServed ??
-			defaultFormData.hasFood,
-		needsFlyers: initialData.needsFlyers ?? defaultFormData.needsFlyers,
-		needsGraphics: initialData.needsGraphics ?? defaultFormData.needsGraphics,
-		needsASFunding:
-			initialData.needsASFunding ?? defaultFormData.needsASFunding,
-		estimatedAttendance:
-			initialData.estimatedAttendance ?? defaultFormData.estimatedAttendance,
-		files: initialData.files || [],
-		invoices: initialData.invoices || [],
-		willOrHaveRoomBooking:
-			initialData.willOrHaveRoomBooking ??
-			defaultFormData.willOrHaveRoomBooking,
-		roomBookingFiles: initialData.roomBookingFiles || [],
-		foodDrinksBeingServed:
-			initialData.foodDrinksBeingServed ??
-			initialData.hasFood ??
-			defaultFormData.foodDrinksBeingServed,
-		asFundingRequired:
-			initialData.asFundingRequired ??
-			initialData.needsASFunding ??
-			defaultFormData.asFundingRequired,
-		flyerType: initialData.flyerType || [],
-		otherFlyerType: initialData.otherFlyerType || "",
-		flyerAdvertisingStartDate: initialData.flyerAdvertisingStartDate || 0,
-		flyerAdditionalRequests: initialData.flyerAdditionalRequests || "",
-		photographyNeeded:
-			initialData.photographyNeeded ?? defaultFormData.photographyNeeded,
-		requiredLogos: initialData.requiredLogos || [],
-		otherLogos: initialData.otherLogos || [],
-		advertisingFormat: initialData.advertisingFormat || "",
-		additionalSpecifications: initialData.additionalSpecifications || "",
-		flyersCompleted:
-			initialData.flyersCompleted ?? defaultFormData.flyersCompleted,
-		graphicsUploadNote:
-			initialData.graphicsUploadNote || defaultFormData.graphicsUploadNote,
-	};
-}
-
 export function EventRequestWizardModal({
 	isOpen,
 	onClose,
@@ -142,36 +59,47 @@ export function EventRequestWizardModal({
 	initialData,
 	aiEnabled = true,
 }: EventRequestWizardModalProps) {
+	const formId = useId();
 	const isEditing = !!initialData;
 	const isConvertingDraft = initialData?.status === "draft";
 	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
-	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
-		buildFormDataFromInitial(initialData),
+		EventRequestMapping.toFormData(initialData),
 	);
 	const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [submitError, setSubmitError] = useState<string | null>(null);
-	const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
 	const initialSnapshotRef = useRef(JSON.stringify(formData));
+	const closeTimerRef = useRef<number | undefined>(undefined);
+	const wizardInput = { formData, disclaimerAccepted };
+	const wizard = useWizard({
+		stepCount: steps.length,
+		initialStep: isEditing ? 2 : 1,
+		canAdvance: (step) => canProceedFromStep(step, wizardInput),
+	});
+	const { step: currentStep, phase, reset: resetWizard } = wizard;
+	const isSubmitting = phase.kind === "submitting";
+	const isSaving = phase.kind === "saving";
+	const submissionSucceeded = phase.kind === "succeeded";
+	const submitError = wizard.errorMessage;
+
+	const resetState = useCallback(
+		(data?: Partial<EventRequest>) => {
+			window.clearTimeout(closeTimerRef.current);
+			const nextFormData = EventRequestMapping.toFormData(data);
+			setFormData(nextFormData);
+			initialSnapshotRef.current = JSON.stringify(nextFormData);
+			setDisclaimerAccepted(!!data);
+			setShowDiscardDialog(false);
+			resetWizard(data ? 2 : 1);
+		},
+		[resetWizard],
+	);
 
 	// Sync form data when initialData changes (e.g., opening edit for a different event)
 	useEffect(() => {
-		if (isOpen) {
-			const nextFormData = buildFormDataFromInitial(initialData);
-			setFormData(nextFormData);
-			initialSnapshotRef.current = JSON.stringify(nextFormData);
-			setCurrentStep(initialData ? 2 : 1);
-			setDisclaimerAccepted(!!initialData);
-			setIsSubmitting(false);
-			setIsSaving(false);
-			setSubmitError(null);
-			setSubmissionSucceeded(false);
-		}
-	}, [isOpen, initialData]);
+		if (isOpen) resetState(initialData);
+	}, [isOpen, initialData, resetState]);
 
 	const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
@@ -179,62 +107,22 @@ export function EventRequestWizardModal({
 		setFormData((prev) => ({ ...prev, ...data }));
 	};
 
-	const canProceed = () => {
-		switch (currentStep) {
-			case 1:
-				return disclaimerAccepted;
-			case 2:
-				return (
-					formData.eventName.trim() &&
-					formData.eventDescription.trim() &&
-					formData.eventType
-				);
-			case 3:
-				return (
-					formData.location.trim() &&
-					formData.startDate &&
-					formData.endDate &&
-					formData.endDate > formData.startDate &&
-					formData.eventCode.trim()
-				);
-			default:
-				return true;
-		}
-	};
-
-	const canSave = () =>
-		!!formData.eventName.trim() &&
-		!!formData.eventDescription.trim() &&
-		!!formData.eventType &&
-		!!formData.location.trim() &&
-		formData.endDate > formData.startDate;
-
-	const handleNext = () => {
-		if (currentStep < steps.length) {
-			setCurrentStep((prev) => prev + 1);
-		}
-	};
-
-	const handleBack = () => {
-		if (currentStep > 1) {
-			setCurrentStep((prev) => prev - 1);
-		}
-	};
+	const canProceed = canProceedFromStep(currentStep, wizardInput);
+	const canSave = canSaveEventRequest(formData);
 
 	const resetAndClose = () => {
 		onClose();
-		setCurrentStep(1);
-		setDisclaimerAccepted(false);
-		setFormData({ ...defaultFormData });
-		setShowDiscardDialog(false);
+		resetState();
 	};
 
 	const isDirty =
 		JSON.stringify(formData) !== initialSnapshotRef.current ||
 		(!isEditing && disclaimerAccepted);
 
+	useUnsavedChangesGuard(isOpen && isDirty && !submissionSucceeded);
+
 	const requestClose = () => {
-		if (isSubmitting || isSaving) return;
+		if (wizard.isPending) return;
 		if (isDirty && !submissionSucceeded) {
 			setShowDiscardDialog(true);
 			return;
@@ -243,51 +131,36 @@ export function EventRequestWizardModal({
 	};
 
 	const handleSubmit = async () => {
-		setIsSubmitting(true);
-		setSubmitError(null);
+		if (!wizard.startSubmit()) return;
 		try {
 			await onSubmit(formData);
-			setSubmissionSucceeded(true);
-			window.setTimeout(resetAndClose, 700);
+			wizard.submitSucceeded();
+			closeTimerRef.current = window.setTimeout(resetAndClose, 700);
 		} catch (error) {
-			setSubmitError(
+			wizard.submitFailed(
 				error instanceof Error
 					? error.message
-					: "The request could not be saved. Please try again.",
+					: "The request couldn’t be submitted. Check your connection and try again.",
 			);
-			setIsSubmitting(false);
 		}
 	};
 
 	const handleSave = async () => {
-		if (!onSave) return;
-		setIsSaving(true);
-		setSubmitError(null);
+		if (!onSave || !canSave || !wizard.startSave()) return;
 		try {
 			await onSave(formData);
 			initialSnapshotRef.current = JSON.stringify(formData);
+			wizard.saveSucceeded();
 		} catch (error) {
-			setSubmitError(
+			wizard.saveFailed(
 				error instanceof Error
 					? error.message
-					: "The request could not be saved. Please try again.",
+					: "The request couldn’t be saved. Check your connection and try again.",
 			);
-		} finally {
-			setIsSaving(false);
 		}
 	};
 
-	const blockedMessage = (() => {
-		if (currentStep === 1 && !disclaimerAccepted)
-			return "Accept the requirements to continue.";
-		if (currentStep === 2 && !canProceed())
-			return "Add the event name, description, and type to continue.";
-		if (currentStep === 3 && !canProceed())
-			return "Add a location, valid time range, and event code to continue.";
-		if (onSave && currentStep >= 2 && !canSave())
-			return "Add the event name, description, type, location, and valid time range to save.";
-		return null;
-	})();
+	const blockedMessage = getBlockedMessage(currentStep, wizardInput, !!onSave);
 
 	const renderStepContent = () => {
 		switch (currentStep) {
@@ -313,6 +186,7 @@ export function EventRequestWizardModal({
 							startDate: formData.startDate,
 							endDate: formData.endDate,
 							eventCode: formData.eventCode,
+							pointsToReward: formData.pointsToReward,
 							hasFood: formData.hasFood,
 							willOrHaveRoomBooking: formData.willOrHaveRoomBooking,
 							roomBookingFiles: formData.roomBookingFiles,
@@ -398,7 +272,8 @@ export function EventRequestWizardModal({
 						type="button"
 						variant="outline"
 						className="h-11 sm:h-9"
-						onClick={handleBack}
+						onClick={wizard.back}
+						disabled={!wizard.isEditable}
 					>
 						Back
 					</Button>
@@ -407,8 +282,9 @@ export function EventRequestWizardModal({
 			<div className="flex flex-1 flex-wrap items-center justify-end gap-2">
 				{(blockedMessage || submitError) && (
 					<p
-						className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
-						role={submitError ? "alert" : undefined}
+						className={`mr-auto text-xs ${submitError ? "block text-destructive" : "hidden text-muted-foreground sm:block"}`}
+						role={submitError ? "alert" : "status"}
+						aria-live="polite"
 					>
 						{submitError || blockedMessage}
 					</p>
@@ -418,7 +294,7 @@ export function EventRequestWizardModal({
 					variant="outline"
 					className="h-11 sm:h-9"
 					onClick={requestClose}
-					disabled={isSubmitting || isSaving}
+					disabled={wizard.isPending}
 				>
 					Cancel
 				</Button>
@@ -428,18 +304,18 @@ export function EventRequestWizardModal({
 						variant="outline"
 						className="h-11 sm:h-9"
 						onClick={handleSave}
-						disabled={isSubmitting || isSaving || !canSave()}
+						disabled={!wizard.isEditable || !canSave}
 					>
 						{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-						Save
+						{isSaving ? "Saving…" : "Save"}
 					</Button>
 				)}
 				{currentStep < steps.length ? (
 					<Button
 						type="button"
 						className="h-11 sm:h-9"
-						onClick={handleNext}
-						disabled={!canProceed() || isSaving}
+						onClick={() => wizard.next()}
+						disabled={!canProceed || !wizard.isEditable}
 					>
 						Next
 					</Button>
@@ -448,18 +324,20 @@ export function EventRequestWizardModal({
 						type="button"
 						className="h-11 sm:h-9"
 						onClick={handleSubmit}
-						disabled={isSubmitting || isSaving}
+						disabled={!wizard.isEditable}
 					>
 						{isSubmitting ? (
 							<Loader2 className="h-4 w-4 animate-spin" />
 						) : (
 							<CheckCircle className="h-4 w-4" />
 						)}
-						{isConvertingDraft
-							? "Submit Request"
-							: isEditing
-								? "Update Request"
-								: "Submit Request"}
+						{isSubmitting
+							? "Submitting…"
+							: isConvertingDraft
+								? "Submit Request"
+								: isEditing
+									? "Update Request"
+									: "Submit Request"}
 					</Button>
 				)}
 			</div>
@@ -522,13 +400,15 @@ export function EventRequestWizardModal({
 					)}
 
 					{submissionSucceeded ? (
-						<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
+						<output className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
 							<CheckCircle className="size-10 text-tone-success" />
-							<h2 className="mt-3 text-lg font-semibold">Request saved</h2>
+							<h2 className="mt-3 text-lg font-semibold text-balance">
+								Request Saved
+							</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Your event request was submitted successfully.
 							</p>
-						</div>
+						</output>
 					) : (
 						<div className="min-h-[300px]">{renderStepContent()}</div>
 					)}
@@ -536,11 +416,11 @@ export function EventRequestWizardModal({
 					{currentStep === 1 && !submissionSucceeded && (
 						<div className="mt-4 border-t pt-4">
 							<label
-								htmlFor="event-requirements"
+								htmlFor={`${formId}-event-requirements`}
 								className="flex cursor-pointer items-start gap-3 text-sm leading-5"
 							>
 								<Checkbox
-									id="event-requirements"
+									id={`${formId}-event-requirements`}
 									checked={disclaimerAccepted}
 									onCheckedChange={(value) =>
 										setDisclaimerAccepted(value === true)
@@ -559,21 +439,21 @@ export function EventRequestWizardModal({
 			<AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
 				<AlertDialogContent className="sm:max-w-md">
 					<AlertDialogHeader>
-						<AlertDialogTitle>Discard this event request?</AlertDialogTitle>
+						<AlertDialogTitle>Discard This Event Request?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Your changes have not been saved. This action cannot be undone.
+							Your changes haven’t been saved. This can’t be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter className="gap-2 sm:gap-2">
 						<AlertDialogCancel className="h-11 sm:h-9">
-							Keep editing
+							Keep Editing
 						</AlertDialogCancel>
 						<AlertDialogAction
 							variant="destructive"
 							className="h-11 sm:h-9"
 							onClick={resetAndClose}
 						>
-							Discard changes
+							Discard Changes
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

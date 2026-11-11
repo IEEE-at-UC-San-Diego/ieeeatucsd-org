@@ -621,9 +621,15 @@ export class VcoDeadlines {
 		}
 
 		const openPhases = phases.filter((phase) => !phase.done);
-		const overduePhase = openPhases.find((phase) => phase.overdue);
-		const upcoming = openPhases.find((phase) => !phase.overdue);
-		const nextDeadline = overduePhase ?? upcoming ?? null;
+		const byDate = (left: VcoPhaseDeadline, right: VcoPhaseDeadline) =>
+			VcoDeadlines.compare(left.date, right.date);
+		const overduePhases = openPhases
+			.filter((phase) => phase.overdue)
+			.sort(byDate);
+		const upcomingPhases = openPhases
+			.filter((phase) => !phase.overdue)
+			.sort(byDate);
+		const nextDeadline = overduePhases[0] ?? upcomingPhases[0] ?? null;
 		const allDone = funded && phases.length > 0 && openPhases.length === 0;
 		const progAppDone = VcoDeadlines.isPhaseDone(event, "prog_app");
 		const tresFinishDone = VcoDeadlines.isPhaseDone(

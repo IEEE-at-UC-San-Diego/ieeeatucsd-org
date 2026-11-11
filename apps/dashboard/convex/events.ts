@@ -19,8 +19,13 @@ import {
   buildGoogleCalendarSubscribeUrl,
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
+import { EventPoints } from "./eventPoints";
 import { assertValidEventTimeRange } from "./eventTimeRange";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
+import {
+  transitionEventRequest,
+  type EventRequestStatus,
+} from "./eventRequestTransition";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
   const legacy = (event as { attendees?: unknown }).attendees;
@@ -487,14 +492,23 @@ export const create = mutation({
     const normalizedEventCode = normalizeEventCode(eventCode);
 
     assertValidEventTimeRange(data.startDate, data.endDate);
+    const pointsToReward = EventPoints.fromUnknown(data.pointsToReward);
+    const listing = transitionEventRequest(null, {
+      kind: "create",
+      isDraft: Boolean(isDraft),
+      published: Boolean(data.published),
+      canPublish: hasOfficerAccess(user.role),
+    });
 
     return await ctx.db.insert("events", {
       ...data,
+      pointsToReward,
       ...(normalizedEventCode ? { eventCode: normalizedEventCode } : {}),
-      status: isDraft ? "draft" : (data.published ? "approved" : "submitted"),
+      status: listing.status,
+      published: listing.published,
+      isDraft: listing.isDraft,
       requestedUser: userId,
       flyersCompleted: data.flyersCompleted ?? false,
-      isDraft: isDraft ?? false,
       createdAt: Date.now(),
     });
   },
@@ -598,6 +612,11 @@ export const update = mutation({
 
     const { id, ...updates } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
+    if (cleanUpdates.pointsToReward !== undefined) {
+      cleanUpdates.pointsToReward = EventPoints.fromUnknown(
+        cleanUpdates.pointsToReward,
+      );
+    }
 
     const nextStartDate = cleanUpdates.startDate ?? event.startDate;
     const nextEndDate = cleanUpdates.endDate ?? event.endDate;
@@ -618,10 +637,35 @@ export const update = mutation({
       }
     }
 
-    const shouldQueueCalendarDeletion =
-      Boolean(event.published) && cleanUpdates.published === false;
+    const currentListing = {
+      status: (event.status ?? "draft") as EventRequestStatus,
+      published: Boolean(event.published),
+      isDraft: Boolean(event.isDraft),
+    };
+    const nextListing = transitionEventRequest(currentListing, {
+      kind: "update",
+      published:
+        typeof cleanUpdates.published === "boolean"
+          ? cleanUpdates.published
+          : undefined,
+      canPublish: hasOfficerAccess(user.role),
+    });
+    const listingPatch =
+      typeof cleanUpdates.published === "boolean"
+        ? {
+            published: nextListing.published,
+            status: nextListing.status,
+            isDraft: nextListing.isDraft,
+          }
+        : {};
+    if (nextListing.published && !event.published) {
+      assertValidEventTimeRange(nextStartDate, nextEndDate);
+    }
 
-    await ctx.db.patch(id, cleanUpdates);
+    const shouldQueueCalendarDeletion =
+      Boolean(event.published) && nextListing.published === false;
+
+    await ctx.db.patch(id, { ...cleanUpdates, ...listingPatch });
 
     if (shouldQueueCalendarDeletion) {
       await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
@@ -679,8 +723,7 @@ export const remove = mutation({
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    // Admins and Executive Officers can delete any event
-    if (hasAdminAccess(user.role)) {
+    if (hasOfficerAccess(user.role)) {
       await ctx.db.delete(args.id);
       if (event.published) {
         await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
@@ -688,7 +731,6 @@ export const remove = mutation({
       return args.id;
     }
 
-    // Non-admin users can only delete their own events if not approved
     if (event.requestedUser && event.requestedUser !== userId) {
       throw new Error("You can only delete your own events");
     }
@@ -728,21 +770,40 @@ export const updateStatus = mutation({
     if (!event) throw new Error("Event not found");
 
     const userId = user.logtoId ?? user.authUserId ?? "";
-    const canSubmitOwnDraft =
-      args.status === "submitted" &&
-      event.status === "draft" &&
-      (event.requestedUser === userId || isGeneralOfficer(user.role));
-
-    if (!hasAdminAccess(user.role) && !canSubmitOwnDraft) {
-      throw new Error("Only admins can change this status");
+    const nextListing = transitionEventRequest(
+      {
+        status: (event.status ?? "draft") as EventRequestStatus,
+        published: Boolean(event.published),
+        isDraft: Boolean(event.isDraft),
+      },
+      {
+        kind: "setStatus",
+        status: args.status,
+        canReview: hasAdminAccess(user.role),
+        canSubmitOwnDraft:
+          args.status === "submitted" &&
+          (event.status ?? "draft") === "draft" &&
+          (event.requestedUser === userId || isGeneralOfficer(user.role)),
+      },
+    );
+    if (nextListing.published && !event.published) {
+      assertValidEventTimeRange(event.startDate, event.endDate);
     }
 
     await ctx.db.patch(args.id, {
-      status: args.status,
-      isDraft: args.status === "submitted" ? false : event.isDraft,
+      status: nextListing.status,
+      published: nextListing.published,
+      isDraft: nextListing.isDraft,
       ...(args.declinedReason && { declinedReason: args.declinedReason }),
       ...(args.reviewFeedback && { reviewFeedback: args.reviewFeedback }),
     });
+    if (event.published && !nextListing.published) {
+      await enqueuePublishedEventGoogleCalendarDeletion(
+        ctx,
+        args.id,
+        "event_unpublished",
+      );
+    }
     return args.id;
   },
 });
@@ -861,11 +922,11 @@ export const checkIn = mutation({
       userId,
       timeCheckedIn: Date.now(),
       food: args.food || "none",
-      pointsEarned: event.pointsToReward ?? 0,
+      pointsEarned: EventPoints.fromDocument(event),
     });
 
     // Update user points and events attended
-    const pts = event.pointsToReward ?? 0;
+    const pts = EventPoints.fromDocument(event);
     await ctx.db.patch(user._id, {
       points: (user.points || 0) + pts,
       eventsAttended: (user.eventsAttended || 0) + 1,

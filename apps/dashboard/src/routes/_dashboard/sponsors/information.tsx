@@ -82,9 +82,13 @@ function SponsorInformationPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
+			<output
+				aria-live="polite"
+				className="flex min-h-[60vh] items-center justify-center"
+			>
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
+				<span className="sr-only">Loading…</span>
+			</output>
 		);
 	}
 
@@ -92,7 +96,8 @@ function SponsorInformationPage() {
 		return (
 			<DashboardPage>
 				<p className="text-center text-muted-foreground">
-					You don't have permission to access this page.
+					You don’t have permission to access this page. Contact an
+					administrator if you think this is a mistake.
 				</p>
 			</DashboardPage>
 		);
@@ -117,13 +122,13 @@ function SponsorInformationPage() {
 	const getTierAmount = (tier?: string | null) => {
 		switch (tier) {
 			case "Diamond":
-				return "$5000+";
+				return "$5,000+";
 			case "Platinum":
-				return "$4000";
+				return "$4,000";
 			case "Gold":
-				return "$3000";
+				return "$3,000";
 			case "Silver":
-				return "$1500";
+				return "$1,500";
 			case "Bronze":
 				return "$750";
 			default:
@@ -188,7 +193,7 @@ function SponsorInformationPage() {
 						<p className="text-xs text-muted-foreground">Current tier</p>
 						<p className="mt-0.5 text-sm font-medium">
 							{sponsorData?.sponsorTier || "Not assigned"}
-							<span className="ml-2 font-normal text-muted-foreground">
+							<span className="ml-2 font-normal tabular-nums text-muted-foreground">
 								{getTierAmount(sponsorData?.sponsorTier)}
 							</span>
 						</p>
@@ -204,7 +209,7 @@ function SponsorInformationPage() {
 			{/* Benefits — mobile: stacked cards; desktop: comparison table */}
 			<section className="space-y-3">
 				<div>
-					<h2 className="text-base font-semibold text-foreground">
+					<h2 className="text-base font-semibold text-balance text-foreground">
 						Benefits by Tier
 					</h2>
 					<p className="text-sm text-muted-foreground">
@@ -260,7 +265,9 @@ function SponsorInformationPage() {
 													</>
 												) : value === false ? (
 													<>
-														<X className="size-3.5 text-muted-foreground" />—
+														<X className="size-3.5 text-muted-foreground" />
+														<span aria-hidden="true">—</span>
+														<span className="sr-only">No</span>
 													</>
 												) : (
 													value
@@ -279,13 +286,17 @@ function SponsorInformationPage() {
 					<table className="w-full text-sm">
 						<thead>
 							<tr className="border-b">
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+								<th
+									scope="col"
+									className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+								>
 									Benefit
 								</th>
 								{(["Bronze", "Silver", "Gold", "Diamond"] as const).map(
 									(tier) => (
 										<th
 											key={tier}
+											scope="col"
 											className={cn(
 												"px-3 py-3 text-center",
 												sponsorData?.sponsorTier === tier &&
@@ -296,7 +307,7 @@ function SponsorInformationPage() {
 												<span className="text-sm font-semibold text-foreground">
 													{tier}
 												</span>
-												<span className="text-xs text-muted-foreground">
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{getTierAmount(tier)}
 												</span>
 											</div>
@@ -311,7 +322,9 @@ function SponsorInformationPage() {
 									key={benefit.name}
 									className="border-b transition-colors last:border-0 hover:bg-muted/30"
 								>
-									<td className="px-4 py-3 font-medium">{benefit.name}</td>
+									<th scope="row" className="px-4 py-3 text-left font-medium">
+										{benefit.name}
+									</th>
 									{(
 										[
 											benefit.bronze,
@@ -332,9 +345,15 @@ function SponsorInformationPage() {
 										>
 											<div className="flex items-center justify-center gap-1.5">
 												{value === true ? (
-													<Check className="size-4 text-tone-success" />
+													<>
+														<Check className="size-4 text-tone-success" />
+														<span className="sr-only">Included</span>
+													</>
 												) : value === false ? (
-													<X className="size-4 text-muted-foreground" />
+													<>
+														<X className="size-4 text-muted-foreground" />
+														<span className="sr-only">Not included</span>
+													</>
 												) : (
 													<span className="text-xs font-medium text-tone-info">
 														{value}
@@ -353,7 +372,7 @@ function SponsorInformationPage() {
 			{/* Support — one-tap contact */}
 			<section className="flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
 				<div className="space-y-1">
-					<h2 className="text-base font-semibold">Support</h2>
+					<h2 className="text-base font-semibold text-balance">Support</h2>
 					<p className="text-sm text-muted-foreground">
 						Questions about sponsorship terms, resume access, or activations?
 						Reach the IEEE UCSD team directly.

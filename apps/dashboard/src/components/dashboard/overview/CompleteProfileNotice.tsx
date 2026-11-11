@@ -8,8 +8,8 @@ export function CompleteProfileNotice() {
 			<div className="flex items-start gap-3">
 				<AlertCircle className="mt-0.5 size-4 shrink-0 text-tone-warning" />
 				<div className="space-y-1">
-					<h2 className="text-sm font-semibold leading-5 text-foreground">
-						Finish setting up your profile
+					<h2 className="text-sm font-semibold leading-5 text-balance text-foreground">
+						Finish Setting Up Your Profile
 					</h2>
 					<p className="max-w-prose text-xs leading-5 text-pretty text-muted-foreground">
 						Complete your account to unlock event check-ins, points, and
@@ -18,7 +18,7 @@ export function CompleteProfileNotice() {
 				</div>
 			</div>
 			<Button asChild size="sm" className="w-full px-3 sm:w-auto">
-				<Link to="/get-started">Finish setup</Link>
+				<Link to="/get-started">Finish Setup</Link>
 			</Button>
 		</section>
 	);
