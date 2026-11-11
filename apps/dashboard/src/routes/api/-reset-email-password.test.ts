@@ -4,6 +4,7 @@ import { matchingMailboxHolderIds } from "../../../convex/mailboxClaim";
 const requireApiAuthMock = vi.fn();
 const resetEmailPasswordMock = vi.fn();
 const mailboxTakenMock = vi.fn();
+const migrationGateMock = vi.fn();
 
 vi.mock("@/server/auth", () => ({
 	requireApiAuth: (...args: unknown[]) => requireApiAuthMock(...args),
@@ -16,6 +17,7 @@ vi.mock("@/server/mxroute", () => ({
 vi.mock("@/server/mailbox-binding", () => ({
 	isMailboxBoundToAnotherAccount: (...args: unknown[]) =>
 		mailboxTakenMock(...args),
+	mailboxMigrationGate: (...args: unknown[]) => migrationGateMock(...args),
 }));
 
 function post(email: string, password = "new-secret") {
@@ -32,6 +34,7 @@ describe("POST /api/reset-email-password", () => {
 		vi.stubEnv("MXROUTE_EMAIL_DOMAIN", "ieeeatucsd.org");
 		resetEmailPasswordMock.mockResolvedValue({ success: true });
 		mailboxTakenMock.mockResolvedValue(false);
+		migrationGateMock.mockResolvedValue({ done: true, collision: false });
 	});
 
 	it("refuses a member reset of another mailbox even when ieeeEmail matches it", async () => {
@@ -182,6 +185,28 @@ describe("POST /api/reset-email-password", () => {
 			ieeeEmail: "ada@ieeeatucsd.org",
 			rawValues: ["Ada@ieeeatucsd.org", "ada@ieeeatucsd.org"],
 		});
+		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
+	});
+
+	it("refuses a lowercase reset before the mailbox migration is done", async () => {
+		migrationGateMock.mockResolvedValue({ done: false, collision: false });
+		mailboxTakenMock.mockResolvedValue(false);
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "ada-other",
+			body: { email: "ada@ieeeatucsd.org", password: "new-secret" },
+			user: {
+				role: "Member",
+				email: "ada@another-domain.example",
+				ieeeEmail: "ada@ieeeatucsd.org",
+			},
+		});
+
+		const { handle } = await import("./reset-email-password");
+		const response = await handle({
+			request: post("ada@ieeeatucsd.org"),
+		});
+
+		expect(response.status).toBe(403);
 		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
 	});
 
