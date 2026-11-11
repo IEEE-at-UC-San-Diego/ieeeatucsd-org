@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { UserRole } from "@/types/roles";
 import { hasVcoViewAccess } from "../../../convex/permissions";
-import { canEditVcoPipelineFields as canEditVcoPipelineFieldsConvex } from "../../../convex/vcoPipeline";
-import {
-	canEditVcoPipelineFields,
-	canViewVcoPipeline,
-	isVcoPosition,
-} from "./vcoAccess";
+import { canEditVcoPipelineFields } from "../../../convex/vcoPipeline";
+import { canViewVcoPipeline, isVcoPosition } from "./vcoAccess";
 
 const ROLES: UserRole[] = [
 	"Member",
@@ -25,23 +21,7 @@ describe("client VCO access matches Convex helpers", () => {
 			expect(canViewVcoPipeline(role, "Vice Chair Operations")).toBe(
 				hasVcoViewAccess(role, "Vice Chair Operations"),
 			);
-			expect(canEditVcoPipelineFields(role)).toBe(
-				canEditVcoPipelineFieldsConvex(role),
-			);
-			expect(canEditVcoPipelineFields(role, "Vice Chair Operations")).toBe(
-				canEditVcoPipelineFieldsConvex(role, "Vice Chair Operations"),
-			);
 		}
-	});
-
-	it("blocks non-VCO officers from editing pipeline done fields", () => {
-		expect(canEditVcoPipelineFields("General Officer")).toBe(false);
-		expect(
-			canEditVcoPipelineFields("General Officer", "Vice Chair Events"),
-		).toBe(false);
-		expect(
-			canEditVcoPipelineFields("General Officer", "Vice Chair Operations"),
-		).toBe(true);
 	});
 
 	it("recognizes VCO titles the same way", () => {
@@ -51,14 +31,11 @@ describe("client VCO access matches Convex helpers", () => {
 	});
 
 	it("uses the same gate for pipeline field writes as for the VCO tab", () => {
-		expect(canEditVcoPipelineFieldsConvex("General Officer")).toBe(false);
+		expect(canEditVcoPipelineFields("General Officer")).toBe(false);
 		expect(
-			canEditVcoPipelineFieldsConvex(
-				"General Officer",
-				"Vice Chair Operations",
-			),
+			canEditVcoPipelineFields("General Officer", "Vice Chair Operations"),
 		).toBe(true);
-		expect(canEditVcoPipelineFieldsConvex("Administrator")).toBe(
+		expect(canEditVcoPipelineFields("Administrator")).toBe(
 			canViewVcoPipeline("Administrator"),
 		);
 	});
