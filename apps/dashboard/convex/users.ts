@@ -10,7 +10,11 @@ import {
   deleteResumeStorage,
   validateAndBuildResume,
 } from "./resume";
-import { decideMailboxClaim } from "./mailboxClaim";
+import {
+  canonicalMailbox,
+  decideMailboxClaim,
+  matchingMailboxHolderIds,
+} from "./mailboxClaim";
 import { UserAuth } from "./userAuth";
 import {
   UserRoleAssignment,
@@ -285,16 +289,17 @@ export const setIEEEEmail = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    const mailbox = args.ieeeEmail.trim().toLowerCase();
-    const holders = await ctx.db
-      .query("users")
-      .withIndex("by_ieeeEmail", (q) => q.eq("ieeeEmail", mailbox))
-      .collect();
+    const mailbox = canonicalMailbox(args.ieeeEmail);
+    const rows = await ctx.db.query("users").collect();
+    const holderIds = matchingMailboxHolderIds(
+      mailbox,
+      rows.map((row) => ({ id: row._id, ieeeEmail: row.ieeeEmail })),
+    );
     const decision = decideMailboxClaim({
       callerId: user._id,
       callerEmail: user.email,
       requestedMailbox: mailbox,
-      holderIds: holders.map((holder) => holder._id),
+      holderIds,
     });
     switch (decision) {
       case "allow":
@@ -327,7 +332,7 @@ export const isMailboxBoundToAnotherAccount = query({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    const mailbox = args.ieeeEmail.trim().toLowerCase();
+    const mailbox = canonicalMailbox(args.ieeeEmail);
     const shape = decideMailboxClaim({
       callerId: user._id,
       callerEmail: user.email,
@@ -337,11 +342,11 @@ export const isMailboxBoundToAnotherAccount = query({
     if (shape !== "allow") {
       throw new Error("Mailbox does not belong to this account");
     }
-    const holders = await ctx.db
-      .query("users")
-      .withIndex("by_ieeeEmail", (q) => q.eq("ieeeEmail", mailbox))
-      .collect();
-    return holders.some((holder) => holder._id !== user._id);
+    const rows = await ctx.db.query("users").collect();
+    return matchingMailboxHolderIds(
+      mailbox,
+      rows.map((row) => ({ id: row._id, ieeeEmail: row.ieeeEmail })),
+    ).some((holderId) => holderId !== user._id);
   },
 });
 

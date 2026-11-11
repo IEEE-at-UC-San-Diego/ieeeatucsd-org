@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { matchingMailboxHolderIds } from "../../../convex/mailboxClaim";
 
 const requireApiAuthMock = vi.fn();
 const resetEmailPasswordMock = vi.fn();
@@ -145,6 +146,34 @@ describe("POST /api/reset-email-password", () => {
 			role: "Member",
 			ieeeEmail: "adasmith@ieeeatucsd.org",
 		});
+		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
+	});
+
+	it("refuses a reset of a case variant another account already holds", async () => {
+		mailboxTakenMock.mockImplementation(
+			async (args: { ieeeEmail?: string }) => {
+				const holderIds = matchingMailboxHolderIds(String(args.ieeeEmail), [
+					{ id: "owner", ieeeEmail: "Ada@ieeeatucsd.org" },
+				]);
+				return holderIds.some((id) => id !== "intruder");
+			},
+		);
+		requireApiAuthMock.mockResolvedValue({
+			logtoId: "intruder",
+			body: { email: "Ada@ieeeatucsd.org", password: "new-secret" },
+			user: {
+				role: "Member",
+				email: "ada@another-domain.example",
+				ieeeEmail: "ada@ieeeatucsd.org",
+			},
+		});
+
+		const { handle } = await import("./reset-email-password");
+		const response = await handle({
+			request: post("Ada@ieeeatucsd.org"),
+		});
+
+		expect(response.status).toBe(403);
 		expect(resetEmailPasswordMock).not.toHaveBeenCalled();
 	});
 

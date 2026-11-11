@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideMailboxClaim } from "./mailboxClaim";
+import { decideMailboxClaim, matchingMailboxHolderIds } from "./mailboxClaim";
 
 describe("decideMailboxClaim", () => {
   it("lets the login that normalizes to the mailbox claim it first", () => {
@@ -33,6 +33,22 @@ describe("decideMailboxClaim", () => {
         holderIds: [],
       }),
     ).toBe("mismatch");
+  });
+
+  it("treats a case variant as the same held mailbox", () => {
+    const holderIds = matchingMailboxHolderIds("ada@ieeeatucsd.org", [
+      { id: "owner", ieeeEmail: "Ada@ieeeatucsd.org" },
+    ]);
+
+    expect(holderIds).toEqual(["owner"]);
+    expect(
+      decideMailboxClaim({
+        callerId: "intruder",
+        callerEmail: "ada@another-domain.example",
+        requestedMailbox: "ada@ieeeatucsd.org",
+        holderIds,
+      }),
+    ).toBe("taken");
   });
 
   it("rejects a second login that strips to a mailbox someone else holds", () => {

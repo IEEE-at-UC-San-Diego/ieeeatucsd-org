@@ -1,12 +1,31 @@
 export type MailboxClaimDecision = "allow" | "taken" | "mismatch";
 
+export function canonicalMailbox(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function matchingMailboxHolderIds(
+  mailbox: string,
+  holders: readonly { id: string; ieeeEmail?: string }[],
+): string[] {
+  const key = canonicalMailbox(mailbox);
+  if (!key) return [];
+  return holders
+    .filter(
+      (holder) =>
+        holder.ieeeEmail !== undefined &&
+        canonicalMailbox(holder.ieeeEmail) === key,
+    )
+    .map((holder) => holder.id);
+}
+
 export function decideMailboxClaim(args: {
   callerId: string;
   callerEmail: string;
   requestedMailbox: string;
   holderIds: readonly string[];
 }): MailboxClaimDecision {
-  const mailbox = args.requestedMailbox.trim().toLowerCase();
+  const mailbox = canonicalMailbox(args.requestedMailbox);
   const at = mailbox.indexOf("@");
   const local = at > 0 ? mailbox.slice(0, at) : "";
   const domain = at > 0 ? mailbox.slice(at + 1) : "";
