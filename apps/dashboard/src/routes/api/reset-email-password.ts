@@ -1,12 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireApiAuth } from "@/server/auth";
+import { isMailboxBoundToAnotherAccount } from "@/server/mailbox-binding";
 import { resetEmailPassword } from "@/server/mxroute";
+
+function ownershipMismatch() {
+	return new Response(
+		JSON.stringify({
+			success: false,
+			error: "Forbidden: mailbox ownership mismatch",
+		}),
+		{ status: 403, headers: { "Content-Type": "application/json" } },
+	);
+}
 
 export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
-		const { body, user } = authResult;
+		const { body, logtoId, user } = authResult;
 		const { email, password } = body as { email?: string; password?: string };
 
 		if (!email || !password) {
@@ -34,16 +45,22 @@ export async function handle({ request }: { request: Request }) {
 			const expectedEmail = requesterUsername
 				? `${requesterUsername}@${mxDomain}`
 				: "";
+			const boundEmail = String(user.ieeeEmail || "").toLowerCase();
 
-			if (!expectedEmail || email.toLowerCase() !== expectedEmail) {
-				return new Response(
-					JSON.stringify({
-						success: false,
-						error: "Forbidden: mailbox ownership mismatch",
-					}),
-					{ status: 403, headers: { "Content-Type": "application/json" } },
-				);
+			if (
+				!expectedEmail ||
+				email.toLowerCase() !== expectedEmail ||
+				boundEmail !== expectedEmail
+			) {
+				return ownershipMismatch();
 			}
+
+			const taken = await isMailboxBoundToAnotherAccount({
+				logtoId,
+				role: user.role,
+				ieeeEmail: expectedEmail,
+			});
+			if (taken) return ownershipMismatch();
 		}
 
 		const result = await resetEmailPassword({ email, password });

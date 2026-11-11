@@ -201,7 +201,8 @@ export default defineSchema({
     .index("by_logtoId", ["logtoId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"])
-    .index("by_points", ["points"]),
+    .index("by_points", ["points"])
+    .index("by_ieeeEmail", ["ieeeEmail"]),
 
   publicProfiles: defineTable({
     userId: v.id("users"),

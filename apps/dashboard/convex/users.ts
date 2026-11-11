@@ -10,6 +10,7 @@ import {
   deleteResumeStorage,
   validateAndBuildResume,
 } from "./resume";
+import { decideMailboxClaim } from "./mailboxClaim";
 import { UserAuth } from "./userAuth";
 import {
   UserRoleAssignment,
@@ -284,13 +285,63 @@ export const setIEEEEmail = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const mailbox = args.ieeeEmail.trim().toLowerCase();
+    const holders = await ctx.db
+      .query("users")
+      .withIndex("by_ieeeEmail", (q) => q.eq("ieeeEmail", mailbox))
+      .collect();
+    const decision = decideMailboxClaim({
+      callerId: user._id,
+      callerEmail: user.email,
+      requestedMailbox: mailbox,
+      holderIds: holders.map((holder) => holder._id),
+    });
+    switch (decision) {
+      case "allow":
+        break;
+      case "taken":
+        throw new Error("Mailbox is already bound to another account");
+      case "mismatch":
+        throw new Error("Mailbox does not belong to this account");
+      default: {
+        const unexpected: never = decision;
+        throw new Error(`Unexpected mailbox claim decision: ${unexpected}`);
+      }
+    }
+
     await ctx.db.patch(user._id, {
       hasIEEEEmail: true,
-      ieeeEmail: args.ieeeEmail,
+      ieeeEmail: mailbox,
       ieeeEmailCreatedAt: Date.now(),
       lastUpdated: Date.now(),
     });
     return user._id;
+  },
+});
+
+export const isMailboxBoundToAnotherAccount = query({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    ieeeEmail: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const mailbox = args.ieeeEmail.trim().toLowerCase();
+    const shape = decideMailboxClaim({
+      callerId: user._id,
+      callerEmail: user.email,
+      requestedMailbox: mailbox,
+      holderIds: [],
+    });
+    if (shape !== "allow") {
+      throw new Error("Mailbox does not belong to this account");
+    }
+    const holders = await ctx.db
+      .query("users")
+      .withIndex("by_ieeeEmail", (q) => q.eq("ieeeEmail", mailbox))
+      .collect();
+    return holders.some((holder) => holder._id !== user._id);
   },
 });
 
