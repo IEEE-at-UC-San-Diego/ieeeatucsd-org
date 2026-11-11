@@ -12,6 +12,10 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const monthDropdownFormatter = new Intl.DateTimeFormat("en-US", {
+	month: "short",
+});
+
 function Calendar({
 	className,
 	classNames,
@@ -37,8 +41,7 @@ function Calendar({
 			)}
 			captionLayout={captionLayout}
 			formatters={{
-				formatMonthDropdown: (date) =>
-					date.toLocaleString("default", { month: "short" }),
+				formatMonthDropdown: (date) => monthDropdownFormatter.format(date),
 				...formatters,
 			}}
 			classNames={{
@@ -75,7 +78,7 @@ function Calendar({
 					defaultClassNames.dropdown_root,
 				),
 				dropdown: cn(
-					"absolute bg-popover inset-0 opacity-0",
+					"absolute bg-popover text-popover-foreground inset-0 opacity-0",
 					defaultClassNames.dropdown,
 				),
 				caption_label: cn(
@@ -194,7 +197,7 @@ function CalendarDayButton({
 			ref={ref}
 			variant="ghost"
 			size="icon"
-			data-day={day.date.toLocaleDateString()}
+			data-day={day.date.toLocaleDateString("en-US")}
 			data-selected-single={
 				modifiers.selected &&
 				!modifiers.range_start &&

@@ -11,6 +11,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +39,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatCurrencyUSD, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { FundDeposit, FundDepositStatus } from "./types";
 import { STATUS_COLORS, STATUS_LABELS } from "./types";
@@ -61,6 +63,7 @@ export function FundDepositList({
 	userRole,
 	logtoId,
 }: FundDepositListProps) {
+	const confirm = useConfirm();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<FundDepositStatus | "all">(
 		"all",
@@ -150,11 +153,24 @@ export function FundDepositList({
 		}));
 	};
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: "USD",
-		}).format(amount);
+	const ariaSort = (key: keyof FundDeposit | "amount") =>
+		sortConfig.key === key
+			? sortConfig.direction === "asc"
+				? "ascending"
+				: "descending"
+			: "none";
+
+	const handleDelete = async (deposit: FundDeposit) => {
+		if (
+			!(await confirm({
+				title: "Delete Deposit?",
+				description: "This can’t be undone.",
+				confirmLabel: "Delete Deposit",
+				destructive: true,
+			}))
+		)
+			return;
+		onDeleteDeposit(deposit);
 	};
 
 	const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
@@ -163,9 +179,11 @@ export function FundDepositList({
 				<div>
 					<p className="text-sm font-medium text-muted-foreground">{title}</p>
 					<div className="flex items-baseline gap-2 mt-1">
-						<h3 className="text-2xl font-bold">{value}</h3>
+						<h3 className="text-2xl font-bold tabular-nums">{value}</h3>
 						{subValue && (
-							<span className="text-xs text-muted-foreground">{subValue}</span>
+							<span className="text-xs text-muted-foreground tabular-nums">
+								{subValue}
+							</span>
 						)}
 					</div>
 				</div>
@@ -188,14 +206,14 @@ export function FundDepositList({
 				<StatCard
 					title="Pending Review"
 					value={stats.pending}
-					subValue={formatCurrency(stats.pendingAmount)}
+					subValue={formatCurrencyUSD(stats.pendingAmount)}
 					icon={Clock}
 					color="text-tone-warning"
 				/>
 				<StatCard
 					title="Verified Deposits"
 					value={stats.verified}
-					subValue={formatCurrency(stats.totalAmount)}
+					subValue={formatCurrencyUSD(stats.totalAmount)}
 					icon={CheckCircle}
 					color="text-tone-success"
 				/>
@@ -226,7 +244,11 @@ export function FundDepositList({
 					<div className="relative flex-1 sm:w-[300px]">
 						<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search deposits..."
+							type="search"
+							name="search"
+							aria-label="Search deposits"
+							autoComplete="off"
+							placeholder="Search deposits…"
 							className="pl-9"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
@@ -236,7 +258,7 @@ export function FundDepositList({
 						value={statusFilter}
 						onValueChange={(v: any) => setStatusFilter(v)}
 					>
-						<SelectTrigger className="w-[140px]">
+						<SelectTrigger className="w-[140px]" aria-label="Filter by status">
 							<div className="flex items-center gap-2">
 								<Filter className="w-3.5 h-3.5 text-muted-foreground" />
 								<SelectValue placeholder="Status" />
@@ -264,40 +286,50 @@ export function FundDepositList({
 				<Table>
 					<TableHeader>
 						<TableRow className="bg-muted/50">
-							<TableHead
-								className="w-[300px] cursor-pointer"
-								onClick={() => handleSort("title")}
-							>
-								<div className="flex items-center gap-1">
+							<TableHead className="w-[300px]" aria-sort={ariaSort("title")}>
+								<button
+									type="button"
+									className="flex items-center gap-1"
+									onClick={() => handleSort("title")}
+								>
 									Deposit <ArrowUpDown className="w-3 h-3" />
-								</div>
+								</button>
 							</TableHead>
-							<TableHead
-								className="cursor-pointer"
-								onClick={() => handleSort("submittedAt")}
-							>
-								<div className="flex items-center gap-1">
+							<TableHead aria-sort={ariaSort("submittedAt")}>
+								<button
+									type="button"
+									className="flex items-center gap-1"
+									onClick={() => handleSort("submittedAt")}
+								>
 									Date <ArrowUpDown className="w-3 h-3" />
-								</div>
+								</button>
 							</TableHead>
 							<TableHead>Method</TableHead>
 							<TableHead>Status</TableHead>
-							<TableHead
-								className="text-right cursor-pointer"
-								onClick={() => handleSort("amount")}
-							>
-								<div className="flex items-center justify-end gap-1">
+							<TableHead className="text-right" aria-sort={ariaSort("amount")}>
+								<button
+									type="button"
+									className="ml-auto flex items-center justify-end gap-1"
+									onClick={() => handleSort("amount")}
+								>
 									Amount <ArrowUpDown className="w-3 h-3" />
-								</div>
+								</button>
 							</TableHead>
-							<TableHead className="w-[50px]"></TableHead>
+							<TableHead className="w-[50px]">
+								<span className="sr-only">Actions</span>
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={6} className="h-24 text-center">
-									Loading deposits...
+								<TableCell
+									colSpan={6}
+									className="h-24 text-center"
+									role="status"
+									aria-live="polite"
+								>
+									Loading deposits…
 								</TableCell>
 							</TableRow>
 						) : paginatedDeposits.length === 0 ? (
@@ -316,15 +348,24 @@ export function FundDepositList({
 									className="group cursor-pointer hover:bg-muted/30"
 									onClick={() => onViewDeposit(deposit)}
 								>
-									<TableCell>
-										<div className="font-medium">{deposit.title}</div>
+									<TableCell className="min-w-0">
+										<button
+											type="button"
+											className="block max-w-[280px] truncate text-left font-medium"
+											onClick={(e) => {
+												e.stopPropagation();
+												onViewDeposit(deposit);
+											}}
+										>
+											{deposit.title}
+										</button>
 										<div className="text-xs text-muted-foreground truncate max-w-[200px]">
 											{deposit.purpose}
 										</div>
 									</TableCell>
 									<TableCell className="text-sm">
 										{deposit.depositDate
-											? new Date(deposit.depositDate).toLocaleDateString()
+											? formatDate(deposit.depositDate)
 											: "-"}
 									</TableCell>
 									<TableCell className="text-sm capitalize">
@@ -343,8 +384,8 @@ export function FundDepositList({
 											{STATUS_LABELS[deposit.status]}
 										</Badge>
 									</TableCell>
-									<TableCell className="text-right font-medium">
-										{formatCurrency(deposit.amount)}
+									<TableCell className="text-right font-medium tabular-nums">
+										{formatCurrencyUSD(deposit.amount)}
 									</TableCell>
 									<TableCell>
 										<DropdownMenu>
@@ -352,7 +393,9 @@ export function FundDepositList({
 												<Button
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+													className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+													aria-label={`Actions for ${deposit.title}`}
+													onClick={(e) => e.stopPropagation()}
 												>
 													<MoreHorizontal className="w-4 h-4" />
 												</Button>
@@ -372,7 +415,7 @@ export function FundDepositList({
 														<DropdownMenuItem
 															onClick={(e) => {
 																e.stopPropagation();
-																onDeleteDeposit(deposit);
+																void handleDelete(deposit);
 															}}
 															className="text-muted-foreground focus:text-tone-danger"
 														>
@@ -392,7 +435,7 @@ export function FundDepositList({
 				{/* Pagination */}
 				{filteredDeposits.length > itemsPerPage && (
 					<div className="flex items-center justify-between p-4 border-t">
-						<div className="text-sm text-muted-foreground">
+						<div className="text-sm text-muted-foreground tabular-nums">
 							Page {currentPage} of {totalPages}
 						</div>
 						<div className="flex gap-2">

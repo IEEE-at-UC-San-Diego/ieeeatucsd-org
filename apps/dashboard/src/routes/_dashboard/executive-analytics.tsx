@@ -10,7 +10,7 @@ import {
 	TrendingUp,
 	Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -23,6 +23,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import { z } from "zod";
 import {
 	DashboardPage,
 	PageHeader,
@@ -49,9 +50,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { formatDate } from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
+const searchSchema = z.object({
+	fy: z.number().int().optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_dashboard/executive-analytics")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.users.getExecutiveAnalytics, undefined, ctx),
 	component: ExecutiveAnalyticsPage,
@@ -147,9 +155,11 @@ function GrowthBadge({ value }: { value: number | null }) {
 function ExecutiveAnalyticsPage() {
 	const isMobile = useIsMobile();
 	const { hasAdminAccess, logtoId, isLoading } = usePermissions();
-	const [fiscalYearStart, setFiscalYearStart] = useState<number | undefined>(
-		undefined,
-	);
+	const prefersReducedMotion = usePrefersReducedMotion();
+	const { fy: fiscalYearStart } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setFiscalYearStart = (fy: number) =>
+		navigate({ search: (prev) => ({ ...prev, fy }), replace: true });
 	const [touchedBar, setTouchedBar] = useState<{
 		month: string;
 		eventsHosted: number;
@@ -167,12 +177,6 @@ function ExecutiveAnalyticsPage() {
 			: "skip",
 	) as ExecutiveAnalyticsData | undefined;
 
-	useEffect(() => {
-		if (analytics && fiscalYearStart === undefined) {
-			setFiscalYearStart(analytics.selectedFiscalYear);
-		}
-	}, [analytics, fiscalYearStart]);
-
 	const formatNumber = useMemo(
 		() => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }),
 		[],
@@ -184,7 +188,10 @@ function ExecutiveAnalyticsPage() {
 				width="wide"
 				className="flex min-h-[60vh] items-center justify-center"
 			>
-				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				<output className="block">
+					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+					<span className="sr-only">Loading…</span>
+				</output>
 			</DashboardPage>
 		);
 	}
@@ -283,8 +290,11 @@ function ExecutiveAnalyticsPage() {
 								value={String(analytics.selectedFiscalYear)}
 								onValueChange={(value) => setFiscalYearStart(Number(value))}
 							>
-								<SelectTrigger className="w-full border-border bg-background">
-									<SelectValue placeholder="Select fiscal year" />
+								<SelectTrigger
+									aria-label="Fiscal year"
+									className="w-full border-border bg-background"
+								>
+									<SelectValue placeholder="Select fiscal year…" />
 								</SelectTrigger>
 								<SelectContent>
 									{analytics.fiscalYearOptions.map((option) => (
@@ -309,7 +319,7 @@ function ExecutiveAnalyticsPage() {
 						onClick={() => setFySheetOpen(true)}
 						className="motion-press flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-sm font-medium"
 					>
-						<span className="text-muted-foreground">Fiscal year</span>
+						<span className="text-muted-foreground">Fiscal Year</span>
 						<span className="text-tone-link">
 							{analytics.selectedFiscalYearLabel}
 						</span>
@@ -317,7 +327,7 @@ function ExecutiveAnalyticsPage() {
 					<ResponsiveOverlay
 						open={fySheetOpen}
 						onOpenChange={setFySheetOpen}
-						title="Fiscal year"
+						title="Fiscal Year"
 						variant="sheet"
 					>
 						<div className="space-y-2 pb-2">
@@ -479,12 +489,14 @@ function ExecutiveAnalyticsPage() {
 												name="Events Hosted"
 												fill="var(--chart-1)"
 												radius={[6, 6, 0, 0]}
+												isAnimationActive={!prefersReducedMotion}
 											/>
 											<Bar
 												dataKey="attendees"
 												name="Attendees"
 												fill="var(--chart-2)"
 												radius={[6, 6, 0, 0]}
+												isAnimationActive={!prefersReducedMotion}
 											/>
 										</BarChart>
 									</ResponsiveContainer>
@@ -540,6 +552,7 @@ function ExecutiveAnalyticsPage() {
 											innerRadius={isMobile ? 40 : 48}
 											outerRadius={isMobile ? 64 : 74}
 											paddingAngle={4}
+											isAnimationActive={!prefersReducedMotion}
 										>
 											{activeEventTypes.map((entry, index) => (
 												<Cell
@@ -582,6 +595,7 @@ function ExecutiveAnalyticsPage() {
 								>
 									<div className="flex items-center gap-2">
 										<span
+											aria-hidden="true"
 											className="inline-block h-2.5 w-2.5 rounded-full"
 											style={{
 												backgroundColor:
@@ -592,7 +606,7 @@ function ExecutiveAnalyticsPage() {
 											{entry.label}
 										</span>
 									</div>
-									<span className="text-sm font-semibold text-foreground">
+									<span className="text-sm font-semibold tabular-nums text-foreground">
 										{entry.value}
 									</span>
 								</div>
@@ -625,15 +639,11 @@ function ExecutiveAnalyticsPage() {
 										className="flex min-h-[52px] flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between md:rounded-lg md:border md:bg-background md:p-4"
 									>
 										<div className="min-w-0 space-y-1">
-											<p className="text-sm font-semibold text-foreground">
+											<p className="break-words text-sm font-semibold text-foreground">
 												{index + 1}. {event.name}
 											</p>
 											<p className="text-xs text-muted-foreground">
-												{new Date(event.date).toLocaleDateString("en-US", {
-													month: "short",
-													day: "numeric",
-													year: "numeric",
-												})}
+												{formatDate(event.date)}
 											</p>
 										</div>
 										<div className="flex items-center gap-3">
@@ -668,7 +678,7 @@ function ExecutiveAnalyticsPage() {
 							<p className="text-xs text-muted-foreground">
 								Average Attendance / Event
 							</p>
-							<p className="mt-1 text-2xl font-semibold text-foreground">
+							<p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
 								{formatNumber.format(analytics.overview.avgAttendeesPerEvent)}
 							</p>
 						</div>
@@ -677,7 +687,7 @@ function ExecutiveAnalyticsPage() {
 								<p className="text-xs text-muted-foreground">
 									Attendee Coverage
 								</p>
-								<p className="text-sm font-semibold text-foreground">
+								<p className="text-sm font-semibold tabular-nums text-foreground">
 									{formatNumber.format(analytics.overview.attendeeCoverage)}%
 								</p>
 							</div>

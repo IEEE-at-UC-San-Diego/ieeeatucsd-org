@@ -1,6 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { useQuery } from "convex/react";
-import { format, formatDistanceToNow } from "date-fns";
 import {
 	ArrowUpDown,
 	ChevronDown,
@@ -27,6 +25,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { formatDateTime, formatRelativeTime } from "@/lib/formatters";
 import type { ConstitutionAuditEntry } from "./types";
 
 interface ConstitutionAuditLogProps {
@@ -109,9 +109,10 @@ function buildChangeSummary(entry: ConstitutionAuditEntry): string {
 export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 	constitutionId,
 }) => {
-	const auditLog = useQuery(api.constitutions.getAuditLog, {
-		constitutionId: constitutionId as any,
-	});
+	const auditLog = useAuthedQuery(
+		api.constitutions.getAuditLog,
+		constitutionId ? { constitutionId: constitutionId as any } : "skip",
+	);
 
 	const entries = auditLog || [];
 	const [searchQuery, setSearchQuery] = useState("");
@@ -203,14 +204,6 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 		);
 	};
 
-	const formatRelativeTime = (timestamp: number) => {
-		return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-	};
-
-	const formatFullTime = (timestamp: number) => {
-		return format(new Date(timestamp), "MMM d, yyyy 'at' h:mm a");
-	};
-
 	if (entries.length === 0) {
 		return (
 			<Card className="border-0 shadow-none">
@@ -247,14 +240,21 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 					<div className="flex-1 relative">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Search changes..."
+							type="search"
+							name="audit-search"
+							aria-label="Search changes"
+							autoComplete="off"
+							placeholder="Search changes…"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-9 h-9 text-sm"
 						/>
 					</div>
 					<Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
-						<SelectTrigger className="w-full sm:w-36 h-9 text-sm">
+						<SelectTrigger
+							aria-label="Filter by change type"
+							className="w-full sm:w-36 h-9 text-sm"
+						>
 							<Filter className="h-3.5 w-3.5 mr-1.5" />
 							<SelectValue placeholder="Type" />
 						</SelectTrigger>
@@ -267,7 +267,10 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 						</SelectContent>
 					</Select>
 					<Select value={userFilter} onValueChange={setUserFilter}>
-						<SelectTrigger className="w-full sm:w-36 h-9 text-sm">
+						<SelectTrigger
+							aria-label="Filter by user"
+							className="w-full sm:w-36 h-9 text-sm"
+						>
 							<User className="h-3.5 w-3.5 mr-1.5" />
 							<SelectValue placeholder="User" />
 						</SelectTrigger>
@@ -297,7 +300,7 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 									getChangeTypeIcon={getChangeTypeIcon}
 									getChangeTypeBadge={getChangeTypeBadge}
 									formatRelativeTime={formatRelativeTime}
-									formatFullTime={formatFullTime}
+									formatFullTime={formatDateTime}
 								/>
 							))
 						)}
@@ -305,7 +308,7 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 				</ScrollArea>
 
 				{/* Footer */}
-				<div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+				<div className="mt-3 pt-3 border-t text-xs text-muted-foreground tabular-nums">
 					{filteredEntries.length === entries.length
 						? `${entries.length} total changes`
 						: `${filteredEntries.length} of ${entries.length} changes`}
@@ -339,7 +342,7 @@ const AuditEntryRow: React.FC<{
 	const [detailsOpen, setDetailsOpen] = useState(false);
 
 	return (
-		<div className="flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors active:bg-muted/80 sm:hover:bg-muted/80">
+		<div className="flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors active:bg-muted/80 sm:hover:bg-muted/80 [content-visibility:auto] [contain-intrinsic-size:auto_88px]">
 			<div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full bg-muted flex items-center justify-center">
 				{getChangeTypeIcon(entry.changeType)}
 			</div>
@@ -358,7 +361,9 @@ const AuditEntryRow: React.FC<{
 					</span>
 				</div>
 
-				<p className="text-sm text-foreground mt-0.5 leading-snug">{summary}</p>
+				<p className="text-sm text-foreground mt-0.5 leading-snug break-words">
+					{summary}
+				</p>
 
 				{(entry.beforeValue || entry.afterValue) && (
 					<>
@@ -367,7 +372,7 @@ const AuditEntryRow: React.FC<{
 							className="h-11 px-0 text-xs text-tone-info hover:text-tone-info mt-1 sm:h-auto"
 							onClick={() => setDetailsOpen(true)}
 						>
-							View details
+							View Details
 						</Button>
 						<ResponsiveOverlay
 							open={detailsOpen}
@@ -418,7 +423,7 @@ const DetailContent: React.FC<{
 				<div className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
 					{sectionType}
 				</div>
-				<div className="text-sm font-medium text-foreground">
+				<div className="text-sm font-medium text-foreground break-words">
 					{sectionTitle}
 				</div>
 			</div>
@@ -528,13 +533,14 @@ const ContentBlock: React.FC<{
 
 	return (
 		<div className={`border-l-2 ${borderColors[variant]} pl-3`}>
-			<p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+			<p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
 				{displayText}
 			</p>
 			{needsTruncation && (
 				<Button
 					variant="ghost"
 					onClick={onToggle}
+					aria-expanded={expanded}
 					className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1"
 				>
 					{expanded ? (

@@ -1,5 +1,5 @@
 import { api } from "@convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import {
 	ArrowLeft,
 	ArrowRight,
@@ -13,15 +13,19 @@ import {
 	Upload,
 	User,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { MobileTaskStepper } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { LEGAL_VERSIONS } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
-import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useWizard } from "@/hooks/useWizard";
+import { MAX_RESUME_BYTES, uploadResumeToStorage } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/get-started")({
 	component: GetStartedPage,
@@ -40,6 +44,7 @@ interface Question {
 	accept?: string;
 	autoComplete?: string;
 	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+	spellCheck?: boolean;
 }
 
 const questions: Question[] = [
@@ -61,6 +66,7 @@ const questions: Question[] = [
 		placeholder: "123456789",
 		autoComplete: "off",
 		inputMode: "text",
+		spellCheck: false,
 	},
 	{
 		id: "major",
@@ -87,12 +93,14 @@ const questions: Question[] = [
 	{
 		id: "memberId",
 		title: "IEEE Member ID",
-		description: "If you're already an IEEE member, enter your ID (optional)",
+		description: "If you’re already an IEEE member, enter your ID (optional)",
 		icon: User,
 		required: false,
 		type: "text",
 		placeholder: "12345678",
+		autoComplete: "off",
 		inputMode: "numeric",
+		spellCheck: false,
 	},
 	{
 		id: "zelle",
@@ -102,8 +110,9 @@ const questions: Question[] = [
 		icon: CreditCard,
 		required: false,
 		type: "text",
-		placeholder: "Phone number or email",
+		placeholder: "Phone number or email…",
 		autoComplete: "email",
+		spellCheck: false,
 	},
 	{
 		id: "resume",
@@ -116,59 +125,71 @@ const questions: Question[] = [
 	},
 ];
 
+function getQuestionError(question: Question, answer: unknown): string | null {
+	if (question.type === "legal-acceptance") {
+		const legalValue = answer as
+			| { tos?: boolean; privacy?: boolean }
+			| undefined;
+		return legalValue?.tos && legalValue?.privacy
+			? null
+			: "You must accept both the Terms of Service and Privacy Policy to continue";
+	}
+	return question.required && !answer
+		? `Enter your ${question.title} to continue.`
+		: null;
+}
+
 function GetStartedPage() {
+	const formId = useId();
 	const { user, logtoId } = useAuth();
 	const completeOnboarding = useAuthedMutation(api.users.completeOnboarding);
 	const generateResumeUploadUrl = useAuthedMutation(
 		api.users.generateResumeUploadUrl,
 	);
-	const [currentStep, setCurrentStep] = useState(0);
 	const [answers, setAnswers] = useState<Record<string, unknown>>({});
-	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
+	const [validationError, setValidationError] = useState<string | null>(null);
+	const navigate = useNavigate();
 
-	const currentQuestion = questions[currentStep];
-	const isLastStep = currentStep === questions.length - 1;
+	const validateStep = (step: number) => {
+		const question = questions[step - 1];
+		const message = getQuestionError(question, answers[question.id]);
+		setValidationError(message);
+		return message === null;
+	};
+
+	const wizard = useWizard({
+		stepCount: questions.length,
+		canAdvance: validateStep,
+	});
+	const isSubmitting = wizard.phase.kind === "submitting";
+	const error = validationError ?? wizard.errorMessage;
+	useUnsavedChangesGuard(Object.keys(answers).length > 0 && wizard.isEditable);
+
+	const currentQuestion = questions[wizard.step - 1];
+	const { isLastStep } = wizard;
 
 	if (user?.signedUp) {
-		window.location.href = "/overview";
-		return null;
+		return <Navigate to="/overview" replace />;
 	}
 
 	const handleNext = () => {
-		if (currentQuestion.type === "legal-acceptance") {
-			const legalValue = answers[currentQuestion.id] as
-				| { tos?: boolean; privacy?: boolean }
-				| undefined;
-			if (!legalValue?.tos || !legalValue?.privacy) {
-				setError(
-					"You must accept both the Terms of Service and Privacy Policy to continue",
-				);
-				return;
-			}
-		} else if (currentQuestion.required && !answers[currentQuestion.id]) {
-			setError("This field is required");
-			return;
-		}
-
-		setError(null);
-		if (isLastStep) {
-			handleSubmit();
-		} else {
-			setCurrentStep((prev) => prev + 1);
+		if (!isLastStep) {
+			wizard.next();
+		} else if (validateStep(wizard.step)) {
+			void handleSubmit();
 		}
 	};
 
 	const handleBack = () => {
-		if (currentStep > 0) {
-			setCurrentStep((prev) => prev - 1);
-			setError(null);
-		}
+		wizard.back();
+		wizard.dismissError();
+		setValidationError(null);
 	};
 
 	const handleInputChange = (value: unknown) => {
 		setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
-		setError(null);
+		setValidationError(null);
+		wizard.dismissError();
 	};
 
 	const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -179,8 +200,7 @@ function GetStartedPage() {
 	};
 
 	const handleSubmit = async () => {
-		setLoading(true);
-		setError(null);
+		if (!wizard.startSubmit()) return;
 		try {
 			const resumeFile = answers.resume as File | null | undefined;
 			let resumeStorageId;
@@ -205,32 +225,35 @@ function GetStartedPage() {
 				tosVersion: LEGAL_VERSIONS.TOS_VERSION,
 				privacyPolicyVersion: LEGAL_VERSIONS.PRIVACY_POLICY_VERSION,
 			});
-			setCurrentStep(questions.length);
+			wizard.submitSucceeded();
 			setTimeout(() => {
-				window.location.href = "/overview";
+				navigate({ to: "/overview", replace: true });
 			}, 2000);
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "Something went wrong");
-			setLoading(false);
+			wizard.submitFailed(
+				err instanceof Error
+					? err.message
+					: "Couldn’t complete setup. Check your connection and try again.",
+			);
 		}
 	};
 
-	if (currentStep === questions.length) {
+	if (wizard.phase.kind === "succeeded") {
 		return (
 			<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
 				<div className="text-center success-reveal">
 					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-ds-green-700 sm:h-24 sm:w-24">
 						<CheckCircle className="h-10 w-10 text-on-accent sm:h-12 sm:w-12" />
 					</div>
-					<h1 className="mb-3 text-2xl font-bold sm:text-3xl">
+					<h1 className="mb-3 text-balance text-2xl font-bold sm:text-3xl">
 						Welcome to IEEE UCSD!
 					</h1>
 					<p className="text-muted-foreground">
 						Your profile has been set up successfully.
 					</p>
-					<p className="mt-2 text-sm text-muted-foreground">
-						Redirecting to your dashboard...
-					</p>
+					<output className="mt-2 block text-sm text-muted-foreground">
+						Redirecting to your dashboard…
+					</output>
 				</div>
 			</div>
 		);
@@ -239,26 +262,38 @@ function GetStartedPage() {
 	const renderInput = () => {
 		const question = currentQuestion;
 		const value = answers[question.id];
+		const fieldProps = {
+			id: question.id,
+			name: question.id,
+			"aria-labelledby": `${question.id}-title`,
+			"aria-describedby": error
+				? `${question.id}-description ${formId}-get-started-error`
+				: `${question.id}-description`,
+			"aria-invalid": error ? true : undefined,
+			"aria-required": question.required || undefined,
+		};
 
 		switch (question.type) {
 			case "text":
 				return (
 					<Input
+						{...fieldProps}
 						type="text"
 						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
 						onKeyDown={handleKeyPress}
 						placeholder={question.placeholder}
 						className="h-12 text-base"
-						autoFocus
 						autoComplete={question.autoComplete}
 						inputMode={question.inputMode}
+						spellCheck={question.spellCheck}
 						enterKeyHint="next"
 					/>
 				);
 			case "number":
 				return (
 					<Input
+						{...fieldProps}
 						type="number"
 						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
@@ -267,47 +302,71 @@ function GetStartedPage() {
 						min={question.min}
 						max={question.max}
 						className="h-12 text-base"
-						autoFocus
+						autoComplete="off"
 						inputMode="numeric"
 						enterKeyHint="next"
 					/>
 				);
-			case "file":
+			case "file": {
+				const resumeAccept = question.accept ?? ".pdf,application/pdf";
+				const onResumePick = (list: FileList | null) => {
+					if (isSubmitting) return;
+					if (!list || list.length === 0) return;
+					const decision = filesForPicker(list, {
+						accept: resumeAccept,
+						multiple: false,
+						maxBytes: MAX_RESUME_BYTES,
+						typeMessage: "Resume must be a PDF file",
+						sizeMessage: "Resume must be 5MB or smaller",
+					});
+					if (decision.message || decision.files.length !== 1) {
+						handleInputChange(null);
+						setValidationError(decision.message);
+						return;
+					}
+					setValidationError(null);
+					handleInputChange(decision.files[0] ?? null);
+				};
 				return (
 					<div className="space-y-4">
-						<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
-							<Upload className="size-8 text-muted-foreground" />
-							<span className="text-sm font-medium">Tap to choose PDF</span>
-							<span className="text-xs text-muted-foreground">Maximum 5MB</span>
-							<input
-								type="file"
-								accept={question.accept}
-								className="sr-only"
-								onChange={(e) => {
-									const file = e.target.files?.[0] || null;
-									if (file) {
-										const validationError = validateResumeFile(file);
-										if (validationError) {
-											setError(validationError);
-											e.target.value = "";
-											return;
-										}
-									}
-									handleInputChange(file);
-								}}
-							/>
-						</label>
+						<FileDropTarget
+							disabled={isSubmitting}
+							onFiles={onResumePick}
+							className="rounded-md"
+						>
+							<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
+								<Upload className="size-8 text-muted-foreground" />
+								<span className="text-sm font-medium">Tap to choose PDF</span>
+								<span className="text-xs text-muted-foreground">
+									Maximum 5&nbsp;MB. Or drop a PDF here.
+								</span>
+								<input
+									{...fieldProps}
+									type="file"
+									accept={resumeAccept}
+									disabled={isSubmitting}
+									className="sr-only"
+									onChange={(e) => {
+										onResumePick(e.target.files);
+										e.target.value = "";
+									}}
+								/>
+							</label>
+						</FileDropTarget>
 						{value instanceof File && (
-							<p className="flex items-center gap-2 font-medium text-tone-success">
-								<CheckCircle className="w-4 h-4" />
-								{value.name} selected
-							</p>
+							<output className="flex min-w-0 items-center gap-2 font-medium text-tone-success">
+								<CheckCircle className="w-4 h-4 shrink-0" />
+								<span className="min-w-0 break-words">
+									{value.name} selected
+								</span>
+							</output>
 						)}
 						<p className="text-xs text-muted-foreground">
 							Your resume will be visible to IEEE sponsors and officers.
 						</p>
 					</div>
 				);
+			}
 			case "legal-acceptance": {
 				const legal = (value as { tos?: boolean; privacy?: boolean }) || {};
 				const tosAccepted = legal.tos || false;
@@ -395,9 +454,11 @@ function GetStartedPage() {
 						<img
 							src="/logos/blue_logo_only.svg"
 							alt=""
+							width={48}
+							height={48}
 							className="size-10 sm:size-12"
 						/>
-						<h1 className="text-xl font-bold sm:text-3xl">
+						<h1 className="text-balance text-xl font-bold sm:text-3xl">
 							IEEE at UC San Diego
 						</h1>
 					</div>
@@ -409,7 +470,7 @@ function GetStartedPage() {
 				<div className="flex min-h-0 flex-1 flex-col rounded-md border bg-card md:shadow-sm">
 					<div className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
 						<MobileTaskStepper
-							currentStep={currentStep + 1}
+							currentStep={wizard.step}
 							totalSteps={questions.length}
 							stepTitle={currentQuestion.title}
 						/>
@@ -420,22 +481,37 @@ function GetStartedPage() {
 							<div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary sm:size-16">
 								<currentQuestion.icon className="size-7 text-primary-foreground sm:size-8" />
 							</div>
-							<h2 className="mb-2 text-xl font-bold sm:text-2xl">
+							<h2
+								id={`${currentQuestion.id}-title`}
+								className="mb-2 text-balance text-xl font-bold sm:text-2xl"
+							>
 								{currentQuestion.title}
 								{currentQuestion.required && (
-									<span className="ml-1 text-tone-danger">*</span>
+									<span className="ml-1 text-tone-danger" aria-hidden="true">
+										*
+									</span>
 								)}
 							</h2>
-							<p className="text-sm text-muted-foreground sm:text-base">
+							<p
+								id={`${currentQuestion.id}-description`}
+								className="text-pretty text-sm text-muted-foreground sm:text-base"
+							>
 								{currentQuestion.description}
 							</p>
 						</div>
 
-						{error && (
-							<div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-								<p className="text-sm text-destructive">{error}</p>
-							</div>
-						)}
+						<output aria-live="polite" className="block">
+							{error && (
+								<div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+									<p
+										id={`${formId}-get-started-error`}
+										className="text-sm text-destructive"
+									>
+										{error}
+									</p>
+								</div>
+							)}
+						</output>
 
 						{renderInput()}
 					</div>
@@ -445,7 +521,7 @@ function GetStartedPage() {
 							<Button
 								variant="outline"
 								onClick={handleBack}
-								disabled={currentStep === 0}
+								disabled={wizard.isFirstStep || !wizard.isEditable}
 								className="h-12 min-w-[5.5rem] shrink-0"
 							>
 								<ArrowLeft className="mr-1.5 size-4" />
@@ -453,13 +529,13 @@ function GetStartedPage() {
 							</Button>
 							<Button
 								onClick={handleNext}
-								disabled={loading}
+								disabled={isSubmitting}
 								className="h-12 flex-1"
 							>
-								{loading ? (
+								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 size-4 animate-spin" />
-										Finishing...
+										Finishing…
 									</>
 								) : isLastStep ? (
 									<>
@@ -478,9 +554,10 @@ function GetStartedPage() {
 							<Button
 								variant="ghost"
 								onClick={handleNext}
+								disabled={isSubmitting}
 								className="h-10 w-full text-muted-foreground"
 							>
-								Skip this question
+								Skip This Question
 							</Button>
 						)}
 					</div>

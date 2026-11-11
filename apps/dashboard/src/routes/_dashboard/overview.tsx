@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { usePermissions } from "@/hooks/usePermissions";
+import { formatMonthYear, formatShortDate } from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/overview")({
@@ -33,10 +34,7 @@ function buildTrend(history: PointsHistoryEntry[]): PointsTrendPoint[] {
 	// Collapse same-day check-ins to the day's final cumulative total.
 	const byDay = new Map<string, number>();
 	for (const entry of history) {
-		const label = new Date(entry.date).toLocaleDateString(undefined, {
-			month: "short",
-			day: "numeric",
-		});
+		const label = formatShortDate(entry.date);
 		byDay.set(label, entry.cumulative);
 	}
 	return [...byDay].map(([date, points]) => ({ date, points }));
@@ -44,13 +42,8 @@ function buildTrend(history: PointsHistoryEntry[]): PointsTrendPoint[] {
 
 function buildRangeLabel(history: PointsHistoryEntry[]): string | null {
 	if (history.length < 2) return null;
-	const format = (timestamp: number) =>
-		new Date(timestamp).toLocaleDateString(undefined, {
-			month: "short",
-			year: "numeric",
-		});
-	const first = format(history[0].date);
-	const last = format(history[history.length - 1].date);
+	const first = formatMonthYear(history[0].date);
+	const last = formatMonthYear(history[history.length - 1].date);
 	return first === last ? first : `${first} – ${last}`;
 }
 
@@ -75,16 +68,19 @@ function AccountSetupNotice({
 				<AlertCircle className="mt-0.5 size-4 shrink-0 text-tone-warning" />
 				<div className="space-y-3">
 					<div className="space-y-1">
-						<h2 className="text-base font-semibold leading-6 text-foreground">
+						<h2 className="text-base font-semibold leading-6 text-balance text-foreground">
 							{isOnline
-								? "Finalizing your account"
-								: "Can't finish account setup"}
+								? "Finalizing Your Account"
+								: "Can’t Finish Account Setup"}
 						</h2>
-						<p className="max-w-prose text-sm leading-5 text-pretty text-muted-foreground">
+						<output
+							aria-live="polite"
+							className="block max-w-prose text-sm leading-5 text-pretty text-muted-foreground"
+						>
 							{isOnline
-								? "We're syncing your dashboard profile. This should only take a moment."
-								: "You're offline. Reconnect, then retry so we can sync your profile."}
-						</p>
+								? "We’re syncing your dashboard profile. This should only take a moment."
+								: "You’re offline. Reconnect, then retry so we can sync your profile."}
+						</output>
 					</div>
 					<div className="flex flex-wrap gap-2">
 						<Button type="button" size="sm" className="px-3" onClick={onRetry}>
@@ -98,7 +94,7 @@ function AccountSetupNotice({
 							className="px-3"
 							onClick={onSignOut}
 						>
-							Sign out
+							Sign Out
 						</Button>
 					</div>
 				</div>
@@ -121,8 +117,8 @@ function OverviewPage() {
 			return (
 				<DashboardPage variant="list">
 					<NetworkErrorState
-						title="Can't finish signing in"
-						description="You're offline. Reconnect, then retry to load your account."
+						title="Can’t Finish Signing In"
+						description="You’re offline. Reconnect, then retry to load your account."
 						onRetry={() => window.location.reload()}
 					/>
 				</DashboardPage>
@@ -148,12 +144,7 @@ function OverviewPage() {
 	}
 
 	const firstName = user.name?.split(" ")[0] || "Member";
-	const memberSince = user.joinDate
-		? new Date(user.joinDate).toLocaleDateString("en-US", {
-				month: "short",
-				year: "numeric",
-			})
-		: null;
+	const memberSince = user.joinDate ? formatMonthYear(user.joinDate) : null;
 
 	const header = (
 		<PageHeader
@@ -171,7 +162,7 @@ function OverviewPage() {
 					size="sm"
 					className="hidden px-3 sm:inline-flex"
 				>
-					<Link to="/leaderboard">View leaderboard</Link>
+					<Link to="/leaderboard">View Leaderboard</Link>
 				</Button>
 			}
 		/>

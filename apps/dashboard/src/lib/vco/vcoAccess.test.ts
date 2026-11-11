@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UserRole } from "@/types/roles";
-import {
-	canEditVcoPipelineFields as canEditVcoPipelineFieldsConvex,
-	hasVcoViewAccess,
-} from "../../../convex/permissions";
+import { hasVcoViewAccess } from "../../../convex/permissions";
+import { canEditVcoPipelineFields as canEditVcoPipelineFieldsConvex } from "../../../convex/vcoPipeline";
 import {
 	canEditVcoPipelineFields,
 	canViewVcoPipeline,
@@ -50,5 +48,18 @@ describe("client VCO access matches Convex helpers", () => {
 		expect(isVcoPosition("Vice Chair Operations")).toBe(true);
 		expect(isVcoPosition("VCO")).toBe(true);
 		expect(isVcoPosition("Vice Chair Events")).toBe(false);
+	});
+
+	it("uses the same gate for pipeline field writes as for the VCO tab", () => {
+		expect(canEditVcoPipelineFieldsConvex("General Officer")).toBe(false);
+		expect(
+			canEditVcoPipelineFieldsConvex(
+				"General Officer",
+				"Vice Chair Operations",
+			),
+		).toBe(true);
+		expect(canEditVcoPipelineFieldsConvex("Administrator")).toBe(
+			canViewVcoPipeline("Administrator"),
+		);
 	});
 });

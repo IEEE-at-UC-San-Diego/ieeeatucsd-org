@@ -10,7 +10,13 @@ import {
   deleteResumeStorage,
   validateAndBuildResume,
 } from "./resume";
-import { buildAuthUpsertResult } from "./userProvisioning";
+import { UserAuth } from "./userAuth";
+import {
+  UserRoleAssignment,
+  assignableUserRoleValidator,
+} from "./userRoleAssignment";
+import { transitionAccountStatus } from "./accountStatusTransition";
+import { serverPolicyAcceptance } from "./legalVersions";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -104,12 +110,13 @@ export const getMe = query({
 });
 
 export const getByLogtoId = query({
-  args: { logtoId: v.string() },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    targetLogtoId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_logtoId", (q) => q.eq("logtoId", args.logtoId))
-      .first();
+    return await UserAuth.getByLogtoId(ctx, args);
   },
 });
 
@@ -131,199 +138,6 @@ export const getByIdForAdmin = query({
   handler: async (ctx, args) => {
     await requireAdminAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db.get(args.userId);
-  },
-});
-
-export const getUserInfo = query({
-  args: { logtoId: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_logtoId", (q) => q.eq("logtoId", args.logtoId))
-      .first();
-    
-    if (!user) return null;
-    
-    return {
-      name: user.name,
-      zelleInformation: user.zelleInformation,
-      email: user.email,
-    };
-  },
-});
-
-export const upsertFromAuth = mutation({
-  args: {
-    logtoId: v.string(),
-    authToken: v.string(),
-    email: v.string(),
-    name: v.string(),
-    avatar: v.optional(v.string()),
-    signInMethod: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const normalizedEmail = args.email.trim().toLowerCase();
-
-    // 1. Check if user already exists by logtoId
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_logtoId", (q) => q.eq("logtoId", args.logtoId))
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        lastLogin: Date.now(),
-        ...(args.signInMethod && { signInMethod: args.signInMethod }),
-        ...(args.avatar && { avatar: args.avatar }),
-      });
-      return buildAuthUpsertResult(
-        existing._id,
-        existing.signedUp ?? false,
-        existing.role,
-      );
-    }
-
-    // 2. If logtoId changed/re-created, relink by email instead of creating a duplicate.
-    // This prevents a second onboarding account for the same email.
-    const emailMatches: any[] = [];
-    const seen = new Set<string>();
-    const addCandidate = (candidate: any) => {
-      if (!candidate || seen.has(candidate._id)) return;
-      seen.add(candidate._id);
-      emailMatches.push(candidate);
-    };
-
-    if (args.email) {
-      const exactMatches = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
-        .collect();
-      for (const candidate of exactMatches) addCandidate(candidate);
-    }
-
-    if (normalizedEmail && normalizedEmail !== args.email) {
-      const normalizedMatches = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-        .collect();
-      for (const candidate of normalizedMatches) addCandidate(candidate);
-    }
-
-    if (emailMatches.length > 0) {
-      const bestMatch = emailMatches.sort((a, b) => {
-        const aSignedUp = a.signedUp ? 1 : 0;
-        const bSignedUp = b.signedUp ? 1 : 0;
-        if (aSignedUp !== bSignedUp) return bSignedUp - aSignedUp;
-
-        const aLastLogin = a.lastLogin ?? 0;
-        const bLastLogin = b.lastLogin ?? 0;
-        return bLastLogin - aLastLogin;
-      })[0];
-
-      await ctx.db.patch(bestMatch._id, {
-        logtoId: args.logtoId,
-        email: normalizedEmail || args.email,
-        lastLogin: Date.now(),
-        ...(args.signInMethod && { signInMethod: args.signInMethod }),
-        ...(args.avatar && { avatar: args.avatar }),
-      });
-
-      return buildAuthUpsertResult(
-        bestMatch._id,
-        bestMatch.signedUp ?? false,
-        bestMatch.role,
-      );
-    }
-
-    // 3. Brand new user — check for sponsor domain auto-assignment
-    let role: string = "Member";
-    let sponsorTier: string | undefined;
-    let sponsorOrganization: string | undefined;
-    let autoAssignedSponsor = false;
-
-    if (normalizedEmail) {
-      const emailDomain = "@" + normalizedEmail.split("@")[1]?.toLowerCase();
-      const domainMatch = await ctx.db
-        .query("sponsorDomains")
-        .withIndex("by_domain", (q) => q.eq("domain", emailDomain))
-        .first();
-
-      if (domainMatch) {
-        role = "Sponsor";
-        sponsorTier = domainMatch.sponsorTier;
-        sponsorOrganization = domainMatch.organizationName;
-        autoAssignedSponsor = true;
-      }
-    }
-
-    // Check for accepted officer invitations. Older invitations may have been
-    // stored before email normalization, so check both forms.
-    const invitationMatches: any[] = [];
-    const addInvitation = (candidate: any) => {
-      if (!candidate) return;
-      if (invitationMatches.some((match) => match._id === candidate._id)) return;
-      invitationMatches.push(candidate);
-    };
-
-    if (normalizedEmail) {
-      addInvitation(
-        await ctx.db
-          .query("officerInvitations")
-          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-          .filter((q) => q.eq(q.field("status"), "accepted"))
-          .first(),
-      );
-    }
-
-    if (args.email && args.email !== normalizedEmail) {
-      addInvitation(
-        await ctx.db
-          .query("officerInvitations")
-          .withIndex("by_email", (q) => q.eq("email", args.email))
-          .filter((q) => q.eq(q.field("status"), "accepted"))
-          .first(),
-      );
-    }
-
-    const acceptedInvitation = invitationMatches[0];
-
-    if (acceptedInvitation && role === "Member") {
-      role = acceptedInvitation.role;
-    }
-
-    const userId = await ctx.db.insert("users", {
-      logtoId: args.logtoId,
-      email: normalizedEmail || args.email,
-      emailVisibility: true,
-      verified: true,
-      name: args.name,
-      avatar: args.avatar,
-      lastLogin: Date.now(),
-      notificationPreferences: {},
-      displayPreferences: {},
-      accessibilitySettings: {},
-      aiFeaturesEnabled: true,
-      signedUp: false,
-      requestedEmail: false,
-      role: role as any,
-      status: "active",
-      joinDate: Date.now(),
-      eventsAttended: 0,
-      points: 0,
-      signInMethod: args.signInMethod || "logto",
-      ...(sponsorTier && { sponsorTier: sponsorTier as any }),
-      ...(sponsorOrganization && { sponsorOrganization }),
-      ...(autoAssignedSponsor && { autoAssignedSponsor }),
-      ...(acceptedInvitation?.position && {
-        position: acceptedInvitation.position,
-      }),
-      ...(acceptedInvitation && {
-        invitedBy: acceptedInvitation.invitedBy,
-        inviteAccepted: Date.now(),
-      }),
-    });
-
-    return buildAuthUpsertResult(userId, false, role);
   },
 });
 
@@ -354,16 +168,14 @@ export const completeOnboarding = mutation({
       );
     }
 
+    const policyAcceptance = serverPolicyAcceptance(now);
     await ctx.db.patch(user._id, {
       pid: args.pid,
       major: args.major,
       graduationYear: args.graduationYear,
       signedUp: true,
       joinDate: now,
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
+      ...policyAcceptance,
       ...(args.memberId && { memberId: args.memberId }),
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
       ...(resume && { resume }),
@@ -493,12 +305,7 @@ export const acceptPolicyUpdate = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const now = Date.now();
 
-    await ctx.db.patch(user._id, {
-      tosAcceptedAt: now,
-      tosVersion: args.tosVersion,
-      privacyPolicyAcceptedAt: now,
-      privacyPolicyVersion: args.privacyPolicyVersion,
-    });
+    await ctx.db.patch(user._id, serverPolicyAcceptance(now));
 
     return user._id;
   },
@@ -603,15 +410,7 @@ export const updateRole = mutation({
     logtoId: v.string(),
     authToken: v.string(),
     userId: v.id("users"),
-    role: v.union(
-      v.literal("Member"),
-      v.literal("General Officer"),
-      v.literal("Executive Officer"),
-      v.literal("Member at Large"),
-      v.literal("Past Officer"),
-      v.literal("Sponsor"),
-      v.literal("Administrator"),
-    ),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(
       v.union(
@@ -627,21 +426,11 @@ export const updateRole = mutation({
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("Target user not found");
 
-    // Nuanced restrictions for Executive Officers (non-Admin)
-    if (admin.role === "Executive Officer") {
-      // Executive Officers cannot change Administrator users
-      if (targetUser.role === "Administrator") {
-        throw new Error("Executive Officers cannot modify Administrator accounts");
-      }
-      // Executive Officers cannot change their own role
-      if (targetUser._id === admin._id) {
-        throw new Error("Executive Officers cannot change their own role");
-      }
-      // Executive Officers cannot assign the Administrator role
-      if (args.role === "Administrator") {
-        throw new Error("Only Administrators can assign the Administrator role");
-      }
-    }
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+      target: targetUser,
+    });
 
     await ctx.db.patch(args.userId, {
       role: args.role,
@@ -661,12 +450,16 @@ export const createPlaceholder = mutation({
     authToken: v.string(),
     email: v.string(),
     name: v.string(),
-    role: v.string(),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+    });
     const normalizedEmail = args.email.trim().toLowerCase();
     const now = Date.now();
 
@@ -684,7 +477,7 @@ export const createPlaceholder = mutation({
       emailVisibility: true,
       verified: true,
       name: args.name,
-      role: args.role as any,
+      role: args.role,
       position: args.position,
       team: args.team as any,
       status: "active",
@@ -716,9 +509,12 @@ export const updateStatus = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const existing = await ctx.db.get(args.userId);
+    if (!existing) throw new Error("User not found");
+    const nextStatus = transitionAccountStatus(existing.status, args.status);
 
     await ctx.db.patch(args.userId, {
-      status: args.status,
+      status: nextStatus,
       lastUpdated: Date.now(),
       lastUpdatedBy: admin.logtoId,
     });

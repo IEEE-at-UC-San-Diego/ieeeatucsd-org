@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { format } from "date-fns";
 import {
 	AlertCircle,
 	Check,
@@ -14,8 +13,9 @@ import {
 	ZoomIn,
 	ZoomOut,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,11 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea"; // Assuming this exists
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import {
+	formatCurrencyUSD,
+	formatDate,
+	formatDateTime,
+} from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { FundDeposit } from "./types";
 import { STATUS_COLORS, STATUS_ICONS, STATUS_LABELS } from "./types";
@@ -50,6 +55,7 @@ export function FundDepositDetail({
 	logtoId,
 	userRole,
 }: FundDepositDetailProps) {
+	const formId = useId();
 	const updateStatus = useAuthedMutation(api.fundDeposits.updateStatus);
 	const deleteDeposit = useAuthedMutation(api.fundDeposits.deleteRequest);
 
@@ -59,6 +65,7 @@ export function FundDepositDetail({
 	const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
 	const [rejectionReason, setRejectionReason] = useState("");
 	const [isDeleting, setIsDeleting] = useState(false);
+	const confirm = useConfirm();
 
 	if (!deposit) return null;
 
@@ -75,13 +82,6 @@ export function FundDepositDetail({
 		setRotation(0);
 	};
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: "USD",
-		}).format(amount);
-	};
-
 	const StatusIcon = STATUS_ICONS[deposit.status];
 
 	const handleApprove = async () => {
@@ -94,13 +94,13 @@ export function FundDepositDetail({
 			toast.success("Deposit verified successfully");
 			onClose();
 		} catch (error) {
-			toast.error("Failed to verify deposit");
+			toast.error("Failed to verify deposit. Please try again.");
 		}
 	};
 
 	const handleReject = async () => {
 		if (!rejectionReason.trim()) {
-			toast.error("Please provide a rejection reason");
+			toast.error("Enter a rejection reason to continue.");
 			return;
 		}
 		try {
@@ -114,19 +114,27 @@ export function FundDepositDetail({
 			setIsRejectModalOpen(false);
 			onClose();
 		} catch (error) {
-			toast.error("Failed to reject deposit");
+			toast.error("Failed to reject deposit. Please try again.");
 		}
 	};
 
 	const handleDelete = async () => {
-		if (!window.confirm("Are you sure? This cannot be undone.")) return;
+		if (
+			!(await confirm({
+				title: "Delete Deposit?",
+				description: "This can’t be undone.",
+				confirmLabel: "Delete Deposit",
+				destructive: true,
+			}))
+		)
+			return;
 		setIsDeleting(true);
 		try {
 			await deleteDeposit({ logtoId, id: deposit._id });
 			toast.success("Deposit deleted");
 			onClose();
 		} catch (error) {
-			toast.error("Failed to delete deposit");
+			toast.error("Failed to delete deposit. Please try again.");
 		} finally {
 			setIsDeleting(false);
 		}
@@ -162,10 +170,10 @@ export function FundDepositDetail({
 							</div>
 							<div className="text-right">
 								<div className="text-2xl font-bold tabular-nums">
-									{formatCurrency(deposit.amount)}
+									{formatCurrencyUSD(deposit.amount)}
 								</div>
 								<div className="text-xs text-muted-foreground">
-									{format(new Date(deposit.depositDate), "MMM d, yyyy")}
+									{formatDate(deposit.depositDate)}
 								</div>
 							</div>
 						</div>
@@ -212,10 +220,7 @@ export function FundDepositDetail({
 										</Label>
 										<div className="text-sm">
 											{deposit.submittedAt
-												? format(
-														new Date(deposit.submittedAt),
-														"MMM d, yyyy h:mm a",
-													)
+												? formatDateTime(deposit.submittedAt)
 												: "-"}
 										</div>
 									</div>
@@ -281,6 +286,7 @@ export function FundDepositDetail({
 												size="icon"
 												className="h-7 w-7"
 												onClick={handleZoomOut}
+												aria-label="Zoom out"
 												disabled={isPdf}
 											>
 												<ZoomOut className="w-3.5 h-3.5" />
@@ -290,6 +296,7 @@ export function FundDepositDetail({
 												size="icon"
 												className="h-7 w-7"
 												onClick={handleZoomIn}
+												aria-label="Zoom in"
 												disabled={isPdf}
 											>
 												<ZoomIn className="w-3.5 h-3.5" />
@@ -299,6 +306,7 @@ export function FundDepositDetail({
 												size="icon"
 												className="h-7 w-7"
 												onClick={handleRotate}
+												aria-label="Rotate receipt"
 												disabled={isPdf}
 											>
 												<RotateCw className="w-3.5 h-3.5" />
@@ -309,6 +317,7 @@ export function FundDepositDetail({
 												size="icon"
 												className="h-7 w-7"
 												onClick={() => window.open(currentFile, "_blank")}
+												aria-label="Open receipt in new tab"
 											>
 												<ExternalLink className="w-3.5 h-3.5" />
 											</Button>
@@ -327,6 +336,8 @@ export function FundDepositDetail({
 												<img
 													src={currentFile}
 													alt="Receipt"
+													width={800}
+													height={1000}
 													className="max-w-full max-h-full object-contain transition-transform duration-200"
 													style={{
 														transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
@@ -348,6 +359,7 @@ export function FundDepositDetail({
 														)
 													}
 													disabled={activeImageIndex === 0}
+													aria-label="Previous receipt"
 												>
 													<ChevronLeft className="w-4 h-4" />
 												</Button>
@@ -366,6 +378,7 @@ export function FundDepositDetail({
 													disabled={
 														activeImageIndex === receiptFiles.length - 1
 													}
+													aria-label="Next receipt"
 												>
 													<ChevronRight className="w-4 h-4" />
 												</Button>
@@ -380,6 +393,7 @@ export function FundDepositDetail({
 												<Button
 													variant="outline"
 													key={idx}
+													aria-label={`View receipt ${idx + 1}`}
 													onClick={() => {
 														setActiveImageIndex(idx);
 														resetView();
@@ -399,7 +413,10 @@ export function FundDepositDetail({
 														<img
 															src={file}
 															className="w-full h-full object-cover"
-															alt="thumbnail"
+															alt=""
+															width={48}
+															height={48}
+															loading="lazy"
 														/>
 													)}
 												</Button>
@@ -469,7 +486,7 @@ export function FundDepositDetail({
 				open={isRejectModalOpen}
 				onOpenChange={setIsRejectModalOpen}
 				title="Reject Deposit"
-				description="Please provide a reason for rejection."
+				description="Explain why this deposit is being rejected."
 				variant="sheet"
 				footer={
 					<div className="flex w-full gap-2">
@@ -490,10 +507,18 @@ export function FundDepositDetail({
 					</div>
 				}
 			>
+				<Label
+					htmlFor={`${formId}-deposit-rejection-reason`}
+					className="sr-only"
+				>
+					Rejection Reason
+				</Label>
 				<Textarea
+					id={`${formId}-deposit-rejection-reason`}
+					name="rejectionReason"
 					value={rejectionReason}
 					onChange={(e) => setRejectionReason(e.target.value)}
-					placeholder="Reason..."
+					placeholder="Reason for rejection…"
 					className="min-h-24 text-base sm:text-sm"
 				/>
 			</ResponsiveOverlay>

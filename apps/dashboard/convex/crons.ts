@@ -9,4 +9,10 @@ crons.interval(
   internal.googleCalendar.scheduledSync,
 );
 
+crons.interval(
+  "expire overdue officer invitations",
+  { hours: 1 },
+  internal.officerInvitations.expireOverdue,
+);
+
 export default crons;

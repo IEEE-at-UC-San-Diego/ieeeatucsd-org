@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { Calendar, Clock3, ExternalLink, MapPin, Pencil } from "lucide-react";
 import type { EventRequest } from "@/components/manage-events/types";
 import { ResponsiveOverlay } from "@/components/mobile";
@@ -8,6 +7,7 @@ import {
 	buildGoogleCalendarSubscribeUrl,
 	downloadEventIcs,
 } from "@/lib/calendarLinks";
+import { formatLongDate, formatTime } from "@/lib/formatters";
 
 interface OfficerCalendarEventModalProps {
 	isOpen: boolean;
@@ -69,7 +69,10 @@ export function OfficerCalendarEventModal({
 					>
 						{isInternalEvent ? "Internal Event" : "Published Event"}
 					</Badge>
-					<Badge variant="outline" className="border-border text-foreground">
+					<Badge
+						variant="outline"
+						className="border-border text-foreground capitalize"
+					>
 						{event.status}
 					</Badge>
 				</div>
@@ -81,7 +84,7 @@ export function OfficerCalendarEventModal({
 							Date
 						</div>
 						<p className="mt-1 text-sm text-foreground">
-							{format(startDate, "EEEE, MMMM d, yyyy")}
+							{formatLongDate(startDate)}
 						</p>
 					</div>
 					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
@@ -90,7 +93,7 @@ export function OfficerCalendarEventModal({
 							Time
 						</div>
 						<p className="mt-1 text-sm text-foreground">
-							{format(startDate, "h:mm a")} - {format(endDate, "h:mm a")}
+							{formatTime(startDate)} – {formatTime(endDate)}
 						</p>
 					</div>
 				</div>
@@ -100,7 +103,7 @@ export function OfficerCalendarEventModal({
 						<MapPin className="h-3.5 w-3.5" />
 						Location
 					</div>
-					<p className="mt-1 text-sm text-foreground">
+					<p className="mt-1 text-sm text-foreground break-words">
 						{event.location || "TBD"}
 					</p>
 				</div>
@@ -108,7 +111,7 @@ export function OfficerCalendarEventModal({
 				{event.eventDescription && (
 					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
 						<p className="text-muted-foreground text-xs">Details</p>
-						<p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+						<p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
 							{event.eventDescription}
 						</p>
 					</div>

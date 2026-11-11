@@ -6,14 +6,26 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import {
+	FileDropTarget,
+	pasteShortcutHint,
+} from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
+import { formatCurrencyUSD } from "@/lib/formatters";
 import type { Invoice, InvoiceItem } from "../types";
+import {
+	invoiceFromUpload,
+	invoiceUploadErrorMessage,
+	isInvoiceUploadBusy,
+} from "./invoiceUploadState";
+import { useInvoiceUpload } from "./useInvoiceUpload";
 
 interface FundingSectionProps {
 	data: {
@@ -36,125 +48,49 @@ export function FundingSection({
 	generateUploadUrl,
 	aiEnabled = true,
 }: FundingSectionProps) {
-	const { getAuthHeaders } = useAuth();
-	const [isUploading, setIsUploading] = useState(false);
-	const [uploadError, setUploadError] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const invoiceLock = useRef(false);
+	const [invoicePickerMessage, setInvoicePickerMessage] = useState<
+		string | null
+	>(null);
+	const confirm = useConfirm();
+	const fundingQuestionId = useId();
+	const formId = useId();
+	const { phase, selectFile } = useInvoiceUpload({
+		generateUploadUrl,
+		parseWithAI: shouldParseInvoiceWithAI(aiEnabled),
+		onFinished: ({ storageId, parsed }) => {
+			const newInvoice = invoiceFromUpload(
+				crypto.randomUUID(),
+				storageId,
+				parsed,
+			);
+			onChange({ invoices: [...data.invoices, newInvoice] });
+		},
+	});
+	const isUploading = isInvoiceUploadBusy(phase);
+	const uploadError = invoiceUploadErrorMessage(phase);
 
-	const handleAddInvoiceViaUpload = async (file: File) => {
-		setUploadError("");
-		const maxSize = 10 * 1024 * 1024;
-		if (file.size > maxSize) {
-			setUploadError("File too large. Maximum 10MB.");
-			return;
-		}
-		const allowedExts = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp"];
-		const ext = "." + file.name.split(".").pop()?.toLowerCase();
-		if (!allowedExts.includes(ext)) {
-			setUploadError("Unsupported file type. Use PDF, JPG, PNG, GIF, or WebP.");
-			return;
-		}
-
-		setIsUploading(true);
-		const newInvoiceId = crypto.randomUUID();
-
-		let fileUrl = "";
-		const parseDataUrl = await new Promise<string>((resolve) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.readAsDataURL(file);
+	const onInvoiceFiles = (list: FileList | null) => {
+		if (invoiceLock.current || isUploading) return;
+		const decision = filesForPicker(list, {
+			accept: ".pdf,.jpg,.jpeg,.png,.gif,.webp",
+			multiple: false,
+			maxBytes: 10 * 1024 * 1024,
+			typeMessage: "Unsupported file type. Use PDF, JPG, PNG, GIF, or WebP.",
+			sizeMessage: "File too large. Choose a file under 10\u00a0MB.",
 		});
-
-		// Upload to Convex if available
-		if (generateUploadUrl) {
-			try {
-				const uploadUrl = await generateUploadUrl();
-				const res = await fetch(uploadUrl, {
-					method: "POST",
-					headers: { "Content-Type": file.type },
-					body: file,
-				});
-				if (res.ok) {
-					const { storageId } = await res.json();
-					fileUrl = storageId;
-				}
-			} catch (err) {
-				console.error("Upload failed:", err);
-			}
+		if (decision.message || decision.files.length !== 1) {
+			setInvoicePickerMessage(decision.message);
+			return;
 		}
-
-		// AI parse
-		if (shouldParseInvoiceWithAI(aiEnabled)) {
-			try {
-				const response = await fetch("/api/parse-invoice", {
-					method: "POST",
-					headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-					// Use local data URL for parsing. Convex storage IDs are not fetchable URLs.
-					body: JSON.stringify({ imageUrl: parseDataUrl }),
-				});
-
-				if (response.ok) {
-					const result = await response.json();
-					if (result.success && result.data) {
-						const parsed = result.data;
-						const newInvoice: Invoice = {
-							_id: newInvoiceId,
-							vendor: parsed.vendor || "",
-							items: (parsed.items || []).map((item: any) => ({
-								description: item.description || "",
-								quantity: item.quantity || 1,
-								unitPrice: item.unitPrice || 0,
-								total: item.total || 0,
-							})),
-							tax: parsed.tax || 0,
-							tip: parsed.tip || 0,
-							invoiceFile: fileUrl || undefined,
-							additionalFiles: [],
-							subtotal: parsed.subtotal || 0,
-							total: parsed.total || 0,
-							amount: parsed.total || 0,
-							description: "",
-						};
-						onChange({ invoices: [...data.invoices, newInvoice] });
-						setIsUploading(false);
-						return;
-					}
-				}
-				// AI failed — create empty invoice with file attached
-				setUploadError(
-					"AI parsing failed. Please enter invoice details manually.",
-				);
-			} catch {
-				setUploadError(
-					"AI parsing failed. Please enter invoice details manually.",
-				);
-			}
-		} else {
-			setUploadError("AI is disabled. Please enter invoice details manually.");
-		}
-
-		// Fallback: create invoice with file but no parsed data
-		const newInvoice: Invoice = {
-			_id: newInvoiceId,
-			vendor: "",
-			items: [],
-			tax: 0,
-			tip: 0,
-			invoiceFile: fileUrl || undefined,
-			additionalFiles: [],
-			subtotal: 0,
-			total: 0,
-			amount: 0,
-			description: "",
-		};
-		onChange({ invoices: [...data.invoices, newInvoice] });
-		setIsUploading(false);
-	};
-
-	const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) handleAddInvoiceViaUpload(file);
-		e.target.value = "";
+		const file = decision.files[0];
+		if (!file) return;
+		setInvoicePickerMessage(null);
+		invoiceLock.current = true;
+		void Promise.resolve(selectFile(file)).finally(() => {
+			invoiceLock.current = false;
+		});
 	};
 
 	const addInvoiceManual = () => {
@@ -225,7 +161,17 @@ export function FundingSection({
 		});
 	};
 
-	const removeInvoice = (id: string) => {
+	const removeInvoice = async (id: string) => {
+		if (
+			!(await confirm({
+				title: "Remove Invoice?",
+				description:
+					"This removes the invoice and its line items from this request.",
+				confirmLabel: "Remove Invoice",
+				destructive: true,
+			}))
+		)
+			return;
 		onChange({ invoices: data.invoices.filter((inv) => inv._id !== id) });
 	};
 
@@ -265,12 +211,17 @@ export function FundingSection({
 		<div className="space-y-6">
 			<div className="grid gap-6">
 				<div className="space-y-3">
-					<Label className="text-sm font-medium flex items-center gap-2">
+					<Label
+						id={fundingQuestionId}
+						className="text-sm font-medium flex items-center gap-2"
+					>
 						<DollarSign className="h-4 w-4 text-muted-foreground" />
 						Do you need AS (Associated Students) funding for this event?{" "}
 						<span className="text-tone-danger">*</span>
 					</Label>
 					<RadioGroup
+						name="needsASFunding"
+						aria-labelledby={fundingQuestionId}
 						value={data.needsASFunding ? "yes" : "no"}
 						onValueChange={(val) => {
 							const isYes = val === "yes";
@@ -279,20 +230,26 @@ export function FundingSection({
 						className="space-y-2"
 					>
 						<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
-							<RadioGroupItem value="yes" id="funding-yes" />
-							<Label htmlFor="funding-yes" className="cursor-pointer flex-1">
+							<RadioGroupItem value="yes" id={`${formId}-funding-yes`} />
+							<Label
+								htmlFor={`${formId}-funding-yes`}
+								className="cursor-pointer flex-1"
+							>
 								Yes, I need AS funding
 							</Label>
 						</div>
 						<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
-							<RadioGroupItem value="no" id="funding-no" />
-							<Label htmlFor="funding-no" className="cursor-pointer flex-1">
+							<RadioGroupItem value="no" id={`${formId}-funding-no`} />
+							<Label
+								htmlFor={`${formId}-funding-no`}
+								className="cursor-pointer flex-1"
+							>
 								No, I have other funding sources
 							</Label>
 						</div>
 					</RadioGroup>
 					<p className="text-xs text-muted-foreground">
-						AS funding requires detailed invoices and receipts. You'll need to
+						AS funding requires detailed invoices and receipts. You’ll need to
 						provide this information in the next step.
 					</p>
 				</div>
@@ -314,75 +271,105 @@ export function FundingSection({
 				<div className="space-y-4 pt-4 border-t">
 					<div className="flex items-center justify-between">
 						<h3 className="text-sm font-medium text-foreground">Invoices</h3>
-						<div className="flex gap-2">
-							<Button
+						<div className="flex flex-col items-end gap-1">
+							<div className="flex gap-2">
+								<FileDropTarget
+									disabled={isUploading}
+									acceptPaste
+									onFiles={onInvoiceFiles}
+									className="rounded-md"
+								>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										disabled={isUploading}
+										onClick={() => fileInputRef.current?.click()}
+									>
+										{isUploading ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												{aiEnabled ? "Scanning…" : "Uploading…"}
+											</>
+										) : (
+											<>
+												<Upload className="h-4 w-4 mr-2" />
+												Upload Invoice
+											</>
+										)}
+									</Button>
+									<input
+										ref={fileInputRef}
+										type="file"
+										name="invoiceFile"
+										aria-label="Upload invoice file"
+										accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+										disabled={isUploading}
+										className="sr-only"
+										onChange={(e) => {
+											onInvoiceFiles(e.target.files);
+											e.target.value = "";
+										}}
+									/>
+								</FileDropTarget>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={addInvoiceManual}
+								>
+									<Plus className="h-4 w-4 mr-2" />
+									Manual Entry
+								</Button>
+							</div>
+							{data.invoices.length > 0 ? (
+								<p className="text-xs text-muted-foreground">
+									{pasteShortcutHint}
+								</p>
+							) : null}
+						</div>
+					</div>
+
+					<output aria-live="polite" className="block">
+						{(invoicePickerMessage || uploadError) && (
+							<div className="bg-ds-red-100 border border-ds-red-100 rounded-lg p-3">
+								<p className="text-xs text-tone-danger">
+									{invoicePickerMessage || uploadError}
+								</p>
+							</div>
+						)}
+					</output>
+
+					{data.invoices.length === 0 ? (
+						<FileDropTarget
+							disabled={isUploading}
+							acceptPaste
+							onFiles={onInvoiceFiles}
+							className="rounded-lg"
+						>
+							<button
 								type="button"
-								variant="outline"
-								size="sm"
+								className="block w-full text-center py-8 border border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
 								disabled={isUploading}
 								onClick={() => fileInputRef.current?.click()}
 							>
-								{isUploading ? (
-									<>
-										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-										{aiEnabled ? "Scanning..." : "Uploading..."}
-									</>
-								) : (
-									<>
-										<Upload className="h-4 w-4 mr-2" />
-										Upload Invoice
-									</>
-								)}
-							</Button>
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								onClick={addInvoiceManual}
-							>
-								<Plus className="h-4 w-4 mr-2" />
-								Manual Entry
-							</Button>
-						</div>
-						<Input
-							ref={fileInputRef}
-							type="file"
-							accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
-							className="hidden"
-							onChange={handleFileInputChange}
-						/>
-					</div>
-
-					{uploadError && (
-						<div className="bg-ds-red-100 border border-ds-red-100 rounded-lg p-3">
-							<p className="text-xs text-tone-danger">{uploadError}</p>
-						</div>
-					)}
-
-					{data.invoices.length === 0 ? (
-						<div
-							className="text-center py-8 border border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors"
-							onClick={() => !isUploading && fileInputRef.current?.click()}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === " ")
-									fileInputRef.current?.click();
-							}}
-							tabIndex={0}
-							role="button"
-						>
-							<Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-							<p className="text-sm text-muted-foreground font-medium">
-								Upload an invoice to get started
-							</p>
-							<p className="text-xs text-muted-foreground mt-1">
-								{aiEnabled
-									? "AI will automatically scan and extract line items"
-									: "AI is disabled for this account; enter invoice details manually"}
-							</p>
-							<p className="text-xs text-muted-foreground mt-0.5">
-								PDF, JPG, PNG supported · or use Manual Entry above
-							</p>
-						</div>
+								<Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+								<span className="block text-sm text-muted-foreground font-medium">
+									Upload an invoice to get started
+								</span>
+								<span className="block text-xs text-muted-foreground mt-1">
+									{aiEnabled
+										? "AI will automatically scan and extract line items"
+										: "AI is disabled for this account; enter invoice details manually"}
+								</span>
+								<span className="block text-xs text-muted-foreground mt-0.5">
+									PDF, JPG, PNG supported. Or drop a file here.
+								</span>
+								<span className="block text-xs text-muted-foreground mt-0.5">
+									{pasteShortcutHint}
+								</span>
+							</button>
+						</FileDropTarget>
 					) : (
 						<div className="space-y-4">
 							{data.invoices.map((invoice) => (
@@ -391,7 +378,7 @@ export function FundingSection({
 									className="p-4 border rounded-lg space-y-4 bg-muted/50"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-xs font-medium text-muted-foreground">
+										<span className="text-xs font-medium tabular-nums text-muted-foreground">
 											Invoice #{data.invoices.indexOf(invoice) + 1}
 										</span>
 										<Button
@@ -400,6 +387,7 @@ export function FundingSection({
 											size="sm"
 											className="h-8 w-8 p-0 text-destructive"
 											onClick={() => removeInvoice(invoice._id)}
+											aria-label={`Remove invoice ${data.invoices.indexOf(invoice) + 1}`}
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -409,6 +397,8 @@ export function FundingSection({
 										<Label htmlFor={`vendor-${invoice._id}`}>Vendor</Label>
 										<Input
 											id={`vendor-${invoice._id}`}
+											name="vendor"
+											autoComplete="off"
 											value={invoice.vendor}
 											onChange={(e) =>
 												updateInvoice(invoice._id, { vendor: e.target.value })
@@ -421,9 +411,9 @@ export function FundingSection({
 										<div className="flex items-center gap-2 text-xs text-tone-success bg-ds-green-100 border border-ds-green-100 rounded-lg px-3 py-2">
 											<FileText className="h-3.5 w-3.5 shrink-0" />
 											<span>
-												{aiEnabled
-													? "Invoice file attached (AI-scanned)"
-													: "Invoice file attached"}
+												{invoice.items.length > 0
+													? "Invoice file attached. Check the line items below before you continue."
+													: "Invoice file attached. Enter the vendor and line items below."}
 											</span>
 										</div>
 									)}
@@ -461,13 +451,16 @@ export function FundingSection({
 																</Label>
 															)}
 															<Input
+																name="itemDescription"
+																autoComplete="off"
+																aria-label={`Item ${idx + 1} description`}
 																value={item.description}
 																onChange={(e) =>
 																	updateLineItem(invoice._id, idx, {
 																		description: e.target.value,
 																	})
 																}
-																placeholder="Item description"
+																placeholder="Item description…"
 																className="h-8 text-xs"
 															/>
 														</div>
@@ -479,6 +472,10 @@ export function FundingSection({
 															)}
 															<Input
 																type="number"
+																inputMode="numeric"
+																name="itemQuantity"
+																autoComplete="off"
+																aria-label={`Item ${idx + 1} quantity`}
 																min={1}
 																value={item.quantity}
 																onChange={(e) =>
@@ -497,6 +494,10 @@ export function FundingSection({
 															)}
 															<Input
 																type="number"
+																inputMode="decimal"
+																name="itemUnitPrice"
+																autoComplete="off"
+																aria-label={`Item ${idx + 1} price`}
 																min={0}
 																step={0.01}
 																value={item.unitPrice || ""}
@@ -508,13 +509,13 @@ export function FundingSection({
 																className="h-8 text-xs"
 															/>
 														</div>
-														<div className="col-span-2 text-xs font-medium text-right pt-1">
+														<div className="col-span-2 text-xs font-medium text-right pt-1 tabular-nums">
 															{idx === 0 && (
 																<Label className="block text-xs text-muted-foreground">
 																	Total
 																</Label>
 															)}
-															${item.total.toFixed(2)}
+															{formatCurrencyUSD(item.total)}
 														</div>
 														<div className="col-span-1">
 															<Button
@@ -523,6 +524,7 @@ export function FundingSection({
 																size="sm"
 																className="h-8 w-8 p-0 text-destructive"
 																onClick={() => removeLineItem(invoice._id, idx)}
+																aria-label={`Remove item ${idx + 1}`}
 															>
 																<Trash2 className="h-3 w-3" />
 															</Button>
@@ -540,7 +542,10 @@ export function FundingSection({
 											</Label>
 											<Input
 												id={`tax-${invoice._id}`}
+												name="tax"
+												autoComplete="off"
 												type="number"
+												inputMode="decimal"
 												min={0}
 												step={0.01}
 												value={invoice.tax || ""}
@@ -561,7 +566,10 @@ export function FundingSection({
 											</Label>
 											<Input
 												id={`tip-${invoice._id}`}
+												name="tip"
+												autoComplete="off"
 												type="number"
+												inputMode="decimal"
 												min={0}
 												step={0.01}
 												value={invoice.tip || ""}
@@ -578,8 +586,10 @@ export function FundingSection({
 										</div>
 										<div className="space-y-1">
 											<Label className="text-xs">Invoice Total</Label>
-											<div className="h-8 flex items-center text-sm font-bold">
-												${(invoice.total || invoice.amount || 0).toFixed(2)}
+											<div className="h-8 flex items-center text-sm font-bold tabular-nums">
+												{formatCurrencyUSD(
+													invoice.total || invoice.amount || 0,
+												)}
 											</div>
 										</div>
 									</div>
@@ -590,13 +600,15 @@ export function FundingSection({
 										</Label>
 										<Textarea
 											id={`description-${invoice._id}`}
+											name="invoiceDescription"
+											autoComplete="off"
 											value={invoice.description}
 											onChange={(e) =>
 												updateInvoice(invoice._id, {
 													description: e.target.value,
 												})
 											}
-											placeholder="Additional notes about this invoice..."
+											placeholder="Additional notes about this invoice…"
 											rows={2}
 										/>
 									</div>
@@ -608,8 +620,8 @@ export function FundingSection({
 									<span className="text-sm font-medium text-muted-foreground">
 										Total Invoiced:
 									</span>
-									<span className="text-lg font-bold text-foreground">
-										${totalAmount.toFixed(2)}
+									<span className="text-lg font-bold tabular-nums text-foreground">
+										{formatCurrencyUSD(totalAmount)}
 									</span>
 								</div>
 							)}

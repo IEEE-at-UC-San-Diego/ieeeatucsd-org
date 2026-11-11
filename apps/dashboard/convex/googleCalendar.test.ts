@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type CalendarEvent,
   type GoogleCalendarSyncState,
+  GoogleCalendarAccess,
   fetchGoogleCalendarEvents,
   selectGoogleCalendarDeletionsForSync,
   syncCalendar,
@@ -522,5 +523,47 @@ describe("syncCalendar", () => {
       pruneSkippedReason: "source_count_drop_from_last_successful_sync",
     });
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+  });
+});
+
+describe("GoogleCalendarAccess.requireAdmin", () => {
+  it("rejects missing credentials before running any query", async () => {
+    const runQuery = vi.fn();
+
+    await expect(
+      GoogleCalendarAccess.requireAdmin(
+        { runQuery },
+        { logtoId: "", authToken: "token" },
+      ),
+    ).rejects.toThrow("Authentication required");
+    await expect(
+      GoogleCalendarAccess.requireAdmin(
+        { runQuery },
+        { logtoId: "logto|admin", authToken: "   " },
+      ),
+    ).rejects.toThrow("Authentication required");
+    expect(runQuery).not.toHaveBeenCalled();
+  });
+
+  it("delegates a present caller to the admin gate", async () => {
+    const runQuery = vi.fn(async () => null);
+
+    await GoogleCalendarAccess.requireAdmin(
+      { runQuery },
+      { logtoId: "logto|admin", authToken: "session-token" },
+    );
+
+    expect(runQuery).toHaveBeenCalledTimes(1);
+    expect(runQuery).toHaveBeenCalledWith(expect.anything(), {
+      logtoId: "logto|admin",
+      authToken: "session-token",
+    });
+  });
+});
+
+describe("googleCalendar public action surface", () => {
+  it("does not export an unauthenticated private-calendar dump", async () => {
+    const googleCalendarModule = await import("./googleCalendar");
+    expect(googleCalendarModule).not.toHaveProperty("getGoogleCalendarEvents");
   });
 });

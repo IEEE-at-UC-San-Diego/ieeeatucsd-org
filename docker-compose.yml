@@ -61,6 +61,8 @@ services:
     environment:
       PORT: 4323
       HOST: 0.0.0.0
+      # DEPLOY_CONVEX is omitted on purpose: local compose must not push
+      # Convex functions. Dokploy production sets it on the dashboard app.
       CONVEX_SELF_HOSTED_URL: ${CONVEX_SELF_HOSTED_URL}
       CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_SELF_HOSTED_ADMIN_KEY}
       LOGTO_ENDPOINT: ${LOGTO_ENDPOINT}
@@ -92,4 +94,4 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 90s

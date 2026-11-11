@@ -33,7 +33,7 @@ export async function createIEEEEmail(params: {
 	password: string;
 }) {
 	const config = getMXRouteConfig();
-	const cleanUsername = params.username.replace(/[^a-z0-9]/g, "");
+	const cleanUsername = params.username.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 	const formData = new URLSearchParams();
 	formData.append("action", "create");

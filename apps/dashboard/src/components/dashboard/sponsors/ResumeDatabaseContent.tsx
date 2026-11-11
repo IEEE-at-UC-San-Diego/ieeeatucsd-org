@@ -1,4 +1,5 @@
 import { api } from "@convex/_generated/api";
+import { getRouteApi } from "@tanstack/react-router";
 import {
 	ArrowLeft,
 	CheckSquare,
@@ -10,7 +11,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	DashboardPage,
@@ -69,6 +70,10 @@ const ROLE_TONE: Record<string, DotTone> = {
 	Administrator: "red",
 };
 
+const routeApi = getRouteApi("/_dashboard/sponsors/resume-database");
+
+type ResumeSearch = ReturnType<typeof routeApi.useSearch>;
+
 function RoleChip({ role, label }: { role: string; label?: string }) {
 	return <DotLabel tone={ROLE_TONE[role] ?? "gray"}>{label ?? role}</DotLabel>;
 }
@@ -90,21 +95,29 @@ function CandidateAvatar({
 }
 
 export default function ResumeDatabaseContent() {
+	const formId = useId();
 	const isMobile = useIsMobile();
 	const { setHideTabBar } = useMobileShell();
 	const { logtoId } = useAuth();
-	const [searchTerm, setSearchTerm] = useState("");
-	const [selectedMajors, setSelectedMajors] = useState<Set<string>>(new Set());
-	const [selectedYears, setSelectedYears] = useState<Set<string>>(new Set());
-	const [selectedOfficerStatus, setSelectedOfficerStatus] =
-		useState<string>("all");
+	const {
+		q: searchTerm,
+		major,
+		year,
+		role: selectedOfficerStatus,
+		page,
+		perPage: itemsPerPage,
+		candidate,
+	} = routeApi.useSearch();
+	const navigate = routeApi.useNavigate();
+	const setSearch = (patch: Partial<ResumeSearch>, replace = true) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace });
+	const selectedMajors = useMemo(() => new Set(major ? [major] : []), [major]);
+	const selectedYears = useMemo(() => new Set(year ? [year] : []), [year]);
+	const selectedUserId = candidate ?? null;
+	const view = candidate ? "detail" : "list";
+	const setSelectedUserId = (id: string) => setSearch({ candidate: id });
 	const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 	const [selectionMode, setSelectionMode] = useState(false);
-	const [view, setView] = useState<"list" | "detail">("list");
-	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-	const [currentPage, setCurrentPage] = useState(1);
-	const [itemsPerPage, setItemsPerPage] = useState(10);
 
 	useEffect(() => {
 		setHideTabBar(isMobile && view === "detail");
@@ -199,6 +212,7 @@ export default function ResumeDatabaseContent() {
 	}, [users]);
 
 	const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+	const currentPage = Math.min(page, Math.max(totalPages, 1));
 	const startIndex = (currentPage - 1) * itemsPerPage;
 	const endIndex = startIndex + itemsPerPage;
 	const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
@@ -206,19 +220,27 @@ export default function ResumeDatabaseContent() {
 	const selectedUser = users.find((u) => u.id === selectedUserId) || null;
 
 	useEffect(() => {
-		if (selectedUserId && !users.some((u) => u.id === selectedUserId)) {
-			setSelectedUserId(null);
-			setView("list");
+		if (
+			!loading &&
+			selectedUserId &&
+			!users.some((u) => u.id === selectedUserId)
+		) {
+			navigate({
+				search: (prev) => ({ ...prev, candidate: undefined }),
+				replace: true,
+			});
 		}
-	}, [users, selectedUserId]);
+	}, [loading, users, selectedUserId, navigate]);
 
 	const handlePageChange = (page: number) => {
-		setCurrentPage(page);
+		setSearch({ page });
 	};
 
 	const handleItemsPerPageChange = (value: string) => {
-		setItemsPerPage(Number(value));
-		setCurrentPage(1);
+		const parsed = Number(value);
+		if (parsed !== 10 && parsed !== 25 && parsed !== 50 && parsed !== 100)
+			return;
+		setSearch({ perPage: parsed, page: 1 });
 	};
 
 	const handleSelectAll = (isSelected: boolean) => {
@@ -248,13 +270,11 @@ export default function ResumeDatabaseContent() {
 	};
 
 	const handleRowClick = (user: UserWithResume) => {
-		setSelectedUserId(user.id);
-		setView("detail");
+		setSearch({ candidate: user.id }, false);
 	};
 
 	const handleBackToList = () => {
-		setView("list");
-		setSelectedUserId(null);
+		setSearch({ candidate: undefined });
 	};
 
 	const exitSelectionMode = () => {
@@ -268,12 +288,7 @@ export default function ResumeDatabaseContent() {
 			activeFilterChips.push({
 				id: `major-${major}`,
 				label: major,
-				onClear: () => {
-					const next = new Set(selectedMajors);
-					next.delete(major);
-					setSelectedMajors(next);
-					setCurrentPage(1);
-				},
+				onClear: () => setSearch({ major: "", page: 1 }),
 			});
 		}
 	}
@@ -282,12 +297,7 @@ export default function ResumeDatabaseContent() {
 			activeFilterChips.push({
 				id: `year-${year}`,
 				label: `Class of ${year}`,
-				onClear: () => {
-					const next = new Set(selectedYears);
-					next.delete(year);
-					setSelectedYears(next);
-					setCurrentPage(1);
-				},
+				onClear: () => setSearch({ year: "", page: 1 }),
 			});
 		}
 	}
@@ -296,10 +306,7 @@ export default function ResumeDatabaseContent() {
 			id: "role",
 			label:
 				selectedOfficerStatus === "officers" ? "Officers only" : "Members only",
-			onClear: () => {
-				setSelectedOfficerStatus("all");
-				setCurrentPage(1);
-			},
+			onClear: () => setSearch({ role: "all", page: 1 }),
 		});
 	}
 
@@ -380,7 +387,9 @@ export default function ResumeDatabaseContent() {
 					);
 				} catch (err) {
 					console.error("Failed to download resume:", err);
-					toast.error("Failed to download resume");
+					toast.error(
+						"Failed to download resume. Check your connection and try again.",
+					);
 				}
 			}
 		} else {
@@ -390,16 +399,13 @@ export default function ResumeDatabaseContent() {
 				downloadCSV(csvContent, filename);
 			} catch (err) {
 				console.error("Failed to generate CSV:", err);
+				toast.error("Failed to generate CSV. Try selecting fewer resumes.");
 			}
 		}
 	};
 
 	const clearFilters = () => {
-		setSearchTerm("");
-		setSelectedMajors(new Set());
-		setSelectedYears(new Set());
-		setSelectedOfficerStatus("all");
-		setCurrentPage(1);
+		setSearch({ q: "", major: "", year: "", role: "all", page: 1 });
 	};
 
 	const getRoleBadgeVariant = (
@@ -443,7 +449,7 @@ export default function ResumeDatabaseContent() {
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<Button variant="ghost" size="sm" onClick={handleBackToList}>
 						<ArrowLeft className="mr-1 h-4 w-4" />
-						All resumes
+						All Resumes
 					</Button>
 					<div className="flex items-center gap-2">
 						<span className="text-xs tabular-nums text-muted-foreground">
@@ -474,7 +480,7 @@ export default function ResumeDatabaseContent() {
 					<div className="flex items-center gap-4">
 						<CandidateAvatar name={selectedUser.name} className="size-14" />
 						<div className="min-w-0">
-							<h1 className="text-2xl font-semibold leading-tight tracking-[-0.025em] text-foreground">
+							<h1 className="break-words text-2xl font-semibold leading-tight tracking-[-0.025em] text-balance text-foreground">
 								{selectedUser.name}
 							</h1>
 							<p className="mt-0.5 text-sm text-muted-foreground">
@@ -494,7 +500,7 @@ export default function ResumeDatabaseContent() {
 								/>
 								<a
 									href={`mailto:${selectedUser.email}`}
-									className="text-sm text-tone-link hover:underline"
+									className="min-w-0 break-all text-sm text-tone-link hover:underline"
 								>
 									{selectedUser.email}
 								</a>
@@ -513,12 +519,14 @@ export default function ResumeDatabaseContent() {
 									);
 								} catch (err) {
 									console.error("Failed to download resume:", err);
-									toast.error("Failed to download resume");
+									toast.error(
+										"Failed to download resume. Check your connection and try again.",
+									);
 								}
 							}}
 						>
 							<Download className="h-4 w-4" />
-							Download
+							Download Resume
 						</Button>
 						<Button asChild>
 							<a
@@ -543,7 +551,7 @@ export default function ResumeDatabaseContent() {
 					<iframe
 						src={selectedUser.resume}
 						className="h-[74vh] w-full bg-muted"
-						title={`${selectedUser.name}'s Resume`}
+						title={`${selectedUser.name}’s Resume`}
 					/>
 				</section>
 			</DashboardPage>
@@ -605,30 +613,28 @@ export default function ResumeDatabaseContent() {
 					</div>
 					<MobileFilters
 						searchValue={searchTerm}
-						onSearchChange={(value) => {
-							setSearchTerm(value);
-							setCurrentPage(1);
-						}}
-						searchPlaceholder="Search name, email, major"
+						onSearchChange={(value) => setSearch({ q: value, page: 1 })}
+						searchPlaceholder="Search name, email, major…"
 						activeChips={activeFilterChips}
 						onClearAll={clearFilters}
 						activeFilterCount={activeFilterChips.length}
 						sheetContent={
 							<div className="space-y-4">
 								<div className="space-y-2">
-									<Label>Major</Label>
+									<Label htmlFor={`${formId}-resume-filter-major`}>Major</Label>
 									<Select
-										value={Array.from(selectedMajors)[0] || "all_majors"}
-										onValueChange={(value) => {
-											if (value === "all_majors") {
-												setSelectedMajors(new Set());
-											} else {
-												setSelectedMajors(new Set([value]));
-											}
-											setCurrentPage(1);
-										}}
+										value={major || "all_majors"}
+										onValueChange={(value) =>
+											setSearch({
+												major: value === "all_majors" ? "" : value,
+												page: 1,
+											})
+										}
 									>
-										<SelectTrigger className="h-11">
+										<SelectTrigger
+											id={`${formId}-resume-filter-major`}
+											className="h-11"
+										>
 											<SelectValue placeholder="All majors" />
 										</SelectTrigger>
 										<SelectContent>
@@ -642,19 +648,22 @@ export default function ResumeDatabaseContent() {
 									</Select>
 								</div>
 								<div className="space-y-2">
-									<Label>Graduation year</Label>
+									<Label htmlFor={`${formId}-resume-filter-year`}>
+										Graduation year
+									</Label>
 									<Select
-										value={Array.from(selectedYears)[0] || "all_years"}
-										onValueChange={(value) => {
-											if (value === "all_years") {
-												setSelectedYears(new Set());
-											} else {
-												setSelectedYears(new Set([value]));
-											}
-											setCurrentPage(1);
-										}}
+										value={year || "all_years"}
+										onValueChange={(value) =>
+											setSearch({
+												year: value === "all_years" ? "" : value,
+												page: 1,
+											})
+										}
 									>
-										<SelectTrigger className="h-11">
+										<SelectTrigger
+											id={`${formId}-resume-filter-year`}
+											className="h-11"
+										>
 											<SelectValue placeholder="All years" />
 										</SelectTrigger>
 										<SelectContent>
@@ -671,15 +680,20 @@ export default function ResumeDatabaseContent() {
 									</Select>
 								</div>
 								<div className="space-y-2">
-									<Label>Role</Label>
+									<Label htmlFor={`${formId}-resume-filter-role`}>Role</Label>
 									<Select
 										value={selectedOfficerStatus}
-										onValueChange={(value) => {
-											setSelectedOfficerStatus(value);
-											setCurrentPage(1);
-										}}
+										onValueChange={(value) =>
+											setSearch({
+												role: value as ResumeSearch["role"],
+												page: 1,
+											})
+										}
 									>
-										<SelectTrigger className="h-11">
+										<SelectTrigger
+											id={`${formId}-resume-filter-role`}
+											className="h-11"
+										>
 											<SelectValue placeholder="All members" />
 										</SelectTrigger>
 										<SelectContent>
@@ -700,24 +714,20 @@ export default function ResumeDatabaseContent() {
 						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							type="search"
-							placeholder="Search name, email, or major"
+							name="q"
+							autoComplete="off"
+							placeholder="Search name, email, or major…"
 							aria-label="Search resumes"
 							value={searchTerm}
-							onChange={(e) => {
-								setSearchTerm(e.target.value);
-								setCurrentPage(1);
-							}}
+							onChange={(e) => setSearch({ q: e.target.value, page: 1 })}
 							className="pl-9"
 						/>
 					</div>
 					<Select
-						value={Array.from(selectedMajors)[0] || "all_majors"}
-						onValueChange={(value) => {
-							setSelectedMajors(
-								value === "all_majors" ? new Set() : new Set([value]),
-							);
-							setCurrentPage(1);
-						}}
+						value={major || "all_majors"}
+						onValueChange={(value) =>
+							setSearch({ major: value === "all_majors" ? "" : value, page: 1 })
+						}
 					>
 						<SelectTrigger className="w-[200px]" aria-label="Major">
 							<SelectValue placeholder="All majors" />
@@ -732,13 +742,10 @@ export default function ResumeDatabaseContent() {
 						</SelectContent>
 					</Select>
 					<Select
-						value={Array.from(selectedYears)[0] || "all_years"}
-						onValueChange={(value) => {
-							setSelectedYears(
-								value === "all_years" ? new Set() : new Set([value]),
-							);
-							setCurrentPage(1);
-						}}
+						value={year || "all_years"}
+						onValueChange={(value) =>
+							setSearch({ year: value === "all_years" ? "" : value, page: 1 })
+						}
 					>
 						<SelectTrigger className="w-[150px]" aria-label="Graduation year">
 							<SelectValue placeholder="All years" />
@@ -754,10 +761,9 @@ export default function ResumeDatabaseContent() {
 					</Select>
 					<Select
 						value={selectedOfficerStatus}
-						onValueChange={(value) => {
-							setSelectedOfficerStatus(value);
-							setCurrentPage(1);
-						}}
+						onValueChange={(value) =>
+							setSearch({ role: value as ResumeSearch["role"], page: 1 })
+						}
 					>
 						<SelectTrigger className="w-[160px]" aria-label="Role">
 							<SelectValue placeholder="All members" />
@@ -773,21 +779,27 @@ export default function ResumeDatabaseContent() {
 						selectedYears.size > 0 ||
 						selectedOfficerStatus !== "all") && (
 						<Button variant="ghost" onClick={clearFilters}>
-							Clear
+							Clear Filters
 						</Button>
 					)}
 				</section>
 			)}
 
 			{loading ? (
-				<div className="space-y-3 rounded-md border p-12 text-center">
-					<div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-foreground" />
+				<output
+					aria-live="polite"
+					className="block space-y-3 rounded-md border p-12 text-center"
+				>
+					<div
+						aria-hidden="true"
+						className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-foreground"
+					/>
 					<p className="text-sm text-muted-foreground">Loading resumes…</p>
-				</div>
+				</output>
 			) : filteredUsers.length === 0 ? (
 				<div className="flex flex-col items-center rounded-md border border-dashed px-6 py-14 text-center">
-					<h3 className="text-sm font-semibold text-foreground">
-						No resumes found
+					<h3 className="text-sm font-semibold text-balance text-foreground">
+						No Resumes Found
 					</h3>
 					<p className="mt-1 max-w-md text-sm text-muted-foreground">
 						{searchTerm ||
@@ -816,10 +828,13 @@ export default function ResumeDatabaseContent() {
 								}
 							>
 								<CardContent className="flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between md:p-4">
-									<p className="text-sm text-tone-info">
+									<output
+										aria-live="polite"
+										className="block text-sm tabular-nums text-tone-info"
+									>
 										<strong>{selectedUsers.size}</strong> user
 										{selectedUsers.size !== 1 ? "s" : ""} selected
-									</p>
+									</output>
 									<div className="flex items-center gap-2">
 										<Button
 											onClick={handleDownloadSelected}
@@ -835,7 +850,7 @@ export default function ResumeDatabaseContent() {
 											className="h-11"
 											onClick={() => setSelectedUsers(new Set())}
 										>
-											Clear
+											Clear Selection
 										</Button>
 									</div>
 								</CardContent>
@@ -944,7 +959,7 @@ export default function ResumeDatabaseContent() {
 												data-state={
 													selectedUsers.has(user.id) ? "selected" : undefined
 												}
-												className="group cursor-pointer transition-colors hover:bg-muted/50 data-[state=selected]:bg-ds-blue-100/50"
+												className="group cursor-pointer transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_57px] hover:bg-muted/50 data-[state=selected]:bg-ds-blue-100/50"
 											>
 												<TableCell
 													className="px-4 py-3"
@@ -966,9 +981,16 @@ export default function ResumeDatabaseContent() {
 													<div className="flex items-center gap-3">
 														<CandidateAvatar name={user.name} />
 														<div className="min-w-0">
-															<div className="truncate text-sm font-medium text-foreground">
+															<button
+																type="button"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleRowClick(user);
+																}}
+																className="block max-w-full truncate rounded-sm text-left text-sm font-medium text-foreground hover:underline"
+															>
 																{user.name}
-															</div>
+															</button>
 															<div className="truncate text-xs text-muted-foreground">
 																{user.email}
 															</div>
@@ -1019,7 +1041,7 @@ export default function ResumeDatabaseContent() {
 								<div className="border-t px-4 py-3">
 									<div className="flex flex-col items-center justify-between gap-3 lg:flex-row">
 										<div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-											<p className="text-xs text-muted-foreground">
+											<p className="text-xs tabular-nums text-muted-foreground">
 												Showing{" "}
 												<span className="font-semibold text-foreground">
 													{startIndex + 1}
@@ -1041,7 +1063,10 @@ export default function ResumeDatabaseContent() {
 													value={itemsPerPage.toString()}
 													onValueChange={handleItemsPerPageChange}
 												>
-													<SelectTrigger className="h-8 w-20 bg-background">
+													<SelectTrigger
+														aria-label="Resumes per page"
+														className="h-8 w-20 bg-background"
+													>
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -1111,7 +1136,7 @@ export default function ResumeDatabaseContent() {
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									Download
+									Open Resume
 								</a>
 							</Button>
 							<Button
@@ -1132,7 +1157,7 @@ export default function ResumeDatabaseContent() {
 					<iframe
 						src={selectedUser.resume}
 						className="h-[calc(100dvh-12rem)] w-full min-w-0 rounded-md border"
-						title={`${selectedUser.name}'s Resume`}
+						title={`${selectedUser.name}’s Resume`}
 					/>
 				</ResponsiveOverlay>
 			)}

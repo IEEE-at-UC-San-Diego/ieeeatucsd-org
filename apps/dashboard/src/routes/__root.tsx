@@ -8,11 +8,28 @@ import {
 } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
 import { Toaster } from "sonner";
+import { ConfirmProvider } from "@/components/dashboard/ConfirmDialog";
 import { ThemeMeta, ThemeProvider, ThemeScript } from "@/components/theme";
 import { AuthProvider } from "@/hooks/useAuth";
+import geistSansFont from "../assets/fonts/Geist-Variable.woff2?url";
 import ConvexProvider from "../integrations/convex/provider";
 import AppLogtoProvider from "../integrations/logto/provider";
 import appCss from "../styles.css?url";
+
+function toOrigin(rawUrl: string | undefined): string | null {
+	const trimmed = rawUrl?.trim();
+	if (!trimmed) return null;
+	try {
+		return new URL(trimmed).origin;
+	} catch {
+		return null;
+	}
+}
+
+const convexOrigin = toOrigin(import.meta.env.VITE_CONVEX_URL);
+const logtoOrigin =
+	toOrigin(import.meta.env.VITE_LOGTO_ENDPOINT) ??
+	"https://auth.ieeeatucsd.org";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
@@ -34,7 +51,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			},
 			{
 				name: "theme-color",
-				content: "#006bff",
+				content: "#ffffff",
 			},
 			{
 				name: "apple-mobile-web-app-capable",
@@ -59,6 +76,26 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			},
 		],
 		links: [
+			...(convexOrigin
+				? [
+						{
+							rel: "preconnect",
+							href: convexOrigin,
+							crossOrigin: "anonymous" as const,
+						},
+					]
+				: []),
+			{
+				rel: "preconnect",
+				href: logtoOrigin,
+			},
+			{
+				rel: "preload",
+				href: geistSansFont,
+				as: "font",
+				type: "font/woff2",
+				crossOrigin: "anonymous" as const,
+			},
 			{
 				rel: "stylesheet",
 				href: appCss,
@@ -105,11 +142,13 @@ function NotFoundComponent() {
 	return (
 		<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
 			<div className="w-full max-w-sm space-y-4 text-center">
-				<h1 className="text-4xl font-bold tracking-tight">404</h1>
-				<p className="text-muted-foreground">Page not found</p>
+				<h1 className="text-4xl font-bold tracking-tight text-balance">404</h1>
+				<p className="text-muted-foreground">
+					This page doesn’t exist. Check the URL or head back to the dashboard.
+				</p>
 				<a
 					href="/overview"
-					className="motion-press inline-flex h-12 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground"
+					className="motion-press inline-flex h-12 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 				>
 					Go to Dashboard
 				</a>
@@ -184,7 +223,9 @@ function RootComponent() {
 		return (
 			<ThemeProvider>
 				<ThemeMeta />
-				<Outlet />
+				<ConfirmProvider>
+					<Outlet />
+				</ConfirmProvider>
 			</ThemeProvider>
 		);
 	}
@@ -195,7 +236,9 @@ function RootComponent() {
 			<AppLogtoProvider>
 				<ConvexProvider>
 					<AuthProvider>
-						<Outlet />
+						<ConfirmProvider>
+							<Outlet />
+						</ConfirmProvider>
 						<ThemedToaster />
 					</AuthProvider>
 				</ConvexProvider>

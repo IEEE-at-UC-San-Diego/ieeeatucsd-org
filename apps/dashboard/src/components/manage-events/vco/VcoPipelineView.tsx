@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { getRouteApi } from "@tanstack/react-router";
 import {
 	AlertTriangle,
 	CalendarClock,
@@ -29,6 +29,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatCurrencyUSD, formatShortDate } from "@/lib/formatters";
 import {
 	type CalendarDate,
 	type QuarterStartSettings,
@@ -39,14 +40,16 @@ import {
 } from "@/lib/vco/VcoDeadlines";
 import type { EventRequest } from "../types";
 
+const manageEventsRoute = getRouteApi("/_dashboard/manage-events");
+
 export type VcoPipelinePatch = {
 	dateTbd?: boolean;
 	finId?: string;
 	funded?: boolean;
 	tresOwner?: VcoTresOwner;
-	progAppDoneAt?: number | null;
-	tresStartDoneAt?: number | null;
-	tresFinishDoneAt?: number | null;
+	progAppDone?: boolean;
+	tresStartDone?: boolean;
+	tresFinishDone?: boolean;
 };
 
 type VcoRow = {
@@ -69,7 +72,7 @@ function calendarToDate(date: CalendarDate): Date {
 }
 
 function formatCalendarDate(date: CalendarDate): string {
-	return format(calendarToDate(date), "MMM d");
+	return formatShortDate(calendarToDate(date));
 }
 
 function countdownLabel(daysUntil: number): string {
@@ -91,7 +94,7 @@ function foodLabel(status: VcoPipelineStatus, event: EventRequest): string {
 		return vendorLabel(event);
 	}
 	const vendor = vendorLabel(event);
-	const perHead = `$${status.foodCostPerHead.toFixed(2)}/head`;
+	const perHead = `${formatCurrencyUSD(status.foodCostPerHead)}/head`;
 	return vendor === "—" ? perHead : `${vendor} · ${perHead}`;
 }
 
@@ -115,9 +118,17 @@ export function VcoPipelineView({
 	onPipelineChange: (event: EventRequest, patch: VcoPipelinePatch) => void;
 }) {
 	const isMobile = useIsMobile();
-	const [flaggedOnly, setFlaggedOnly] = useState(false);
-	const [thisQuarter, setThisQuarter] = useState(false);
-	const [search, setSearch] = useState("");
+	const {
+		vq: search,
+		flagged: flaggedOnly,
+		quarter: thisQuarter,
+	} = manageEventsRoute.useSearch();
+	const navigate = manageEventsRoute.useNavigate();
+	const setPipelineSearch = (patch: {
+		vq?: string;
+		flagged?: boolean;
+		quarter?: boolean;
+	}) => navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
 	const finalsWeeks = useMemo(
 		() => VcoDeadlines.resolveFinalsWeeks(weekLabelSettings),
@@ -209,9 +220,12 @@ export function VcoPipelineView({
 			<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 				<div className="relative min-w-0 max-w-md flex-1">
 					<Input
+						type="search"
+						name="pipelineSearch"
+						autoComplete="off"
 						value={search}
-						onChange={(event) => setSearch(event.target.value)}
-						placeholder="Search pipeline events..."
+						onChange={(event) => setPipelineSearch({ vq: event.target.value })}
+						placeholder="Search pipeline events…"
 						aria-label="Search VCO pipeline events"
 					/>
 				</div>
@@ -219,21 +233,25 @@ export function VcoPipelineView({
 					<label className="inline-flex items-center gap-2 text-sm">
 						<Checkbox
 							checked={flaggedOnly}
-							onCheckedChange={(checked) => setFlaggedOnly(checked === true)}
+							onCheckedChange={(checked) =>
+								setPipelineSearch({ flagged: checked === true })
+							}
 						/>
 						Flagged only
 					</label>
 					<label className="inline-flex items-center gap-2 text-sm">
 						<Checkbox
 							checked={thisQuarter}
-							onCheckedChange={(checked) => setThisQuarter(checked === true)}
+							onCheckedChange={(checked) =>
+								setPipelineSearch({ quarter: checked === true })
+							}
 						/>
 						This quarter
 					</label>
 				</div>
 			</div>
 
-			<div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+			<div className="flex flex-wrap gap-3 text-sm text-muted-foreground tabular-nums">
 				<span>
 					<span className="font-medium text-foreground">
 						{datedRows.length}
@@ -254,7 +272,9 @@ export function VcoPipelineView({
 
 			{undatedRows.length > 0 && (
 				<section className="space-y-2">
-					<h2 className="text-sm font-medium text-foreground">Needs date</h2>
+					<h2 className="text-sm font-medium text-foreground text-balance">
+						Needs Date
+					</h2>
 					{isMobile ? (
 						<VcoMobileList
 							rows={undatedRows}
@@ -272,8 +292,8 @@ export function VcoPipelineView({
 			)}
 
 			<section className="space-y-2">
-				<h2 className="text-sm font-medium text-foreground">
-					Upcoming by next deadline
+				<h2 className="text-sm font-medium text-foreground text-balance">
+					Upcoming by Next Deadline
 				</h2>
 				{datedRows.length === 0 ? (
 					<div className="rounded-md border bg-background p-8 text-center text-sm text-muted-foreground">
@@ -315,10 +335,10 @@ function VcoTable({
 							<TableHead className="px-4 py-3 pl-6">Event</TableHead>
 							<TableHead className="px-4 py-3">Date</TableHead>
 							<TableHead className="px-4 py-3">Officer</TableHead>
-							<TableHead className="px-4 py-3">Venue / time</TableHead>
+							<TableHead className="px-4 py-3">Venue / Time</TableHead>
 							<TableHead className="px-4 py-3">Headcount</TableHead>
-							<TableHead className="px-4 py-3">Food / vendor</TableHead>
-							<TableHead className="px-4 py-3">Next deadline</TableHead>
+							<TableHead className="px-4 py-3">Food / Vendor</TableHead>
+							<TableHead className="px-4 py-3">Next Deadline</TableHead>
 							<TableHead className="px-4 py-3 pr-6">Pipeline</TableHead>
 						</TableRow>
 					</TableHeader>
@@ -326,7 +346,7 @@ function VcoTable({
 						{rows.map((row) => (
 							<TableRow
 								key={row.event._id}
-								className="border-b last:border-b-0 hover:bg-muted/40"
+								className="border-b last:border-b-0 hover:bg-muted/40 [content-visibility:auto] [contain-intrinsic-size:auto_112px]"
 							>
 								<TableCell className="min-w-[180px] px-4 py-3 pl-6">
 									<button
@@ -406,12 +426,12 @@ function VcoMobileList({
 			{rows.map((row) => (
 				<article
 					key={row.event._id}
-					className="space-y-3 rounded-md border bg-background p-4"
+					className="space-y-3 rounded-md border bg-background p-4 [content-visibility:auto] [contain-intrinsic-size:auto_280px]"
 				>
 					<div className="flex items-start justify-between gap-3">
 						<button
 							type="button"
-							className="min-w-0 text-left"
+							className="min-w-0 flex-1 text-left"
 							onClick={() => onView(row.event)}
 						>
 							<h3 className="truncate font-medium text-foreground">
@@ -447,7 +467,7 @@ function VcoMobileList({
 						</div>
 						<div>
 							<dt className="text-xs text-muted-foreground">Venue / time</dt>
-							<dd>
+							<dd className="min-w-0 break-words">
 								{row.event.location || "TBD"}
 								{!row.status.needsDate && (
 									<span className="block text-xs text-muted-foreground">
@@ -531,10 +551,23 @@ function DeadlineCell({ status }: { status: VcoPipelineStatus }) {
 		return <span className="text-sm text-muted-foreground">No deadline</span>;
 	}
 	const overdue = status.nextDeadline.overdue;
+	const done = status.nextDeadline.done;
 	return (
-		<div className={overdue ? "text-tone-danger" : "text-foreground"}>
+		<div
+			className={
+				done
+					? "text-muted-foreground"
+					: overdue
+						? "text-tone-danger"
+						: "text-foreground"
+			}
+		>
 			<div className="flex items-center gap-1.5 text-sm font-medium">
-				<CalendarClock className="h-3.5 w-3.5 shrink-0" />
+				{done ? (
+					<Check className="h-3.5 w-3.5 shrink-0" />
+				) : (
+					<CalendarClock className="h-3.5 w-3.5 shrink-0" />
+				)}
 				{status.nextDeadline.label}
 			</div>
 			<div className="text-xs tabular-nums">
@@ -560,6 +593,10 @@ function PipelineEditor({
 		<div className="space-y-2">
 			<div className="flex items-center gap-2">
 				<Input
+					name="finId"
+					autoComplete="off"
+					spellCheck={false}
+					translate="no"
 					value={finId}
 					onChange={(change) => setFinId(change.target.value)}
 					onBlur={() => {
@@ -603,30 +640,38 @@ function PipelineEditor({
 				</label>
 				{status.funded && (
 					<>
-						<PhaseDoneCheckbox
-							label="Prog app"
-							eventName={event.eventName}
-							doneAt={event.progAppDoneAt}
-							onToggle={(doneAt) =>
-								onPipelineChange(event, { progAppDoneAt: doneAt })
-							}
-						/>
-						<PhaseDoneCheckbox
-							label="T-Res START"
-							eventName={event.eventName}
-							doneAt={event.tresStartDoneAt}
-							onToggle={(doneAt) =>
-								onPipelineChange(event, { tresStartDoneAt: doneAt })
-							}
-						/>
-						<PhaseDoneCheckbox
-							label="T-Res FINISH"
-							eventName={event.eventName}
-							doneAt={event.tresFinishDoneAt}
-							onToggle={(doneAt) =>
-								onPipelineChange(event, { tresFinishDoneAt: doneAt })
-							}
-						/>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.progAppDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, { progAppDone: checked === true })
+								}
+								aria-label={`Prog app done for ${event.eventName}`}
+							/>
+							Prog app
+						</label>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.tresStartDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, { tresStartDone: checked === true })
+								}
+								aria-label={`T-Res START done for ${event.eventName}`}
+							/>
+							T-Res START
+						</label>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.tresFinishDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, {
+										tresFinishDone: checked === true,
+									})
+								}
+								aria-label={`T-Res FINISH done for ${event.eventName}`}
+							/>
+							T-Res FINISH
+						</label>
 					</>
 				)}
 				<label className="inline-flex items-center gap-1.5">
@@ -640,37 +685,5 @@ function PipelineEditor({
 				</label>
 			</div>
 		</div>
-	);
-}
-
-function PhaseDoneCheckbox({
-	label,
-	eventName,
-	doneAt,
-	onToggle,
-}: {
-	label: string;
-	eventName: string;
-	doneAt?: number | null;
-	onToggle: (doneAt: number | null) => void;
-}) {
-	const done = VcoDeadlines.isPhaseDone(doneAt);
-	return (
-		<label
-			className={
-				done
-					? "inline-flex items-center gap-1.5 text-muted-foreground"
-					: "inline-flex items-center gap-1.5"
-			}
-		>
-			<Checkbox
-				checked={done}
-				onCheckedChange={(checked) =>
-					onToggle(checked === true ? Date.now() : null)
-				}
-				aria-label={`${label} done for ${eventName}`}
-			/>
-			{label}
-		</label>
 	);
 }

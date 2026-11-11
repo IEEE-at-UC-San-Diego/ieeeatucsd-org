@@ -66,7 +66,7 @@ export function EventCard({
 					{checkingIn ? (
 						<>
 							<Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-							Checking In...
+							Checking In…
 						</>
 					) : (
 						<>
@@ -88,15 +88,20 @@ export function EventCard({
 
 	return (
 		<div
-			className={`group rounded-md border bg-card transition-colors hover:bg-muted/40 cursor-pointer ${
+			className={`group relative rounded-md border bg-card transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_176px] hover:bg-muted/40 ${
 				isPast ? "opacity-70 hover:opacity-100" : ""
 			}`}
-			onClick={onClick}
 		>
 			<div className="flex h-full flex-col gap-3 p-4">
 				<div className="flex items-start justify-between gap-3">
-					<h3 className="line-clamp-2 text-base font-semibold leading-snug tracking-[-0.01em] text-foreground">
-						{event.eventName}
+					<h3 className="min-w-0 text-base font-semibold leading-snug tracking-[-0.01em] text-foreground">
+						<button
+							type="button"
+							onClick={onClick}
+							className="line-clamp-2 cursor-pointer break-words text-left after:absolute after:inset-0 after:rounded-md after:content-['']"
+						>
+							{event.eventName}
+						</button>
 					</h3>
 					<div className="shrink-0 pt-0.5">{statusBadge()}</div>
 				</div>
@@ -108,18 +113,14 @@ export function EventCard({
 					</p>
 					<p className="truncate">{event.location}</p>
 					<p>
-						<span className="font-medium text-foreground">
+						<span className="font-medium tabular-nums text-foreground">
 							{event.pointsToReward} pts
 						</span>
 						{event.hasFood && " · Food provided"}
 					</p>
 				</div>
 
-				{action && (
-					<div className="pt-1" onClick={(e) => e.stopPropagation()}>
-						{action}
-					</div>
-				)}
+				{action && <div className="relative z-10 pt-1">{action}</div>}
 			</div>
 		</div>
 	);

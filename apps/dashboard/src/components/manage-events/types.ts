@@ -53,6 +53,7 @@ export interface EventRequest {
 	startDate: number;
 	endDate: number;
 	eventCode: string;
+	pointsToReward: number;
 	hasFood: boolean;
 	needsFlyers: boolean;
 	needsGraphics: boolean;
@@ -93,12 +94,12 @@ export interface EventRequest {
 	finId?: string;
 	funded?: boolean;
 	tresOwner?: "vco" | "president";
-	progAppDoneAt?: number | null;
-	progAppDoneBy?: string | null;
-	tresStartDoneAt?: number | null;
-	tresStartDoneBy?: string | null;
-	tresFinishDoneAt?: number | null;
-	tresFinishDoneBy?: string | null;
+	progAppDoneAt?: number;
+	progAppDoneBy?: string;
+	tresStartDoneAt?: number;
+	tresStartDoneBy?: string;
+	tresFinishDoneAt?: number;
+	tresFinishDoneBy?: string;
 	publicGoogleEventId?: string | null;
 	publicGoogleEventUrl?: string | null;
 	publicGoogleCalendarId?: string | null;
@@ -143,6 +144,7 @@ export interface EventFormData {
 	startDate: number;
 	endDate: number;
 	eventCode: string;
+	pointsToReward: number;
 	hasFood: boolean;
 	needsFlyers: boolean;
 	needsGraphics: boolean;

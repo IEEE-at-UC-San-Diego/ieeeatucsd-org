@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { Resend } from "resend";
+import { sponsorContactMessage } from "./sponsor-contact-html";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -23,40 +24,16 @@ export const POST: APIRoute = async ({ request }) => {
 
     const toEmail = import.meta.env.CONTACT_TO || "president@ieeeatucsd.org";
 
-    const replyToEmail =
-      import.meta.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
+    await resend.emails.send(
+      sponsorContactMessage({
+        email,
+        phone,
+        message,
+        from: fromEmail,
+        contactTo: toEmail,
+      }),
+    );
 
-    // Send to IEEE includes user's email + message
-    await resend.emails.send({
-      from: fromEmail,
-      to: [toEmail],
-      replyTo: email,
-      subject: "New Contact Form Submission",
-      html: `
-        <p><strong>From:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone || "(none)"}</p>
-        <p><strong>Message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-      `,
-    });
-
-    // User confirmation
-    await resend.emails.send({
-      from: fromEmail,
-      to: [email],
-      replyTo: replyToEmail,
-      subject: "IEEE UCSD — We received your message",
-      html: `
-        <p>Hi!</p>
-        <p>Thanks for reaching out to IEEE UCSD. We received your message and will get back to you soon.</p>
-        <hr/>
-        <p><strong>Your message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-        <p>— IEEE UCSD</p>
-      `,
-    });
-
-    // return back to contact page
     return new Response(null, {
       status: 303,
       headers: { Location: "/sponsors?sent=1" },
@@ -66,10 +43,3 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response("Failed to send", { status: 500 });
   }
 };
-
-function escapeHtml(s: string) {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}

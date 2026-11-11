@@ -394,6 +394,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 	return (
 		<div
 			id={`section-${section.id}`}
+			className={isHighlighted ? "constitution-section-highlight" : undefined}
 			style={{
 				marginBottom: section.type === "article" ? "8px" : "14px",
 				...getIndentStyle(),

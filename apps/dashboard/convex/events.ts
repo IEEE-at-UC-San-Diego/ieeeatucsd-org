@@ -8,15 +8,24 @@ import {
   hasAdminAccess,
   hasOfficerAccess,
   isGeneralOfficer,
-  canEditVcoPipelineFields,
 } from "./permissions";
+import {
+  buildVcoPhaseDonePatch,
+  vcoPipelineActorId,
+} from "./vcoPipeline";
 import {
   buildGoogleCalendarEventUrl,
   buildGoogleCalendarIcsUrl,
   buildGoogleCalendarSubscribeUrl,
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
+import { EventPoints } from "./eventPoints";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { PublicPublishedEvent } from "./publicPublishedEvent";
+import {
+  transitionEventRequest,
+  type EventRequestStatus,
+} from "./eventRequestTransition";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
   const legacy = (event as { attendees?: unknown }).attendees;
@@ -188,11 +197,10 @@ export const listPublished = query({
           ...legacyAttendeeIds,
         ]).size;
 
-        return {
-          ...event,
+        return PublicPublishedEvent.fromDocument(event, {
           attendeeCount,
           ...getPublicCalendarMeta(event._id),
-        };
+        });
       }),
     );
   },
@@ -484,14 +492,23 @@ export const create = mutation({
     const normalizedEventCode = normalizeEventCode(eventCode);
 
     assertValidEventTimeRange(data.startDate, data.endDate);
+    const pointsToReward = EventPoints.fromUnknown(data.pointsToReward);
+    const listing = transitionEventRequest(null, {
+      kind: "create",
+      isDraft: Boolean(isDraft),
+      published: Boolean(data.published),
+      canPublish: hasOfficerAccess(user.role),
+    });
 
     return await ctx.db.insert("events", {
       ...data,
+      pointsToReward,
       ...(normalizedEventCode ? { eventCode: normalizedEventCode } : {}),
-      status: isDraft ? "draft" : (data.published ? "approved" : "submitted"),
+      status: listing.status,
+      published: listing.published,
+      isDraft: listing.isDraft,
       requestedUser: userId,
       flyersCompleted: data.flyersCompleted ?? false,
-      isDraft: isDraft ?? false,
       createdAt: Date.now(),
     });
   },
@@ -595,6 +612,11 @@ export const update = mutation({
 
     const { id, ...updates } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
+    if (cleanUpdates.pointsToReward !== undefined) {
+      cleanUpdates.pointsToReward = EventPoints.fromUnknown(
+        cleanUpdates.pointsToReward,
+      );
+    }
 
     const nextStartDate = cleanUpdates.startDate ?? event.startDate;
     const nextEndDate = cleanUpdates.endDate ?? event.endDate;
@@ -615,10 +637,35 @@ export const update = mutation({
       }
     }
 
-    const shouldQueueCalendarDeletion =
-      Boolean(event.published) && cleanUpdates.published === false;
+    const currentListing = {
+      status: (event.status ?? "draft") as EventRequestStatus,
+      published: Boolean(event.published),
+      isDraft: Boolean(event.isDraft),
+    };
+    const nextListing = transitionEventRequest(currentListing, {
+      kind: "update",
+      published:
+        typeof cleanUpdates.published === "boolean"
+          ? cleanUpdates.published
+          : undefined,
+      canPublish: hasOfficerAccess(user.role),
+    });
+    const listingPatch =
+      typeof cleanUpdates.published === "boolean"
+        ? {
+            published: nextListing.published,
+            status: nextListing.status,
+            isDraft: nextListing.isDraft,
+          }
+        : {};
+    if (nextListing.published && !event.published) {
+      assertValidEventTimeRange(nextStartDate, nextEndDate);
+    }
 
-    await ctx.db.patch(id, cleanUpdates);
+    const shouldQueueCalendarDeletion =
+      Boolean(event.published) && nextListing.published === false;
+
+    await ctx.db.patch(id, { ...cleanUpdates, ...listingPatch });
 
     if (shouldQueueCalendarDeletion) {
       await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
@@ -627,23 +674,6 @@ export const update = mutation({
     return id;
   },
 });
-
-const vcoDoneTimestamp = v.optional(v.union(v.number(), v.null()));
-
-function applyDoneAttribution(
-  updates: Record<string, unknown>,
-  atKey: "progAppDoneAt" | "tresStartDoneAt" | "tresFinishDoneAt",
-  byKey: "progAppDoneBy" | "tresStartDoneBy" | "tresFinishDoneBy",
-  actorId: string,
-) {
-  if (!(atKey in updates)) return;
-  const value = updates[atKey];
-  if (typeof value === "number") {
-    updates[byKey] = actorId;
-  } else if (value === null) {
-    updates[byKey] = null;
-  }
-}
 
 export const updateVcoPipeline = mutation({
   args: {
@@ -654,28 +684,32 @@ export const updateVcoPipeline = mutation({
     finId: v.optional(v.string()),
     funded: v.optional(v.boolean()),
     tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
-    progAppDoneAt: vcoDoneTimestamp,
-    tresStartDoneAt: vcoDoneTimestamp,
-    tresFinishDoneAt: vcoDoneTimestamp,
+    progAppDone: v.optional(v.boolean()),
+    tresStartDone: v.optional(v.boolean()),
+    tresFinishDone: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
-    if (!canEditVcoPipelineFields(user.role, user.position)) {
-      throw new Error("Insufficient permissions: VCO or admin access required");
-    }
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    const { id, ...updates } = args;
+    const {
+      id,
+      progAppDone,
+      tresStartDone,
+      tresFinishDone,
+      ...updates
+    } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
     if (typeof cleanUpdates.finId === "string") {
       cleanUpdates.finId = cleanUpdates.finId.trim();
     }
-    const actorId = user.logtoId ?? user.authUserId ?? user.email;
-    applyDoneAttribution(cleanUpdates, "progAppDoneAt", "progAppDoneBy", actorId);
-    applyDoneAttribution(cleanUpdates, "tresStartDoneAt", "tresStartDoneBy", actorId);
-    applyDoneAttribution(cleanUpdates, "tresFinishDoneAt", "tresFinishDoneBy", actorId);
-    await ctx.db.patch(id, cleanUpdates);
+    const donePatch = buildVcoPhaseDonePatch(
+      { progAppDone, tresStartDone, tresFinishDone },
+      vcoPipelineActorId(user),
+      Date.now(),
+    );
+    await ctx.db.patch(id, { ...cleanUpdates, ...donePatch });
     return id;
   },
 });
@@ -689,8 +723,7 @@ export const remove = mutation({
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    // Admins and Executive Officers can delete any event
-    if (hasAdminAccess(user.role)) {
+    if (hasOfficerAccess(user.role)) {
       await ctx.db.delete(args.id);
       if (event.published) {
         await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
@@ -698,7 +731,6 @@ export const remove = mutation({
       return args.id;
     }
 
-    // Non-admin users can only delete their own events if not approved
     if (event.requestedUser && event.requestedUser !== userId) {
       throw new Error("You can only delete your own events");
     }
@@ -738,21 +770,40 @@ export const updateStatus = mutation({
     if (!event) throw new Error("Event not found");
 
     const userId = user.logtoId ?? user.authUserId ?? "";
-    const canSubmitOwnDraft =
-      args.status === "submitted" &&
-      event.status === "draft" &&
-      (event.requestedUser === userId || isGeneralOfficer(user.role));
-
-    if (!hasAdminAccess(user.role) && !canSubmitOwnDraft) {
-      throw new Error("Only admins can change this status");
+    const nextListing = transitionEventRequest(
+      {
+        status: (event.status ?? "draft") as EventRequestStatus,
+        published: Boolean(event.published),
+        isDraft: Boolean(event.isDraft),
+      },
+      {
+        kind: "setStatus",
+        status: args.status,
+        canReview: hasAdminAccess(user.role),
+        canSubmitOwnDraft:
+          args.status === "submitted" &&
+          (event.status ?? "draft") === "draft" &&
+          (event.requestedUser === userId || isGeneralOfficer(user.role)),
+      },
+    );
+    if (nextListing.published && !event.published) {
+      assertValidEventTimeRange(event.startDate, event.endDate);
     }
 
     await ctx.db.patch(args.id, {
-      status: args.status,
-      isDraft: args.status === "submitted" ? false : event.isDraft,
+      status: nextListing.status,
+      published: nextListing.published,
+      isDraft: nextListing.isDraft,
       ...(args.declinedReason && { declinedReason: args.declinedReason }),
       ...(args.reviewFeedback && { reviewFeedback: args.reviewFeedback }),
     });
+    if (event.published && !nextListing.published) {
+      await enqueuePublishedEventGoogleCalendarDeletion(
+        ctx,
+        args.id,
+        "event_unpublished",
+      );
+    }
     return args.id;
   },
 });
@@ -871,11 +922,11 @@ export const checkIn = mutation({
       userId,
       timeCheckedIn: Date.now(),
       food: args.food || "none",
-      pointsEarned: event.pointsToReward ?? 0,
+      pointsEarned: EventPoints.fromDocument(event),
     });
 
     // Update user points and events attended
-    const pts = event.pointsToReward ?? 0;
+    const pts = EventPoints.fromDocument(event);
     await ctx.db.patch(user._id, {
       points: (user.points || 0) + pts,
       eventsAttended: (user.eventsAttended || 0) + 1,

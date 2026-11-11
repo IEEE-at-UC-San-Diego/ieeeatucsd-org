@@ -290,12 +290,12 @@ export default defineSchema({
     finId: v.optional(v.string()),
     funded: v.optional(v.boolean()),
     tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
-    progAppDoneAt: v.optional(v.union(v.number(), v.null())),
-    progAppDoneBy: v.optional(v.union(v.string(), v.null())),
-    tresStartDoneAt: v.optional(v.union(v.number(), v.null())),
-    tresStartDoneBy: v.optional(v.union(v.string(), v.null())),
-    tresFinishDoneAt: v.optional(v.union(v.number(), v.null())),
-    tresFinishDoneBy: v.optional(v.union(v.string(), v.null())),
+    progAppDoneAt: v.optional(v.number()),
+    progAppDoneBy: v.optional(v.string()),
+    tresStartDoneAt: v.optional(v.number()),
+    tresStartDoneBy: v.optional(v.string()),
+    tresFinishDoneAt: v.optional(v.number()),
+    tresFinishDoneBy: v.optional(v.string()),
   })
     .index("by_eventCode", ["eventCode"])
     .index("by_startDate", ["startDate"])
@@ -381,6 +381,7 @@ export default defineSchema({
     ),
     submittedBy: v.string(),
     additionalInfo: v.string(),
+    businessPurpose: v.optional(v.string()),
     department: v.union(
       v.literal("internal"),
       v.literal("external"),

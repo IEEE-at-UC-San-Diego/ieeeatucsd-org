@@ -401,10 +401,6 @@ export class VcoDeadlines {
 		return Boolean(event.needsAsFunding || event.asFundingRequired);
 	}
 
-	static isPhaseDone(doneAt?: number | null): boolean {
-		return typeof doneAt === "number" && Number.isFinite(doneAt) && doneAt > 0;
-	}
-
 	static inferTresOwner(
 		event: Pick<VcoEventInput, "eventName" | "tresOwner">,
 	): VcoTresOwner {
@@ -412,6 +408,18 @@ export class VcoDeadlines {
 			return event.tresOwner;
 		}
 		return GBM_OR_TABLING.test(event.eventName) ? "president" : "vco";
+	}
+
+	static isPhaseDone(
+		event: Pick<
+			VcoEventInput,
+			"progAppDoneAt" | "tresStartDoneAt" | "tresFinishDoneAt"
+		>,
+		phase: VcoPhase,
+	): boolean {
+		if (phase === "prog_app") return Boolean(event.progAppDoneAt);
+		if (phase === "tres_start") return Boolean(event.tresStartDoneAt);
+		return Boolean(event.tresFinishDoneAt);
 	}
 
 	static finalsWeeksFromQuarterStarts(
@@ -584,20 +592,22 @@ export class VcoDeadlines {
 			VcoDeadlines.programmingAppDeadline(eventDate),
 			finalsWeeks,
 		);
-		const progAppDone = VcoDeadlines.isPhaseDone(event.progAppDoneAt);
-		const tresStartDone = VcoDeadlines.isPhaseDone(event.tresStartDoneAt);
-		const tresFinishDone = VcoDeadlines.isPhaseDone(event.tresFinishDoneAt);
 		const phases: VcoPhaseDeadline[] = [];
 		if (funded) {
 			phases.push(
-				VcoDeadlines.toPhaseDeadline("prog_app", progApp, today, progAppDone),
+				VcoDeadlines.toPhaseDeadline(
+					"prog_app",
+					progApp,
+					today,
+					VcoDeadlines.isPhaseDone(event, "prog_app"),
+				),
 			);
 			phases.push(
 				VcoDeadlines.toPhaseDeadline(
 					"tres_start",
 					VcoDeadlines.tresStartDeadline(eventDate, finalsWeeks),
 					today,
-					tresStartDone,
+					VcoDeadlines.isPhaseDone(event, "tres_start"),
 				),
 			);
 			phases.push(
@@ -605,16 +615,27 @@ export class VcoDeadlines {
 					"invoices_tres_finish",
 					VcoDeadlines.tresFinishDeadline(eventDate, finalsWeeks),
 					today,
-					tresFinishDone,
+					VcoDeadlines.isPhaseDone(event, "invoices_tres_finish"),
 				),
 			);
 		}
 
 		const openPhases = phases.filter((phase) => !phase.done);
-		const overduePhase = openPhases.find((phase) => phase.overdue);
-		const upcoming = openPhases.find((phase) => !phase.overdue);
-		const nextDeadline = overduePhase ?? upcoming ?? null;
+		const byDate = (left: VcoPhaseDeadline, right: VcoPhaseDeadline) =>
+			VcoDeadlines.compare(left.date, right.date);
+		const overduePhases = openPhases
+			.filter((phase) => phase.overdue)
+			.sort(byDate);
+		const upcomingPhases = openPhases
+			.filter((phase) => !phase.overdue)
+			.sort(byDate);
+		const nextDeadline = overduePhases[0] ?? upcomingPhases[0] ?? null;
 		const allDone = funded && phases.length > 0 && openPhases.length === 0;
+		const progAppDone = VcoDeadlines.isPhaseDone(event, "prog_app");
+		const tresFinishDone = VcoDeadlines.isPhaseDone(
+			event,
+			"invoices_tres_finish",
+		);
 		const lateCreated = funded
 			? VcoDeadlines.isLateCreated(event.createdAt, progApp, timeZone)
 			: false;

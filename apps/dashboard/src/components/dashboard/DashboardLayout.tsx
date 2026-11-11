@@ -29,6 +29,19 @@ import { AuthFlow } from "@/lib/auth/AuthFlow";
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "./AppSidebar";
 
+const MAIN_CONTENT_ID = "main-content";
+
+function SkipToContentLink() {
+	return (
+		<a
+			href={`#${MAIN_CONTENT_ID}`}
+			className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-[max(1rem,env(safe-area-inset-top))] focus:z-[100] focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-popover"
+		>
+			Skip to Main Content
+		</a>
+	);
+}
+
 function MobileDashboardChrome({
 	title,
 	pathname,
@@ -83,6 +96,7 @@ function MobileDashboardChrome({
 
 	return (
 		<div className="flex h-dvh max-w-[100vw] flex-col overflow-hidden bg-background">
+			<SkipToContentLink />
 			<NetworkStatusBanner />
 			<MobileAppBar
 				title={title}
@@ -90,9 +104,11 @@ function MobileDashboardChrome({
 				trailing={<NotificationBell />}
 			/>
 			<main
+				id={MAIN_CONTENT_ID}
+				tabIndex={-1}
 				data-dashboard-scroll
 				className={cn(
-					"min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain",
+					"min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain outline-none",
 					!hideTabBar && MOBILE_TAB_BAR_OFFSET,
 				)}
 			>
@@ -165,6 +181,7 @@ export function DashboardLayout() {
 
 	return (
 		<SidebarProvider>
+			<SkipToContentLink />
 			<AppSidebar currentPath={location.pathname} />
 			<SidebarInset className="max-w-full overflow-hidden">
 				<NetworkStatusBanner />
@@ -177,8 +194,10 @@ export function DashboardLayout() {
 					<NotificationBell />
 				</header>
 				<main
+					id={MAIN_CONTENT_ID}
+					tabIndex={-1}
 					data-dashboard-scroll
-					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto"
+					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
 				>
 					<ErrorBoundary>
 						<Outlet />

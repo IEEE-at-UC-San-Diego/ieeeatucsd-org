@@ -1,4 +1,5 @@
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { assertAccountCanAct } from "./accountStatusTransition";
 
 export type UserRole =
   | "Member"
@@ -65,7 +66,11 @@ async function signHex(input: string, secret: string) {
   return toHex(new Uint8Array(signature));
 }
 
-async function verifySessionToken(authToken: string): Promise<SessionPayload> {
+type BridgeSession =
+  | { status: "valid"; payload: SessionPayload }
+  | { status: "expired" };
+
+async function readBridgeSession(authToken: string): Promise<BridgeSession> {
   const parts = authToken.split(".");
   if (parts.length !== 2) {
     throw new Error("Invalid auth token format");
@@ -90,10 +95,10 @@ async function verifySessionToken(authToken: string): Promise<SessionPayload> {
   }
 
   if (Date.now() >= payload.exp * 1000) {
-    throw new Error("Auth token expired");
+    return { status: "expired" };
   }
 
-  return payload;
+  return { status: "valid", payload };
 }
 
 async function getNativeIdentity(ctx: AuthContext) {
@@ -131,8 +136,9 @@ export async function getCurrentUser(
       throw new Error("Missing auth token");
     }
 
-    const claims = await verifySessionToken(authToken);
-    if (claims.sub !== resolvedLogtoId) {
+    const session = await readBridgeSession(authToken);
+    if (session.status === "expired") return null;
+    if (session.payload.sub !== resolvedLogtoId) {
       throw new Error("Auth token subject mismatch");
     }
   }
@@ -157,6 +163,7 @@ export async function requireCurrentUser(
   if (!user) {
     throw new Error("User not found in database");
   }
+  assertAccountCanAct(user.status);
   return user;
 }
 
@@ -214,37 +221,6 @@ export function hasVcoViewAccess(
   position?: string | null,
 ): boolean {
   return hasAdminAccess(role) || (hasOfficerAccess(role) && isVcoPosition(position));
-}
-
-/**
- * Fields writable only through `events.updateVcoPipeline`.
- * `events.update` / `events.create` do not accept these.
- */
-export const VCO_PIPELINE_EDIT_FIELDS = [
-  "dateTbd",
-  "finId",
-  "funded",
-  "tresOwner",
-  "progAppDoneAt",
-  "progAppDoneBy",
-  "tresStartDoneAt",
-  "tresStartDoneBy",
-  "tresFinishDoneAt",
-  "tresFinishDoneBy",
-] as const;
-
-export type VcoPipelineEditField = (typeof VCO_PIPELINE_EDIT_FIELDS)[number];
-
-/**
- * Same gate as viewing the VCO pipeline: only VCO-titled officers,
- * Executive Officers, and Administrators may edit pipeline fields
- * (funded, FIN-ID, T-Res owner, and phase done timestamps).
- */
-export function canEditVcoPipelineFields(
-  role: UserRole,
-  position?: string | null,
-): boolean {
-  return hasVcoViewAccess(role, position);
 }
 
 /**

@@ -464,6 +464,151 @@ describe("VcoDeadlines.compute", () => {
 		expect(status.flags).toContain("missing_invoice");
 	});
 
+	it("skips a done overdue phase and uses the next open deadline", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Late Workshop",
+				startDate: pacificAfternoon(2026, 11, 18),
+				createdAt: pacificAfternoon(2026, 9, 1),
+				location: "CSE 1202",
+				expectedAttendance: 40,
+				needsAsFunding: true,
+				progAppDoneAt: pacificAfternoon(2026, 10, 20),
+			},
+			{ nowMs: now },
+		);
+		expect(status.phases.find((phase) => phase.phase === "prog_app")).toEqual(
+			expect.objectContaining({ done: true, overdue: false }),
+		);
+		expect(status.nextDeadline?.phase).toBe("tres_start");
+		expect(status.nextDeadline?.overdue).toBe(false);
+		expect(status.nextDeadline?.isoDate).toBe("2026-10-28");
+		expect(status.allDone).toBe(false);
+		expect(status.flags).not.toContain("overdue");
+	});
+
+	it("does not treat the three phase timestamps as an ordered pipeline", () => {
+		const shifted = {
+			nowMs: pacificAfternoon(2026, 11, 15),
+			finalsWeeks: [{ start: d(2026, 11, 12), end: d(2026, 12, 31) }],
+		};
+		const event = {
+			eventName: "Finals shift",
+			startDate: pacificAfternoon(2026, 12, 16),
+			createdAt: pacificAfternoon(2026, 8, 1),
+			location: "CSE 1202",
+			expectedAttendance: 40,
+			needsAsFunding: true,
+		};
+		const open = VcoDeadlines.compute(event, shifted);
+		const finish = open.phases.find(
+			(phase) => phase.phase === "invoices_tres_finish",
+		);
+		const prog = open.phases.find((phase) => phase.phase === "prog_app");
+		expect(prog?.done).toBe(false);
+		expect(finish?.done).toBe(false);
+		expect(finish?.overdue).toBe(true);
+		expect(open.nextDeadline?.phase).toBe("tres_start");
+
+		const finishChecked = VcoDeadlines.compute(
+			{
+				...event,
+				tresFinishDoneAt: pacificAfternoon(2026, 10, 1),
+			},
+			shifted,
+		);
+		expect(
+			finishChecked.phases.find(
+				(phase) => phase.phase === "invoices_tres_finish",
+			),
+		).toEqual(expect.objectContaining({ done: true, overdue: false }));
+		expect(
+			finishChecked.phases.find((phase) => phase.phase === "prog_app")?.done,
+		).toBe(false);
+		expect(finishChecked.allDone).toBe(false);
+	});
+
+	it("shows all done instead of a deadline when every funded phase is done", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Late Workshop",
+				startDate: pacificAfternoon(2026, 11, 18),
+				createdAt: pacificAfternoon(2026, 9, 1),
+				location: "CSE 1202",
+				expectedAttendance: 40,
+				needsAsFunding: true,
+				progAppDoneAt: pacificAfternoon(2026, 10, 20),
+				tresStartDoneAt: pacificAfternoon(2026, 10, 21),
+				tresFinishDoneAt: pacificAfternoon(2026, 10, 22),
+			},
+			{ nowMs: now },
+		);
+		expect(status.phases.every((phase) => phase.done && !phase.overdue)).toBe(
+			true,
+		);
+		expect(status.nextDeadline).toBeNull();
+		expect(status.allDone).toBe(true);
+		expect(status.flags).not.toContain("overdue");
+		expect(status.flags).not.toContain("late");
+	});
+
+	it("does not escalate missing venue or headcount once prog app is done", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Social Mixer",
+				startDate: pacificAfternoon(2026, 11, 18),
+				createdAt: pacificAfternoon(2026, 9, 1),
+				location: "TBD",
+				expectedAttendance: 0,
+				needsAsFunding: true,
+				progAppDoneAt: pacificAfternoon(2026, 10, 20),
+			},
+			{ nowMs: now },
+		);
+		expect(status.flags).toContain("missing_venue");
+		expect(status.flags).toContain("missing_headcount");
+		expect(status.overdueFlags).not.toContain("missing_venue");
+		expect(status.overdueFlags).not.toContain("missing_headcount");
+		expect(status.flags).not.toContain("overdue");
+	});
+
+	it("does not flag a late-created event once prog app is marked done", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Last-minute Talk",
+				startDate: pacificAfternoon(2026, 11, 18),
+				createdAt: pacificAfternoon(2026, 10, 20),
+				location: "Center Hall",
+				expectedAttendance: 30,
+				needsAsFunding: true,
+				progAppDoneAt: pacificAfternoon(2026, 10, 21),
+			},
+			{ nowMs: now },
+		);
+		expect(status.lateCreated).toBe(true);
+		expect(status.flags).not.toContain("late");
+	});
+
+	it("does not flag a missing invoice once T-Res FINISH is done", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Invoice Due Social",
+				startDate: pacificAfternoon(2026, 11, 4),
+				createdAt: pacificAfternoon(2026, 8, 1),
+				location: "Sun God Lawn",
+				expectedAttendance: 50,
+				needsAsFunding: true,
+				tresFinishDoneAt: pacificAfternoon(2026, 10, 20),
+			},
+			{ nowMs: now },
+		);
+		expect(status.flags).not.toContain("missing_invoice");
+		expect(
+			status.phases.find((phase) => phase.phase === "invoices_tres_finish")
+				?.done,
+		).toBe(true);
+	});
+
 	it("treats an attached file or a positive total as invoice evidence", () => {
 		expect(
 			VcoDeadlines.hasInvoice([{ vendor: "Unknown", invoiceFile: "file_1" }]),

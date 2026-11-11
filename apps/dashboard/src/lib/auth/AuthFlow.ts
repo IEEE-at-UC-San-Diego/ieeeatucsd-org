@@ -56,12 +56,11 @@ export interface CallbackClaims {
 export interface FinalizeSignInDeps {
 	getIdTokenClaims?: () => Promise<CallbackClaims | null | undefined>;
 	getAccessToken?: () => Promise<string | null | undefined>;
+	getIdToken?: () => Promise<string | null | undefined>;
 	createSession: (accessToken: string) => Promise<{ sessionToken: string }>;
 	upsertUser: (args: {
-		logtoId: string;
 		authToken: string;
-		email: string;
-		name: string;
+		name?: string;
 		avatar?: string;
 		signInMethod: string;
 	}) => Promise<CallbackUser>;
@@ -224,6 +223,7 @@ export class AuthFlow {
 	static async finalizeSignIn({
 		getIdTokenClaims,
 		getAccessToken,
+		getIdToken,
 		createSession,
 		upsertUser,
 	}: FinalizeSignInDeps) {
@@ -237,11 +237,14 @@ export class AuthFlow {
 			throw new Error("Missing access token");
 		}
 
-		const session = await createSession(accessToken);
+		const idToken = await getIdToken?.();
+		if (!idToken) {
+			throw new Error("Missing ID token");
+		}
+
+		await createSession(accessToken);
 		const user = await upsertUser({
-			logtoId: claims.sub,
-			authToken: session.sessionToken,
-			email: claims.email || "",
+			authToken: idToken,
 			name: claims.name || claims.sub,
 			avatar: claims.picture,
 			signInMethod: "logto",
