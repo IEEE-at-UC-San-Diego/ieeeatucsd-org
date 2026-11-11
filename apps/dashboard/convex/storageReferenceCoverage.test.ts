@@ -79,7 +79,54 @@ describe("storage reference coverage", () => {
     ]);
   });
 
-  it("ignores writes inside the storage helpers and other tables", () => {
+  it("reports a destructured db and a db parameter", () => {
+    const fromCtx = `
+${PREAMBLE}
+export async function save(eventId: Id<"events">) {
+  const { db } = ctx;
+  await db.patch(eventId, { published: true });
+  await db.delete(eventId);
+  await db.replace(eventId, { published: false });
+  await db.insert("events", { name: "Launch" });
+}
+`;
+    const fromParameter = `
+${PREAMBLE}
+export const save = ({ db }: { db: typeof ctx.db }) => {
+  return db.insert("events", { name: "Launch" });
+};
+`;
+    expect(findDirectStorageWritesInText(fromCtx).map((write) => write.kind)).toEqual([
+      "patch",
+      "delete",
+      "replace",
+      "insert",
+    ]);
+    expect(findDirectStorageWritesInText(fromParameter)).toMatchObject([
+      { kind: "insert", table: "events" },
+    ]);
+  });
+
+  it("reports methods taken off db, including a computed name", () => {
+    const source = `
+${PREAMBLE}
+export async function save(eventId: Id<"events">) {
+  const { patch, delete: remove } = ctx.db;
+  await patch(eventId, { published: true });
+  await remove(eventId);
+  await ctx.db["replace"](eventId, { published: false });
+  await ctx.db["insert"]("events", { name: "Launch" });
+}
+`;
+    expect(findDirectStorageWritesInText(source).map((write) => write.kind)).toEqual([
+      "patch",
+      "delete",
+      "replace",
+      "insert",
+    ]);
+  });
+
+  it("ignores other tables and a function that is only named like a helper", () => {
     const source = `
 ${PREAMBLE}
 async function insertTracked() {
@@ -91,7 +138,9 @@ export async function save() {
   await ctx.db.delete("budgetAdjustments" as Id<"budgetAdjustments">);
 }
 `;
-    expect(findDirectStorageWritesInText(source)).toEqual([]);
+    expect(findDirectStorageWritesInText(source)).toMatchObject([
+      { kind: "insert", table: "events" },
+    ]);
   });
 
   it("finds no direct writes of the five storage tables", () => {

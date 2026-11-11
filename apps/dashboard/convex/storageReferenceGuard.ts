@@ -9,13 +9,6 @@ const TRACKED_TABLES = new Set([
   "fundRequests",
 ]);
 
-const HELPERS = new Set([
-  "insertTracked",
-  "patchTracked",
-  "replaceTracked",
-  "deleteTracked",
-]);
-
 const WRITE_KINDS = new Set(["insert", "patch", "replace", "delete"]);
 
 export type StorageWrite = {
@@ -65,27 +58,84 @@ function receiverTable(receiver: ts.Expression, checker: ts.TypeChecker): string
   return arg ? tableArg(arg, checker) : null;
 }
 
-function helperName(node: ts.Node): string | null {
-  let current: ts.Node | undefined = node.parent;
-  while (current) {
+function bindingPropertyName(element: ts.BindingElement): string | null {
+  if (element.propertyName && ts.isIdentifier(element.propertyName)) return element.propertyName.text;
+  if (ts.isIdentifier(element.name)) return element.name.text;
+  return null;
+}
+
+function isDbExpression(
+  expr: ts.Expression,
+  checker: ts.TypeChecker,
+  seen = new Set<ts.Node>(),
+): boolean {
+  if (seen.has(expr)) return false;
+  seen.add(expr);
+  if (ts.isPropertyAccessExpression(expr) && expr.name.text === "db") return true;
+  if (!ts.isIdentifier(expr)) return false;
+  const declaration = checker.getSymbolAtLocation(expr)?.valueDeclaration;
+  if (!declaration) return false;
+  if (ts.isBindingElement(declaration)) return bindingPropertyName(declaration) === "db";
+  if (ts.isVariableDeclaration(declaration) && declaration.initializer) {
+    return isDbExpression(declaration.initializer, checker, seen);
+  }
+  return false;
+}
+
+function boundWriteKind(node: ts.Identifier, checker: ts.TypeChecker): StorageWrite["kind"] | null {
+  const declaration = checker.getSymbolAtLocation(node)?.valueDeclaration;
+  if (!declaration) return null;
+  if (ts.isBindingElement(declaration)) {
+    const propertyName = bindingPropertyName(declaration);
+    if (!propertyName || !WRITE_KINDS.has(propertyName)) return null;
+    const owner = declaration.parent.parent;
     if (
-      (ts.isFunctionDeclaration(current) ||
-        ts.isFunctionExpression(current) ||
-        ts.isMethodDeclaration(current)) &&
-      current.name &&
-      ts.isIdentifier(current.name)
+      ts.isVariableDeclaration(owner) &&
+      owner.initializer &&
+      isDbExpression(owner.initializer, checker)
     ) {
-      return current.name.text;
+      return propertyName as StorageWrite["kind"];
     }
+    return null;
+  }
+  if (
+    ts.isVariableDeclaration(declaration) &&
+    declaration.initializer &&
+    ts.isPropertyAccessExpression(declaration.initializer) &&
+    WRITE_KINDS.has(declaration.initializer.name.text) &&
+    isDbExpression(declaration.initializer.expression, checker)
+  ) {
+    return declaration.initializer.name.text as StorageWrite["kind"];
+  }
+  return null;
+}
+
+function calledWrite(
+  expression: ts.Expression,
+  checker: ts.TypeChecker,
+): { kind: StorageWrite["kind"]; receiver: ts.Expression | null } | null {
+  if (ts.isPropertyAccessExpression(expression) && WRITE_KINDS.has(expression.name.text)) {
+    return {
+      kind: expression.name.text as StorageWrite["kind"],
+      receiver: expression.expression,
+    };
+  }
+  if (ts.isElementAccessExpression(expression)) {
+    const argument = expression.argumentExpression;
     if (
-      ts.isVariableDeclaration(current) &&
-      ts.isIdentifier(current.name) &&
-      current.initializer &&
-      (ts.isArrowFunction(current.initializer) || ts.isFunctionExpression(current.initializer))
+      argument &&
+      (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) &&
+      WRITE_KINDS.has(argument.text)
     ) {
-      return current.name.text;
+      return {
+        kind: argument.text as StorageWrite["kind"],
+        receiver: expression.expression,
+      };
     }
-    current = current.parent;
+  }
+  if (ts.isIdentifier(expression)) {
+    const kind = boundWriteKind(expression, checker);
+    if (kind) return { kind, receiver: null };
   }
   return null;
 }
@@ -97,14 +147,14 @@ function collectFile(program: ts.Program, fileName: string): StorageWrite[] {
   const writes: StorageWrite[] = [];
 
   const visit = (node: ts.Node) => {
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      WRITE_KINDS.has(node.expression.name.text) &&
-      !HELPERS.has(helperName(node) ?? "")
-    ) {
-      const kind = node.expression.name.text as StorageWrite["kind"];
-      const fromReceiver = receiverTable(node.expression.expression, checker);
+    if (ts.isCallExpression(node)) {
+      const called = calledWrite(node.expression, checker);
+      if (!called) {
+        ts.forEachChild(node, visit);
+        return;
+      }
+      const { kind } = called;
+      const fromReceiver = called.receiver ? receiverTable(called.receiver, checker) : null;
       let table = fromReceiver;
       if (!table && node.arguments[0]) {
         if (kind === "insert") table = tableArg(node.arguments[0], checker);

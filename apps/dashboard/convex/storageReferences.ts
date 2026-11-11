@@ -93,55 +93,14 @@ function storageIdsFrom(
 type InsertValue<T extends StorageTable> = WithoutSystemFields<Doc<T>>;
 type PatchValue<T extends StorageTable> = Partial<Doc<T>>;
 
-function insertValue<T extends StorageTable>(value: unknown): InsertValue<T> {
-  return value as InsertValue<T>;
-}
-
 export async function insertTracked<T extends StorageTable>(
   ctx: MutationCtx,
   table: T,
   value: InsertValue<T>,
 ): Promise<Id<T>> {
-  switch (table) {
-    case "users": {
-      const id = await ctx.db.insert("users", insertValue<"users">(value));
-      await syncRecordStorage(ctx, "users", id);
-      return id as Id<T>;
-    }
-    case "events": {
-      const id = await ctx.db.insert("events", insertValue<"events">(value));
-      await syncRecordStorage(ctx, "events", id);
-      return id as Id<T>;
-    }
-    case "reimbursements": {
-      const id = await ctx.db.insert(
-        "reimbursements",
-        insertValue<"reimbursements">(value),
-      );
-      await syncRecordStorage(ctx, "reimbursements", id);
-      return id as Id<T>;
-    }
-    case "fundDeposits": {
-      const id = await ctx.db.insert(
-        "fundDeposits",
-        insertValue<"fundDeposits">(value),
-      );
-      await syncRecordStorage(ctx, "fundDeposits", id);
-      return id as Id<T>;
-    }
-    case "fundRequests": {
-      const id = await ctx.db.insert(
-        "fundRequests",
-        insertValue<"fundRequests">(value),
-      );
-      await syncRecordStorage(ctx, "fundRequests", id);
-      return id as Id<T>;
-    }
-    default: {
-      const unreachable: never = table;
-      return unreachable;
-    }
-  }
+  const id = await ctx.db.insert(table, value);
+  await syncRecordStorage(ctx, table, id);
+  return id;
 }
 
 export async function patchTracked<T extends StorageTable>(
@@ -150,75 +109,7 @@ export async function patchTracked<T extends StorageTable>(
   id: Id<T>,
   value: PatchValue<T>,
 ): Promise<void> {
-  switch (table) {
-    case "users":
-      await ctx.db.patch(id as Id<"users">, value as PatchValue<"users">);
-      break;
-    case "events":
-      await ctx.db.patch(id as Id<"events">, value as PatchValue<"events">);
-      break;
-    case "reimbursements":
-      await ctx.db.patch(
-        id as Id<"reimbursements">,
-        value as PatchValue<"reimbursements">,
-      );
-      break;
-    case "fundDeposits":
-      await ctx.db.patch(
-        id as Id<"fundDeposits">,
-        value as PatchValue<"fundDeposits">,
-      );
-      break;
-    case "fundRequests":
-      await ctx.db.patch(
-        id as Id<"fundRequests">,
-        value as PatchValue<"fundRequests">,
-      );
-      break;
-    default: {
-      const unreachable: never = table;
-      return unreachable;
-    }
-  }
-  await syncRecordStorage(ctx, table, id);
-}
-
-export async function replaceTracked<T extends StorageTable>(
-  ctx: MutationCtx,
-  table: T,
-  id: Id<T>,
-  value: InsertValue<T>,
-): Promise<void> {
-  switch (table) {
-    case "users":
-      await ctx.db.replace(id as Id<"users">, insertValue<"users">(value));
-      break;
-    case "events":
-      await ctx.db.replace(id as Id<"events">, insertValue<"events">(value));
-      break;
-    case "reimbursements":
-      await ctx.db.replace(
-        id as Id<"reimbursements">,
-        insertValue<"reimbursements">(value),
-      );
-      break;
-    case "fundDeposits":
-      await ctx.db.replace(
-        id as Id<"fundDeposits">,
-        insertValue<"fundDeposits">(value),
-      );
-      break;
-    case "fundRequests":
-      await ctx.db.replace(
-        id as Id<"fundRequests">,
-        insertValue<"fundRequests">(value),
-      );
-      break;
-    default: {
-      const unreachable: never = table;
-      return unreachable;
-    }
-  }
+  await ctx.db.patch(id, value);
   await syncRecordStorage(ctx, table, id);
 }
 
