@@ -246,7 +246,7 @@ describe("syncStorageReferences", () => {
     const db = {
       system: {
         normalizeId: (_table: string, id: string) =>
-          id === "kg2kept" || id === "kg2old" ? id : null,
+          id === "kg2kept" || id === "kg2old" || id === "kg2other" ? id : null,
       },
       query: () => ({
         withIndex: (
@@ -288,6 +288,7 @@ describe("syncStorageReferences", () => {
       "event_1",
       {
         graphicsFiles: ["https://files.example/api/storage/kg2kept"],
+        eventDescription: "kg2other",
       },
     );
 
