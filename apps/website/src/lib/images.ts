@@ -1,10 +1,5 @@
 import type { ImageMetadata } from "astro";
 
-// Eagerly map every asset under src/images so JSON/data-driven paths
-// (e.g. "/src/images/project.webp") can be resolved to ImageMetadata
-// and rendered through Astro's <Image /> component.
-// Only the paths JSON data passes to resolveImage. A wider glob also emits
-// unused photos into the client build, including files no page renders.
 const images = import.meta.glob<{ default: ImageMetadata }>(
   [
     "/src/images/project.webp",
