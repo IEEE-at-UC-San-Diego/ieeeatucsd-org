@@ -1,5 +1,6 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { ReimbursementStorageAccess } from "./reimbursementStorageAccess";
 import {
   requireCurrentUser,
   requireAdminAccess,
@@ -89,8 +90,20 @@ export const create = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
     const { logtoId, authToken, ...data } = args;
-    return await ctx.db.insert("reimbursements", {
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx,
+        user,
+        ReimbursementStorageAccess.receiptFileValues(data.receipts),
+      );
+    const receipts = await ReimbursementStorageAccess.rewriteReceiptFiles(
+      ctx,
+      data.receipts,
+      attachedIds,
+    );
+    const reimbursementId = await ctx.db.insert("reimbursements", {
       ...data,
+      receipts,
       status: "submitted",
       submittedBy: userId,
       auditLogs: [
@@ -101,6 +114,12 @@ export const create = mutation({
         },
       ],
     });
+    await ReimbursementStorageAccess.recordFileRefs(
+      ctx,
+      reimbursementId,
+      attachedIds,
+    );
+    return reimbursementId;
   },
 });
 
@@ -179,6 +198,19 @@ export const updatePaymentDetails = mutation({
     if (!reimbursement) throw new Error("Reimbursement not found");
     transitionReimbursementPayment(reimbursement.status);
 
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx,
+        admin,
+        [args.paymentDetails.proofFileUrl],
+      );
+    const proofFileUrl = args.paymentDetails.proofFileUrl
+      ? await ReimbursementStorageAccess.canonicalizeStorageValue(
+          ctx,
+          attachedIds[0],
+        )
+      : args.paymentDetails.proofFileUrl;
+
     const auditLogs = reimbursement.auditLogs || [];
     auditLogs.push({
       action: "payment_details_added",
@@ -188,9 +220,17 @@ export const updatePaymentDetails = mutation({
 
     await ctx.db.patch(args.id, {
       status: "paid",
-      paymentDetails: args.paymentDetails,
+      paymentDetails: {
+        ...args.paymentDetails,
+        proofFileUrl,
+      },
       auditLogs,
     });
+    await ReimbursementStorageAccess.recordFileRefs(
+      ctx,
+      args.id,
+      attachedIds,
+    );
     return args.id;
   },
 });
@@ -206,6 +246,7 @@ export const remove = mutation({
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
     assertReimbursementDeletable(reimbursement.status);
+    await ReimbursementStorageAccess.deleteFileRefs(ctx, args.id);
     await ctx.db.delete(args.id);
     return args.id;
   },
@@ -214,8 +255,48 @@ export const remove = mutation({
 export const generateUploadUrl = mutation({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.storage.generateUploadUrl();
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const token = await ReimbursementStorageAccess.issueUploadTicket(ctx, user);
+    return ReimbursementStorageAccess.uploadUrlForToken(token);
+  },
+});
+
+export const assertUploadTicket = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    await ReimbursementStorageAccess.assertUploadTicket(ctx, args.token);
+  },
+});
+
+export const completeTicketedUpload = internalMutation({
+  args: {
+    token: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ReimbursementStorageAccess.completeTicketedUpload(
+      ctx,
+      args.token,
+      args.storageId,
+    );
+    return args.storageId;
+  },
+});
+
+export const registerPendingUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    await ReimbursementStorageAccess.registerPendingUpload(
+      ctx,
+      user,
+      args.storageId,
+    );
+    return args.storageId;
   },
 });
 
@@ -226,7 +307,8 @@ export const getStorageUrl = mutation({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    await ReimbursementStorageAccess.assertCanResolve(ctx, user, args.storageId);
     return await ctx.storage.getUrl(args.storageId);
   },
 });

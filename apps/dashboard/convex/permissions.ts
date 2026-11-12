@@ -15,6 +15,7 @@ export type SponsorTier = "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
 type SessionPayload = {
   sub: string;
   role?: UserRole;
+  email?: string;
   iat: number;
   exp: number;
   v: number;
@@ -66,17 +67,20 @@ async function signHex(input: string, secret: string) {
   return toHex(new Uint8Array(signature));
 }
 
+function splitSignedToken(token: string): [string, string] {
+  const separator = token.lastIndexOf(".");
+  if (separator <= 0 || separator === token.length - 1) {
+    throw new Error("Invalid auth token format");
+  }
+  return [token.slice(0, separator), token.slice(separator + 1)];
+}
+
 type BridgeSession =
   | { status: "valid"; payload: SessionPayload }
   | { status: "expired" };
 
 async function readBridgeSession(authToken: string): Promise<BridgeSession> {
-  const parts = authToken.split(".");
-  if (parts.length !== 2) {
-    throw new Error("Invalid auth token format");
-  }
-
-  const [encodedPayload, signature] = parts;
+  const [encodedPayload, signature] = splitSignedToken(authToken);
   const secret = getSessionSecret();
   const expected = await signHex(encodedPayload, secret);
   if (expected !== signature) {
@@ -99,6 +103,44 @@ async function readBridgeSession(authToken: string): Promise<BridgeSession> {
   }
 
   return { status: "valid", payload };
+}
+
+export async function readVerifiedSession(
+  ctx: AuthContext,
+  logtoId?: string,
+  authToken?: string,
+) {
+  const nativeIdentity = await getNativeIdentity(ctx);
+  if (nativeIdentity?.subject) {
+    if (logtoId && nativeIdentity.subject !== logtoId) {
+      throw new Error("Auth token subject mismatch");
+    }
+    return {
+      subject: nativeIdentity.subject,
+      email:
+        typeof nativeIdentity.email === "string" ? nativeIdentity.email : "",
+      source: "native" as const,
+    };
+  }
+
+  if (!logtoId?.trim() || !authToken?.trim()) {
+    throw new Error("Missing auth token");
+  }
+
+  const session = await readBridgeSession(authToken);
+  if (session.status === "expired") {
+    throw new Error("Auth token expired");
+  }
+  const claims = session.payload;
+  if (claims.sub !== logtoId) {
+    throw new Error("Auth token subject mismatch");
+  }
+
+  return {
+    subject: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : "",
+    source: "session" as const,
+  };
 }
 
 async function getNativeIdentity(ctx: AuthContext) {

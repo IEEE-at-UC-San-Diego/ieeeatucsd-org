@@ -21,6 +21,19 @@ describe("convex session token signing", () => {
 		expect(verified.v).toBe(1);
 	});
 
+	it("round-trips an optional email claim", async () => {
+		const { createConvexSessionToken, verifyConvexSessionToken } = await import(
+			"./convex-session"
+		);
+
+		const { token } = createConvexSessionToken({
+			sub: "logto|invitee",
+			email: "Alex@UCSD.edu",
+		});
+
+		expect(verifyConvexSessionToken(token).email).toBe("alex@ucsd.edu");
+	});
+
 	it("rejects an expired token", async () => {
 		const {
 			createConvexSessionToken,
@@ -46,7 +59,9 @@ describe("convex session token signing", () => {
 			sub: "logto|original-user",
 		});
 
-		const [encodedPayload, signature] = token.split(".");
+		const separator = token.lastIndexOf(".");
+		const encodedPayload = token.slice(0, separator);
+		const signature = token.slice(separator + 1);
 		const payload = JSON.parse(decodeURIComponent(encodedPayload)) as Record<
 			string,
 			unknown

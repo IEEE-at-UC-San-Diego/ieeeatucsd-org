@@ -2,27 +2,13 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { OfficerInvitationAccess } from "./officerInvitationAccess";
 import { requireAdminAccess } from "./permissions";
 import {
   assertInvitationServerWriter,
-  expiredInvitationFailure,
   transitionOfficerInvitation,
   type InvitationState,
 } from "./officerInvitationTransition";
-
-const publicInvitationFields = (invitation: any) => ({
-  _id: invitation._id,
-  name: invitation.name,
-  role: invitation.role,
-  position: invitation.position,
-  offeredPositions: invitation.offeredPositions,
-  status: invitation.status,
-  invitedAt: invitation.invitedAt,
-  expiresAt: invitation.expiresAt,
-  message: invitation.message,
-  acceptanceDeadline: invitation.acceptanceDeadline,
-  leaderName: invitation.leaderName,
-});
 
 function invitationState(invitation: {
   status: InvitationState["status"];
@@ -137,7 +123,9 @@ export const getPublic = query({
   args: { id: v.id("officerInvitations") },
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.id);
-    return invitation ? publicInvitationFields(invitation) : null;
+    return invitation
+      ? OfficerInvitationAccess.publicInvitationFields(invitation)
+      : null;
   },
 });
 
@@ -219,96 +207,31 @@ export const updateStatus = mutation({
 
 export const acceptPublic = mutation({
   args: {
+    logtoId: v.string(),
+    authToken: v.string(),
     id: v.id("officerInvitations"),
-    email: v.string(),
     selectedPosition: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const invitation = await ctx.db.get(args.id);
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-
-    const now = Date.now();
-    const emailMatches =
-      args.email.trim().toLowerCase() === invitation.email.trim().toLowerCase();
-    const result = transitionOfficerInvitation(
-      invitationState(invitation),
-      { type: "accept", emailMatches },
-      now,
-    );
-    const expired = expiredInvitationFailure(result);
-    if (expired && result.stamp) {
-      await ctx.db.patch(args.id, stampPatch(result.stamp));
-      return expired;
-    }
-    if (!result.ok) {
-      throw new Error(result.error ?? "Illegal invitation transition");
-    }
-
-    const offeredPositions =
-      invitation.offeredPositions && invitation.offeredPositions.length > 0
-        ? invitation.offeredPositions
-        : [invitation.position];
-    if (offeredPositions.length > 1 && !args.selectedPosition?.trim()) {
-      throw new Error("Please select one position to accept");
-    }
-    const selectedPosition = args.selectedPosition?.trim() || invitation.position;
-    if (!offeredPositions.includes(selectedPosition)) {
-      throw new Error("Selected position is not part of this invitation");
-    }
-
-    await grantInvitationRole(ctx, invitation, selectedPosition, now);
-    const stamp = result.stamp;
-    if (!stamp) throw new Error("Illegal invitation transition");
-    await ctx.db.patch(args.id, {
-      ...stampPatch(stamp),
-      position: selectedPosition,
-    });
-
-    return {
-      ...publicInvitationFields(invitation),
-      email: invitation.email,
-      position: selectedPosition,
-      status: "accepted" as const,
-      acceptedAt: now,
-      roleGranted: true,
-      userCreatedOrUpdated: true,
-    };
+    return await OfficerInvitationAccess.accept(ctx, args);
   },
 });
 
 export const declinePublic = mutation({
-  args: { id: v.id("officerInvitations") },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("officerInvitations"),
+  },
   handler: async (ctx, args) => {
-    const invitation = await ctx.db.get(args.id);
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-    const now = Date.now();
-    const result = transitionOfficerInvitation(
-      invitationState(invitation),
-      { type: "decline" },
-      now,
-    );
-    const expired = expiredInvitationFailure(result);
-    if (expired && result.stamp) {
-      await ctx.db.patch(args.id, stampPatch(result.stamp));
-      return expired;
-    }
-    if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
-    if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
-
-    return {
-      ...publicInvitationFields(invitation),
-      status: "declined" as const,
-      declinedAt: now,
-    };
+    return await OfficerInvitationAccess.decline(ctx, args);
   },
 });
 
 export const recordAcceptanceSideEffects = mutation({
   args: {
+    logtoId: v.string(),
+    authToken: v.string(),
     id: v.id("officerInvitations"),
     serverSecret: v.string(),
     onboardingEmailSent: v.optional(v.boolean()),
@@ -323,6 +246,11 @@ export const recordAcceptanceSideEffects = mutation({
     if (!invitation) {
       throw new Error("Invitation not found");
     }
+    await OfficerInvitationAccess.requireMatchingCaller(
+      ctx,
+      args,
+      invitation.email,
+    );
 
     const setsRoleFlags =
       args.roleGranted !== undefined ||
