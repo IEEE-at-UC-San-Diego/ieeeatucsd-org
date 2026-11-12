@@ -14,6 +14,9 @@ const resolvedImage = resolveImage(image);
       <Image
         src={resolvedImage}
         alt={title}
+        width={960}
+        widths={[480, 768, 960]}
+        sizes="(min-width: 768px) 34vw, 100vw"
         class="aspect-[4/3] w-full object-cover"
       />
     </div>
