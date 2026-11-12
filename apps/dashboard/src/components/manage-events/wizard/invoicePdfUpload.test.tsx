@@ -29,16 +29,10 @@ function fileList(files: File[]): FileList {
 }
 
 function contentTypeOf(headers: HeadersInit | undefined): string {
-	if (!headers) return "";
-	if (headers instanceof Headers) return headers.get("content-type") ?? "";
-	if (Array.isArray(headers)) {
-		const found = headers.find(
-			([name]) => name.toLowerCase() === "content-type",
-		);
-		return found?.[1] ?? "";
+	if (!headers || headers instanceof Headers || Array.isArray(headers)) {
+		return "";
 	}
-	const record = headers as Record<string, string>;
-	return record["Content-Type"] ?? record["content-type"] ?? "";
+	return headers["Content-Type"] ?? "";
 }
 
 function installStorage() {
