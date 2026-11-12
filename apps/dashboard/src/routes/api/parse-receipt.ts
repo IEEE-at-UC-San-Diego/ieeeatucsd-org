@@ -33,7 +33,7 @@ const RECEIPT_CATEGORIES = [
 	"Other",
 ];
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -159,7 +159,7 @@ Rules:
 					"X-Title": "IEEE UCSD Reimbursement System",
 				},
 				body: JSON.stringify({
-					model: "deepseek/deepseek-v4.1-flash",
+					model: "google/gemini-3.8-flash",
 					messages: [
 						{ role: "system", content: systemPrompt },
 						{ role: "user", content: contentParts },
