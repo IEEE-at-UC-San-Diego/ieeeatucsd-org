@@ -86,10 +86,17 @@ export const getPublished = query({
 });
 
 export const getSections = query({
-  args: { constitutionId: v.id("constitutions") },
+  args: {
+    constitutionId: v.id("constitutions"),
+    logtoId: v.optional(v.string()),
+    authToken: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) return [];
+    if (constitution.status !== "published") {
+      await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    }
     return constitution.sections || [];
   },
 });

@@ -13,7 +13,7 @@ vi.mock("./permissions", () => ({
   requireAdminAccess,
 }));
 
-import { get, getAuditLog, getByTitle } from "./constitutions";
+import { get, getAuditLog, getByTitle, getSections } from "./constitutions";
 
 type QueryHandler = {
   args: object;
@@ -183,5 +183,103 @@ describe("constitution read auth", () => {
     ).rejects.toThrow(/admin access required/);
 
     expect(ctx.db.query).not.toHaveBeenCalled();
+  });
+});
+
+describe("constitution section reads", () => {
+  beforeEach(() => {
+    requireOfficerAccess.mockReset();
+  });
+
+  it("returns published sections without an officer session", async () => {
+    requireOfficerAccess.mockRejectedValue(
+      new Error("Insufficient permissions: officer access required"),
+    );
+    const sections = [{ id: "s1", title: "Article I", content: "Public text" }];
+    const ctx = {
+      db: {
+        get: vi.fn(async () => ({ status: "published", sections })),
+      },
+    };
+
+    await expect(
+      asQuery(getSections).handler(ctx, {
+        constitutionId: "constitutions:published",
+      }),
+    ).resolves.toEqual(sections);
+
+    expect(requireOfficerAccess).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty list when the constitution does not exist", async () => {
+    const ctx = { db: { get: vi.fn(async () => null) } };
+
+    await expect(
+      asQuery(getSections).handler(ctx, {
+        constitutionId: "constitutions:missing",
+      }),
+    ).resolves.toEqual([]);
+
+    expect(requireOfficerAccess).not.toHaveBeenCalled();
+  });
+
+  it("refuses draft sections when the caller is not an officer", async () => {
+    requireOfficerAccess.mockRejectedValue(
+      new Error("Insufficient permissions: officer access required"),
+    );
+    const ctx = {
+      db: {
+        get: vi.fn(async () => ({
+          status: "draft",
+          sections: [{ id: "s1", title: "Unreleased", content: "Secret draft" }],
+        })),
+      },
+    };
+
+    await expect(
+      asQuery(getSections).handler(ctx, {
+        constitutionId: "constitutions:draft",
+      }),
+    ).rejects.toThrow(/officer access required/);
+  });
+
+  it("returns draft sections to an officer", async () => {
+    requireOfficerAccess.mockResolvedValue({ role: "General Officer" });
+    const sections = [{ id: "s1", title: "Unreleased", content: "Officer draft" }];
+    const ctx = {
+      db: {
+        get: vi.fn(async () => ({ status: "draft", sections })),
+      },
+    };
+
+    await expect(
+      asQuery(getSections).handler(ctx, {
+        constitutionId: "constitutions:draft",
+        logtoId: "officer",
+        authToken: "token",
+      }),
+    ).resolves.toEqual(sections);
+
+    expect(requireOfficerAccess).toHaveBeenCalledWith(ctx, "officer", "token");
+  });
+
+  it("refuses archived sections when the caller is not an officer", async () => {
+    requireOfficerAccess.mockRejectedValue(
+      new Error("Insufficient permissions: officer access required"),
+    );
+    const ctx = {
+      db: {
+        get: vi.fn(async () => ({
+          status: "archived",
+          sections: [{ id: "s1", content: "Old text" }],
+        })),
+      },
+    };
+
+    await expect(
+      asQuery(getSections).handler(ctx, {
+        constitutionId: "constitutions:archived",
+      }),
+    ).rejects.toThrow(/officer access required/);
   });
 });
