@@ -533,7 +533,7 @@ describe("VcoDeadlines.compute", () => {
 			{
 				eventName: "Late Workshop",
 				startDate: pacificAfternoon(2026, 11, 18),
-				createdAt: pacificAfternoon(2026, 9, 1),
+				createdAt: pacificAfternoon(2026, 10, 20),
 				location: "CSE 1202",
 				expectedAttendance: 40,
 				needsAsFunding: true,
@@ -548,6 +548,7 @@ describe("VcoDeadlines.compute", () => {
 		);
 		expect(status.nextDeadline).toBeNull();
 		expect(status.allDone).toBe(true);
+		expect(status.lateCreated).toBe(true);
 		expect(status.flags).not.toContain("overdue");
 		expect(status.flags).not.toContain("late");
 	});
