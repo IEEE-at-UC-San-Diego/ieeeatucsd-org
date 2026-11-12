@@ -19,7 +19,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useWizard } from "@/hooks/useWizard";
-import { contentTypeForUpload } from "@/lib/uploadContentType";
+import {
+	contentTypeForUpload,
+	ROOM_BOOKING_UPLOAD_TYPES,
+} from "@/lib/uploadContentType";
 import { EventRequestMapping } from "../EventRequestMapping";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
@@ -201,7 +204,12 @@ export function EventRequestWizardModal({
 									const uploadUrl = await generateUploadUrl({});
 									const res = await fetch(uploadUrl, {
 										method: "POST",
-										headers: { "Content-Type": contentTypeForUpload(file) },
+										headers: {
+											"Content-Type": contentTypeForUpload(
+												file,
+												ROOM_BOOKING_UPLOAD_TYPES,
+											),
+										},
 										body: file,
 									});
 									if (res.ok) {

@@ -125,9 +125,16 @@ if (!signedIn) {
 		excerpt: document.body.innerText.split("\n").slice(0, 20),
 	}));
 	await page.screenshot({ path: `${evidenceDir}/signin-wall.png` });
+	const convex = process.env.CONVEX_URL ?? "http://127.0.0.1:3210";
+	const version = await fetch(`${convex}/version`).catch((error) => error);
+	const convexDown = version instanceof Error || !version.ok;
+	let error =
+		"Sign-in wall. The Logto storage keys were not accepted by this dashboard.";
+	if (where.url.includes("session-init")) error = "session-init";
+	if (convexDown) error = "Convex unreachable";
 	console.error(
 		JSON.stringify({
-			error: "Sign-in wall. The Logto storage keys were not accepted by this dashboard.",
+			error,
 			...where,
 			console: consoleLines.filter((line) => line.type === "error").slice(0, 10),
 		}),

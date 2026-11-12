@@ -9,16 +9,30 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
 	docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
-const ALLOWED_CONTENT_TYPES = new Set(Object.values(CONTENT_TYPE_BY_EXTENSION));
+export const INVOICE_UPLOAD_TYPES = new Set([
+	CONTENT_TYPE_BY_EXTENSION.pdf,
+	CONTENT_TYPE_BY_EXTENSION.jpg,
+	CONTENT_TYPE_BY_EXTENSION.png,
+	CONTENT_TYPE_BY_EXTENSION.gif,
+	CONTENT_TYPE_BY_EXTENSION.webp,
+]);
 
-export function contentTypeForUpload(file: {
-	name: string;
-	type: string;
-}): string {
+export const ROOM_BOOKING_UPLOAD_TYPES = new Set([
+	CONTENT_TYPE_BY_EXTENSION.pdf,
+	CONTENT_TYPE_BY_EXTENSION.jpg,
+	CONTENT_TYPE_BY_EXTENSION.png,
+	CONTENT_TYPE_BY_EXTENSION.doc,
+	CONTENT_TYPE_BY_EXTENSION.docx,
+]);
+
+export function contentTypeForUpload(
+	file: { name: string; type: string },
+	allowed: ReadonlySet<string>,
+): string {
 	const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
 	const fromExtension =
 		CONTENT_TYPE_BY_EXTENSION[extension] ?? "application/octet-stream";
 	const declared = file.type.trim().toLowerCase();
-	if (declared && ALLOWED_CONTENT_TYPES.has(declared)) return declared;
+	if (declared && allowed.has(declared)) return declared;
 	return fromExtension;
 }
