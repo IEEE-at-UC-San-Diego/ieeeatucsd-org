@@ -1,10 +1,22 @@
 import type { ImageMetadata } from "astro";
 
-// Eagerly map every asset under src/images so JSON/data-driven paths
-// (e.g. "/src/images/project.webp") can be resolved to ImageMetadata
-// and rendered through Astro's <Image /> component.
 const images = import.meta.glob<{ default: ImageMetadata }>(
-  "/src/images/**/*.{webp,png,jpg,jpeg,avif,gif,svg}",
+  [
+    "/src/images/project.webp",
+    "/src/images/halloween.webp",
+    "/src/images/hardhack.webp",
+    "/src/images/waterpurity.webp",
+    "/src/images/play-a-eye.webp",
+    "/src/images/lavagame.webp",
+    "/src/images/compactgps.webp",
+    "/src/images/powertag.webp",
+    "/src/images/holidayrobot.webp",
+    "/src/images/step.webp",
+    "/src/images/scc.jpg",
+    "/src/images/sbcc.jpg",
+    "/src/images/projects.png",
+    "/src/images/logos/*",
+  ],
   { eager: true },
 );
 
