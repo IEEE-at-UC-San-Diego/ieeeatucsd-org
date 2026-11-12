@@ -45,6 +45,7 @@ export async function syncGoogleGroupsForRoleWithAudit(
 			googleResults.map(async (result: GoogleGroupAuditResult) => {
 				try {
 					await convex.mutation(createGgFn, {
+						serverSecret: process.env.CONVEX_SESSION_SECRET ?? "",
 						email: normalizedEmail,
 						googleGroup: result.group,
 						role,

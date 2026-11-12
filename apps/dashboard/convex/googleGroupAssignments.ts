@@ -1,9 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { assertInvitationServerWriter } from "./officerInvitationTransition";
 import { requireAdminAccess } from "./permissions";
 
 export const create = mutation({
   args: {
+    serverSecret: v.string(),
     email: v.string(),
     googleGroup: v.string(),
     role: v.optional(v.string()),
@@ -11,6 +13,7 @@ export const create = mutation({
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertInvitationServerWriter(args.serverSecret);
     return await ctx.db.insert("googleGroupAssignments", {
       email: args.email,
       googleGroup: args.googleGroup,
