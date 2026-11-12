@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 
 const pidFile = process.env.VERIFY_PID_FILE ?? "/tmp/verify-dashboard-pids";
 const evidence = process.env.VERIFY_EVIDENCE_DIR ?? "/tmp/verify-dashboard-evidence";
@@ -19,13 +20,33 @@ const pids = readFileSync(pidFile, "utf8")
 	.map((line) => Number(line.trim()))
 	.filter((pid) => Number.isInteger(pid) && pid > 0);
 
+const envLocalPath = resolve(
+	import.meta.dirname,
+	"../../../apps/dashboard/.env.local",
+);
+if (existsSync(envLocalPath)) {
+	const contents = readFileSync(envLocalPath, "utf8");
+	if (contents.startsWith("# verify-dashboard\n")) {
+		rmSync(envLocalPath);
+	}
+}
+
 const stopped = [];
 for (const pid of pids) {
-	try {
-		process.kill(pid, "SIGTERM");
-		stopped.push(pid);
-	} catch (error) {
-		stopped.push({ pid, error: String(error) });
+	let signaled = false;
+	for (const signal of ["SIGTERM", "SIGKILL"]) {
+		try {
+			process.kill(-pid, signal);
+			signaled = true;
+		} catch {
+			try {
+				process.kill(pid, signal);
+				signaled = true;
+			} catch {
+				// already gone, or this signal cannot be delivered
+			}
+		}
 	}
+	stopped.push(signaled ? pid : { pid, error: "not running" });
 }
 console.log(JSON.stringify({ stopped, evidence }));

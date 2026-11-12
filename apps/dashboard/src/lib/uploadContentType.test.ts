@@ -14,6 +14,12 @@ describe("contentTypeForUpload", () => {
 		);
 	});
 
+	it("replaces a declared type the picker does not allow", () => {
+		expect(
+			contentTypeForUpload({ name: "invoice.pdf", type: "text/html" }),
+		).toBe("application/pdf");
+	});
+
 	it("falls back when the extension is unknown", () => {
 		expect(contentTypeForUpload({ name: "notes.txt", type: "  " })).toBe(
 			"application/octet-stream",

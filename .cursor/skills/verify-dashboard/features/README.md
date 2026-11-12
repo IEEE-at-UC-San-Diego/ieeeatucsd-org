@@ -7,7 +7,7 @@ This directory is the maintained source for verifying the officer dashboard in `
 - Dashboard health at `http://localhost:3000/api/health` returns 200.
 - Convex at `http://127.0.0.1:3210/version` responds.
 - `node .cursor/skills/verify-dashboard/doctor.mjs` exits 0.
-- An officer session can open `/manage-events`. Production sign-in is `Continue with Google`. A session file passed as `IEEE_DEV_OFFICER_JSON` stays outside the repo.
+- An officer session can open `/manage-events`. Production sign-in is `Continue with Google`. The drive seeds `logto:<appId>:idToken` and `logto:<appId>:accessToken` from `VERIFY_LOGTO_SESSION`, which stays outside the repo.
 - Do not drive an instance this run did not start unless doctor shows it is already the local dashboard and local Convex.
 
 ## Driving conventions

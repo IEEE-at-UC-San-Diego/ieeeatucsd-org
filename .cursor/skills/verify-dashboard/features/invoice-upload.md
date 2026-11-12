@@ -20,7 +20,7 @@ Preconditions:
 
 - Doctor exits 0.
 - The officer can open `/manage-events`.
-- `IEEE_DEV_OFFICER_JSON` is set when Google sign-in is unavailable.
+- `VERIFY_LOGTO_SESSION` exists. Launch writes it.
 - `PUPPETEER_CORE` points at `puppeteer-core.js`, or puppeteer-core is installed under the scratch prefix in the skill.
 
 - **Reach Funding.** Run `node .cursor/skills/verify-dashboard/drive-invoice-upload.mjs`. It chooses New Event Request, checks the label that starts `I have read the requirements`, fills event name `Invoice PDF Social`, description, event type Social, location `Price Center`, and event code `INV42`, then continues to the step whose text includes `Upload an invoice to get started`.

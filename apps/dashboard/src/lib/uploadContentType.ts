@@ -9,12 +9,16 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
 	docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
+const ALLOWED_CONTENT_TYPES = new Set(Object.values(CONTENT_TYPE_BY_EXTENSION));
+
 export function contentTypeForUpload(file: {
 	name: string;
 	type: string;
 }): string {
-	const declared = file.type.trim();
-	if (declared) return declared;
 	const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-	return CONTENT_TYPE_BY_EXTENSION[extension] ?? "application/octet-stream";
+	const fromExtension =
+		CONTENT_TYPE_BY_EXTENSION[extension] ?? "application/octet-stream";
+	const declared = file.type.trim().toLowerCase();
+	if (declared && ALLOWED_CONTENT_TYPES.has(declared)) return declared;
+	return fromExtension;
 }

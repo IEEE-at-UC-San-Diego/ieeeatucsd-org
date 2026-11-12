@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const evidenceDir =
 	process.env.VERIFY_EVIDENCE_DIR ?? "/tmp/verify-dashboard-evidence";
 const dashboard = process.env.DASHBOARD_URL ?? "http://localhost:3000";
-const officerPath = process.env.IEEE_DEV_OFFICER_JSON;
+const sessionPath =
+	process.env.VERIFY_LOGTO_SESSION ?? "/tmp/verify-dashboard-logto-session.json";
 const puppeteerPath =
 	process.env.PUPPETEER_CORE ??
 	"/tmp/verify-dashboard-pw/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js";
@@ -27,9 +28,20 @@ function chromeExecutable() {
 	throw new Error("Set CHROME_PATH to a Chrome or Chromium binary");
 }
 
-const bridge = officerPath
-	? JSON.parse(readFileSync(officerPath, "utf8"))
-	: null;
+if (!existsSync(sessionPath)) {
+	console.error(`Missing Logto session file at ${sessionPath}. Run launch.mjs first.`);
+	process.exit(2);
+}
+const session = JSON.parse(readFileSync(sessionPath, "utf8"));
+if (
+	!session?.appId ||
+	!session.idToken ||
+	!session.accessToken ||
+	typeof session.expiresAt !== "number"
+) {
+	console.error("Logto session file is missing appId, idToken, accessToken, or expiresAt");
+	process.exit(2);
+}
 mkdirSync(evidenceDir, { recursive: true });
 const puppeteer = await import(puppeteerPath);
 
@@ -64,11 +76,19 @@ page.on("response", async (response) => {
 	});
 });
 
-if (bridge) {
-	await page.evaluateOnNewDocument((value) => {
-		localStorage.setItem("ieeeDevOfficer", JSON.stringify(value));
-	}, bridge);
-}
+await page.evaluateOnNewDocument((value) => {
+	localStorage.setItem(`logto:${value.appId}:idToken`, value.idToken);
+	localStorage.setItem(
+		`logto:${value.appId}:accessToken`,
+		JSON.stringify({
+			"@": {
+				token: value.accessToken,
+				scope: "openid",
+				expiresAt: value.expiresAt,
+			},
+		}),
+	);
+}, session);
 
 async function clickLabel(label) {
 	const clicked = await page.evaluate((text) => {
@@ -89,22 +109,28 @@ await page.goto(`${dashboard}/manage-events`, {
 	waitUntil: "domcontentloaded",
 	timeout: 60000,
 });
-await page.waitForFunction(
-	() => {
-		const text = document.body.innerText;
-		return (
-			text.includes("New Event Request") || text.includes("Continue with Google")
-		);
-	},
-	{ timeout: 30000 },
-);
-const signedIn = await page.evaluate(() =>
-	document.body.innerText.includes("New Event Request"),
-);
+let signedIn = false;
+try {
+	await page.waitForFunction(
+		() => document.body.innerText.includes("New Event Request"),
+		{ timeout: 20000 },
+	);
+	signedIn = true;
+} catch {
+	signedIn = false;
+}
 if (!signedIn) {
+	const where = await page.evaluate(() => ({
+		url: location.href,
+		excerpt: document.body.innerText.split("\n").slice(0, 20),
+	}));
 	await page.screenshot({ path: `${evidenceDir}/signin-wall.png` });
 	console.error(
-		"Sign-in wall. The DEV officer bridge is missing from this dashboard build.",
+		JSON.stringify({
+			error: "Sign-in wall. The Logto storage keys were not accepted by this dashboard.",
+			...where,
+			console: consoleLines.filter((line) => line.type === "error").slice(0, 10),
+		}),
 	);
 	await browser.close();
 	process.exit(2);
