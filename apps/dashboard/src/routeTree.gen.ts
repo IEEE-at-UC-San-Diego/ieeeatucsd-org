@@ -48,7 +48,6 @@ import { Route as DashboardSponsorsResumeDatabaseRouteImport } from './routes/_d
 import { Route as ApiAiQueryRouteImport } from './routes/api/ai/query'
 import { Route as ApiAuthConvexSessionRouteImport } from './routes/api/auth/convex-session'
 import { Route as ApiEmailNotifyRouteImport } from './routes/api/email/notify'
-import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as ApiIeeeEmailFetchContentRouteImport } from './routes/api/ieee-email/fetch-content'
 import { Route as ApiIeeeEmailFetchEmailsRouteImport } from './routes/api/ieee-email/fetch-emails'
 import { Route as ApiOnboardingAcceptInvitationRouteImport } from './routes/api/onboarding/accept-invitation'
@@ -263,11 +262,6 @@ const ApiEmailNotifyRoute = ApiEmailNotifyRouteImport.update({
   path: '/api/email/notify',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
-  id: '/api/email/send',
-  path: '/api/email/send',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiIeeeEmailFetchContentRoute =
   ApiIeeeEmailFetchContentRouteImport.update({
     id: '/api/ieee-email/fetch-content',
@@ -359,7 +353,6 @@ export interface FileRoutesByFullPath {
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
-  '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
   '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
@@ -409,7 +402,6 @@ export interface FileRoutesByTo {
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
-  '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
   '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
@@ -461,7 +453,6 @@ export interface FileRoutesById {
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
-  '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
   '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
@@ -513,7 +504,6 @@ export interface FileRouteTypes {
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
-    | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
     | '/api/onboarding/accept-invitation'
@@ -563,7 +553,6 @@ export interface FileRouteTypes {
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
-    | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
     | '/api/onboarding/accept-invitation'
@@ -614,7 +603,6 @@ export interface FileRouteTypes {
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
-    | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
     | '/api/onboarding/accept-invitation'
@@ -645,7 +633,6 @@ export interface RootRouteChildren {
   ApiAiQueryRoute: typeof ApiAiQueryRoute
   ApiAuthConvexSessionRoute: typeof ApiAuthConvexSessionRoute
   ApiEmailNotifyRoute: typeof ApiEmailNotifyRoute
-  ApiEmailSendRoute: typeof ApiEmailSendRoute
   ApiIeeeEmailFetchContentRoute: typeof ApiIeeeEmailFetchContentRoute
   ApiIeeeEmailFetchEmailsRoute: typeof ApiIeeeEmailFetchEmailsRoute
   ApiOnboardingAcceptInvitationRoute: typeof ApiOnboardingAcceptInvitationRoute
@@ -932,13 +919,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEmailNotifyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/email/send': {
-      id: '/api/email/send'
-      path: '/api/email/send'
-      fullPath: '/api/email/send'
-      preLoaderRoute: typeof ApiEmailSendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/ieee-email/fetch-content': {
       id: '/api/ieee-email/fetch-content'
       path: '/api/ieee-email/fetch-content'
@@ -1076,7 +1056,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiQueryRoute: ApiAiQueryRoute,
   ApiAuthConvexSessionRoute: ApiAuthConvexSessionRoute,
   ApiEmailNotifyRoute: ApiEmailNotifyRoute,
-  ApiEmailSendRoute: ApiEmailSendRoute,
   ApiIeeeEmailFetchContentRoute: ApiIeeeEmailFetchContentRoute,
   ApiIeeeEmailFetchEmailsRoute: ApiIeeeEmailFetchEmailsRoute,
   ApiOnboardingAcceptInvitationRoute: ApiOnboardingAcceptInvitationRoute,
