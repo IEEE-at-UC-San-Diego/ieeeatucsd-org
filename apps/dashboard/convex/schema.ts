@@ -189,6 +189,7 @@ export default defineSchema({
     signInMethod: v.optional(v.string()),
     hasIEEEEmail: v.optional(v.boolean()),
     ieeeEmail: v.optional(v.string()),
+    ieeeEmailClaimToken: v.optional(v.string()),
     ieeeEmailCreatedAt: v.optional(v.number()),
     sponsorTier: v.optional(sponsorTier),
     sponsorOrganization: v.optional(v.string()),
@@ -200,6 +201,7 @@ export default defineSchema({
   })
     .index("by_logtoId", ["logtoId"])
     .index("by_email", ["email"])
+    .index("by_ieeeEmail", ["ieeeEmail"])
     .index("by_role", ["role"])
     .index("by_points", ["points"]),
 
@@ -853,4 +855,22 @@ export default defineSchema({
     createdByName: v.optional(v.string()),
   })
     .index("by_department", ["department"]),
+
+  mailboxMigrationState: defineTable({
+    name: v.string(),
+    phase: v.union(v.literal("scan"), v.literal("patch"), v.literal("done")),
+    cursor: v.optional(v.string()),
+    pageSize: v.optional(v.number()),
+  }).index("by_name", ["name"]),
+
+  mailboxCanonHolders: defineTable({
+    canon: v.string(),
+    userId: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_canon", ["canon"]),
+
+  mailboxCollisions: defineTable({
+    canon: v.string(),
+  }).index("by_canon", ["canon"]),
 });

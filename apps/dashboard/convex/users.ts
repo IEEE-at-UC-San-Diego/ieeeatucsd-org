@@ -10,6 +10,14 @@ import {
   deleteResumeStorage,
   validateAndBuildResume,
 } from "./resume";
+import {
+  canonicalMailbox,
+  decideMailboxClaim,
+  isMailboxOfficer,
+  loadMailboxHolders,
+  nonOfficerMailboxAccess,
+} from "./mailboxClaim";
+import { readMailboxGate } from "./migrations/lowercaseIeeeEmails";
 import { UserAuth } from "./userAuth";
 import {
   UserRoleAssignment,
@@ -284,13 +292,83 @@ export const setIEEEEmail = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const mailbox = canonicalMailbox(args.ieeeEmail);
+    if (!isMailboxOfficer(user.role)) {
+      const gate = await readMailboxGate(ctx, mailbox);
+      const access = nonOfficerMailboxAccess({
+        migrationDone: gate.done,
+        collision: gate.collision,
+      });
+      switch (access) {
+        case "open":
+          break;
+        case "closed":
+          throw new Error("Mailbox migration is not finished");
+        case "collision":
+          throw new Error("Mailbox collision must be resolved");
+        default: {
+          const unexpected: never = access;
+          throw new Error(`Unexpected mailbox access: ${unexpected}`);
+        }
+      }
+    }
+    const holders = await loadMailboxHolders(ctx.db, mailbox, [args.ieeeEmail]);
+    const holderIds = holders.map((holder) => holder.id);
+    const decision = decideMailboxClaim({
+      callerId: user._id,
+      callerEmail: user.email,
+      requestedMailbox: mailbox,
+      holderIds,
+    });
+    switch (decision) {
+      case "allow":
+        break;
+      case "taken":
+        throw new Error("Mailbox is already bound to another account");
+      case "mismatch":
+        throw new Error("Mailbox does not belong to this account");
+      default: {
+        const unexpected: never = decision;
+        throw new Error(`Unexpected mailbox claim decision: ${unexpected}`);
+      }
+    }
+
+    const claimToken = crypto.randomUUID();
     await ctx.db.patch(user._id, {
       hasIEEEEmail: true,
-      ieeeEmail: args.ieeeEmail,
+      ieeeEmail: mailbox,
+      ieeeEmailClaimToken: claimToken,
       ieeeEmailCreatedAt: Date.now(),
       lastUpdated: Date.now(),
     });
-    return user._id;
+    return claimToken;
+  },
+});
+
+export const isMailboxBoundToAnotherAccount = query({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    ieeeEmail: v.string(),
+    rawValues: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const mailbox = canonicalMailbox(args.ieeeEmail);
+    const shape = decideMailboxClaim({
+      callerId: user._id,
+      callerEmail: user.email,
+      requestedMailbox: mailbox,
+      holderIds: [],
+    });
+    if (shape !== "allow") {
+      throw new Error("Mailbox does not belong to this account");
+    }
+    const holders = await loadMailboxHolders(ctx.db, mailbox, [
+      args.ieeeEmail,
+      ...(args.rawValues ?? []),
+    ]);
+    return holders.some((holder) => holder.id !== user._id);
   },
 });
 

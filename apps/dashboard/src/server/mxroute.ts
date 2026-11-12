@@ -33,7 +33,11 @@ export async function createIEEEEmail(params: {
 	password: string;
 }) {
 	const config = getMXRouteConfig();
-	const cleanUsername = params.username.toLowerCase().replace(/[^a-z0-9]/g, "");
+	const cleanUsername = params.username
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "");
+	const emailDomain = config.emailDomain.trim().toLowerCase();
 
 	const formData = new URLSearchParams();
 	formData.append("action", "create");
@@ -58,7 +62,7 @@ export async function createIEEEEmail(params: {
 	if (responseText.includes("error=1") || !response.ok) {
 		if (responseText.includes("already exists")) {
 			throw new Error(
-				`Email address ${cleanUsername}@${config.emailDomain} already exists.`,
+				`Email address ${cleanUsername}@${emailDomain} already exists.`,
 			);
 		}
 		let errorMessage = "Failed to create email account";
@@ -73,7 +77,7 @@ export async function createIEEEEmail(params: {
 
 	return {
 		success: true,
-		ieeeEmail: `${cleanUsername}@${config.emailDomain}`,
+		ieeeEmail: `${cleanUsername}@${emailDomain}`,
 	};
 }
 
