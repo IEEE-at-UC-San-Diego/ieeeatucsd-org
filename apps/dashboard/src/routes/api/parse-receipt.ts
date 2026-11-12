@@ -22,6 +22,15 @@ type ParsedReceiptResponse = {
 	total: number;
 };
 
+const OPENROUTER_REQUEST_TIMEOUT_MS = 60_000;
+
+function isReceiptScanTimeoutError(error: unknown) {
+	return (
+		error instanceof Error &&
+		(error.name === "TimeoutError" || error.name === "AbortError")
+	);
+}
+
 const RECEIPT_CATEGORIES = [
 	"Food & Beverages",
 	"Transportation",
@@ -33,7 +42,7 @@ const RECEIPT_CATEGORIES = [
 	"Other",
 ];
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -152,6 +161,7 @@ Rules:
 			"https://openrouter.ai/api/v1/chat/completions",
 			{
 				method: "POST",
+				signal: AbortSignal.timeout(OPENROUTER_REQUEST_TIMEOUT_MS),
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
@@ -159,7 +169,7 @@ Rules:
 					"X-Title": "IEEE UCSD Reimbursement System",
 				},
 				body: JSON.stringify({
-					model: "google/gemini-3-flash-preview",
+					model: "google/gemini-3.8-flash",
 					messages: [
 						{ role: "system", content: systemPrompt },
 						{ role: "user", content: contentParts },
@@ -167,7 +177,7 @@ Rules:
 					...(plugins ? { plugins } : {}),
 					response_format: { type: "json_object" },
 					temperature: 0,
-					reasoning: { effort: "high", exclude: true },
+					reasoning: { effort: "low", exclude: true },
 				}),
 			},
 		);
@@ -298,6 +308,14 @@ Rules:
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
+		if (isReceiptScanTimeoutError(error)) {
+			return new Response(
+				JSON.stringify({
+					error: "The receipt scan timed out. Try again.",
+				}),
+				{ status: 504, headers: { "Content-Type": "application/json" } },
+			);
+		}
 		return new Response(
 			JSON.stringify({
 				error: "Internal server error",

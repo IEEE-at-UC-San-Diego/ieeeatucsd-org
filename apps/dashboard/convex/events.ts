@@ -772,8 +772,7 @@ export const remove = mutation({
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    // Admins and Executive Officers can delete any event
-    if (hasAdminAccess(user.role)) {
+    if (hasOfficerAccess(user.role)) {
       await ctx.db.delete(args.id);
       if (event.published) {
         await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
@@ -781,7 +780,6 @@ export const remove = mutation({
       return args.id;
     }
 
-    // Non-admin users can only delete their own events if not approved
     if (event.requestedUser && event.requestedUser !== userId) {
       throw new Error("You can only delete your own events");
     }

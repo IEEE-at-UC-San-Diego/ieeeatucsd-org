@@ -20,6 +20,8 @@ export const INVOICE_SCAN_EMPTY =
 	"The invoice scan finished without line items. Enter the vendor and line items below.";
 export const INVOICE_SCAN_UNREADABLE =
 	"The invoice scan returned data the form could not read. Enter the vendor and line items below.";
+export const INVOICE_SCAN_TIMEOUT =
+	"The invoice scan timed out. Try again or enter the vendor and line items below.";
 
 function readDataUrl(
 	imageUrl: string,

@@ -6,9 +6,14 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import {
+	FileDropTarget,
+	pasteShortcutHint,
+} from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -29,6 +34,7 @@ interface FundingSectionProps {
 		invoices: Invoice[];
 	};
 	onChange: (data: Partial<FundingSectionProps["data"]>) => void;
+	generateUploadUrl?: () => Promise<string>;
 	uploadStorageFile?: (file: File) => Promise<string>;
 	aiEnabled?: boolean;
 }
@@ -40,14 +46,20 @@ export function shouldParseInvoiceWithAI(aiEnabled: boolean) {
 export function FundingSection({
 	data,
 	onChange,
+	generateUploadUrl,
 	uploadStorageFile,
 	aiEnabled = true,
 }: FundingSectionProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const invoiceLock = useRef(false);
+	const [invoicePickerMessage, setInvoicePickerMessage] = useState<
+		string | null
+	>(null);
 	const confirm = useConfirm();
 	const fundingQuestionId = useId();
 	const formId = useId();
 	const { phase, selectFile } = useInvoiceUpload({
+		generateUploadUrl,
 		uploadFile: uploadStorageFile,
 		parseWithAI: shouldParseInvoiceWithAI(aiEnabled),
 		onFinished: ({ storageId, parsed }) => {
@@ -62,10 +74,26 @@ export function FundingSection({
 	const isUploading = isInvoiceUploadBusy(phase);
 	const uploadError = invoiceUploadErrorMessage(phase);
 
-	const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) selectFile(file);
-		e.target.value = "";
+	const onInvoiceFiles = (list: FileList | null) => {
+		if (invoiceLock.current || isUploading) return;
+		const decision = filesForPicker(list, {
+			accept: ".pdf,.jpg,.jpeg,.png,.gif,.webp",
+			multiple: false,
+			maxBytes: 10 * 1024 * 1024,
+			typeMessage: "Unsupported file type. Use PDF, JPG, PNG, GIF, or WebP.",
+			sizeMessage: "File too large. Choose a file under 10\u00a0MB.",
+		});
+		if (decision.message || decision.files.length !== 1) {
+			setInvoicePickerMessage(decision.message);
+			return;
+		}
+		const file = decision.files[0];
+		if (!file) return;
+		setInvoicePickerMessage(null);
+		invoiceLock.current = true;
+		void Promise.resolve(selectFile(file)).finally(() => {
+			invoiceLock.current = false;
+		});
 	};
 
 	const addInvoiceManual = () => {
@@ -246,75 +274,105 @@ export function FundingSection({
 				<div className="space-y-4 pt-4 border-t">
 					<div className="flex items-center justify-between">
 						<h3 className="text-sm font-medium text-foreground">Invoices</h3>
-						<div className="flex gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={isUploading}
-								onClick={() => fileInputRef.current?.click()}
-							>
-								{isUploading ? (
-									<>
-										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-										{aiEnabled ? "Scanning…" : "Uploading…"}
-									</>
-								) : (
-									<>
-										<Upload className="h-4 w-4 mr-2" />
-										Upload Invoice
-									</>
-								)}
-							</Button>
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								onClick={addInvoiceManual}
-							>
-								<Plus className="h-4 w-4 mr-2" />
-								Manual Entry
-							</Button>
+						<div className="flex flex-col items-end gap-1">
+							<div className="flex gap-2">
+								<FileDropTarget
+									disabled={isUploading}
+									acceptPaste
+									onFiles={onInvoiceFiles}
+									className="rounded-md"
+								>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										disabled={isUploading}
+										onClick={() => fileInputRef.current?.click()}
+									>
+										{isUploading ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												{aiEnabled ? "Scanning…" : "Uploading…"}
+											</>
+										) : (
+											<>
+												<Upload className="h-4 w-4 mr-2" />
+												Upload Invoice
+											</>
+										)}
+									</Button>
+									<input
+										ref={fileInputRef}
+										type="file"
+										name="invoiceFile"
+										aria-label="Upload invoice file"
+										accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+										disabled={isUploading}
+										className="sr-only"
+										onChange={(e) => {
+											onInvoiceFiles(e.target.files);
+											e.target.value = "";
+										}}
+									/>
+								</FileDropTarget>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={addInvoiceManual}
+								>
+									<Plus className="h-4 w-4 mr-2" />
+									Manual Entry
+								</Button>
+							</div>
+							{data.invoices.length > 0 ? (
+								<p className="text-xs text-muted-foreground">
+									{pasteShortcutHint}
+								</p>
+							) : null}
 						</div>
-						<Input
-							ref={fileInputRef}
-							type="file"
-							name="invoiceFile"
-							aria-label="Upload invoice file"
-							accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
-							className="hidden"
-							onChange={handleFileInputChange}
-						/>
 					</div>
 
 					<output aria-live="polite" className="block">
-						{uploadError && (
+						{(invoicePickerMessage || uploadError) && (
 							<div className="bg-ds-red-100 border border-ds-red-100 rounded-lg p-3">
-								<p className="text-xs text-tone-danger">{uploadError}</p>
+								<p className="text-xs text-tone-danger">
+									{invoicePickerMessage || uploadError}
+								</p>
 							</div>
 						)}
 					</output>
 
 					{data.invoices.length === 0 ? (
-						<button
-							type="button"
-							className="block w-full text-center py-8 border border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+						<FileDropTarget
 							disabled={isUploading}
-							onClick={() => fileInputRef.current?.click()}
+							acceptPaste
+							onFiles={onInvoiceFiles}
+							className="rounded-lg"
 						>
-							<Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-							<span className="block text-sm text-muted-foreground font-medium">
-								Upload an invoice to get started
-							</span>
-							<span className="block text-xs text-muted-foreground mt-1">
-								{aiEnabled
-									? "AI will automatically scan and extract line items"
-									: "AI is disabled for this account; enter invoice details manually"}
-							</span>
-							<span className="block text-xs text-muted-foreground mt-0.5">
-								PDF, JPG, PNG supported · or use Manual Entry above
-							</span>
-						</button>
+							<button
+								type="button"
+								className="block w-full text-center py-8 border border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+								disabled={isUploading}
+								onClick={() => fileInputRef.current?.click()}
+							>
+								<Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+								<span className="block text-sm text-muted-foreground font-medium">
+									Upload an invoice to get started
+								</span>
+								<span className="block text-xs text-muted-foreground mt-1">
+									{aiEnabled
+										? "AI will automatically scan and extract line items"
+										: "AI is disabled for this account; enter invoice details manually"}
+								</span>
+								<span className="block text-xs text-muted-foreground mt-0.5">
+									PDF, JPG, PNG supported. Or drop a file here.
+								</span>
+								<span className="block text-xs text-muted-foreground mt-0.5">
+									{pasteShortcutHint}
+								</span>
+							</button>
+						</FileDropTarget>
 					) : (
 						<div className="space-y-4">
 							{data.invoices.map((invoice) => (

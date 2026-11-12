@@ -93,4 +93,30 @@ describe("GraphicsUploadSession", () => {
 		expect(calls).toEqual(["begin:ba7816bf", "url", "claim:storage_new"]);
 		vi.unstubAllGlobals();
 	});
+
+	it("sends the caller content type when the file itself has none", async () => {
+		let contentType = "";
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (_url: string, init?: RequestInit) => {
+				contentType = new Headers(init?.headers).get("Content-Type") ?? "";
+				return {
+					ok: true,
+					json: async () => ({ storageId: "storage_pdf" }),
+				};
+			}),
+		);
+		const storageId = await uploadOwnedStorageFile(
+			new Blob(["%PDF"], { type: "" }),
+			{
+				beginStorageUpload: async () => {},
+				generateUploadUrl: async () => "https://upload.example",
+				claimStorageUpload: async () => {},
+			},
+			"application/pdf",
+		);
+		expect(storageId).toBe("storage_pdf");
+		expect(contentType).toBe("application/pdf");
+		vi.unstubAllGlobals();
+	});
 });

@@ -74,12 +74,16 @@ export async function uploadOwnedStorageFile(
 		generateUploadUrl: () => Promise<string>;
 		claimStorageUpload: (args: { storageId: string }) => Promise<unknown>;
 	},
+	contentType?: string,
 ): Promise<string> {
 	const sha256 = await GraphicsUploadSession.sha256Hex(file);
 	await deps.beginStorageUpload({ sha256 });
 	const uploadResponse = await fetch(await deps.generateUploadUrl(), {
 		method: "POST",
-		headers: { "Content-Type": file.type || "application/octet-stream" },
+		headers: {
+			"Content-Type":
+				contentType?.trim() || file.type || "application/octet-stream",
+		},
 		body: file,
 	});
 	if (!uploadResponse.ok) throw new Error("Upload failed");

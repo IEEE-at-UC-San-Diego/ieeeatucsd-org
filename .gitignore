@@ -3,9 +3,10 @@ dist/
 
 # generated types
 .astro/
-# Cursor local state; keep committed cloud environment config
+# Cursor local state; keep committed cloud environment config and skills
 .cursor/*
 !.cursor/environment.json
+!.cursor/skills/
 
 final_review_gate.py
 

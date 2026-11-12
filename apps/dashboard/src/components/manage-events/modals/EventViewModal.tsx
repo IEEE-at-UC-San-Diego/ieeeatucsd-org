@@ -34,6 +34,8 @@ import {
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FileDropTarget } from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -223,6 +225,7 @@ export function EventViewModal({
 		Record<string, string>
 	>({});
 	const getStorageUrlRef = useRef(getStorageUrl);
+	const graphicsUploadLock = useRef(false);
 	const resolvableFileRefsRef = useRef<string[]>([]);
 	const activeEventIdRef = useRef<string | null>(event?._id ?? null);
 	activeEventIdRef.current = event?._id ?? null;
@@ -449,6 +452,29 @@ export function EventViewModal({
 				GraphicsUploadSession.finish(current, uploadEventId),
 			);
 		}
+	};
+
+	const onGraphicsFiles = (list: FileList | null) => {
+		if (graphicsUploadLock.current || isGraphicsBusy) return;
+		const decision = filesForPicker(list, {
+			accept: "image/*,application/pdf,.ai,.psd,.svg,.eps,.fig",
+			multiple: false,
+			maxBytes: 25 * 1024 * 1024,
+			sizeMessage:
+				"File is larger than 25\u00A0MB. Choose a smaller file or paste a link instead.",
+		});
+		if (decision.message || decision.files.length !== 1) {
+			if (decision.message) {
+				setGraphicsStatus({ kind: "error", message: decision.message });
+			}
+			return;
+		}
+		const file = decision.files[0];
+		if (!file) return;
+		graphicsUploadLock.current = true;
+		void handleGraphicsFileUpload(file).finally(() => {
+			graphicsUploadLock.current = false;
+		});
 	};
 
 	const isUrl = (text: string) => {
@@ -855,18 +881,21 @@ export function EventViewModal({
 
 								{/* File Upload */}
 								{onUpdateGraphics && event.status !== "published" && (
-									<div className="flex items-center gap-3">
+									<FileDropTarget
+										disabled={isGraphicsBusy}
+										onFiles={onGraphicsFiles}
+										className="flex min-h-11 flex-wrap items-center gap-3 rounded-md border-2 border-dashed border-border px-3 py-2"
+									>
 										<label>
-											<Input
+											<input
 												type="file"
 												name="graphicsFile"
 												aria-label="Upload graphics file"
-												className="hidden"
+												className="sr-only"
 												accept="image/*,application/pdf,.ai,.psd,.svg,.eps,.fig"
 												disabled={isGraphicsBusy}
 												onChange={(e) => {
-													const file = e.target.files?.[0];
-													if (file) void handleGraphicsFileUpload(file);
+													onGraphicsFiles(e.target.files);
 													e.target.value = "";
 												}}
 											/>
@@ -889,9 +918,10 @@ export function EventViewModal({
 											</Button>
 										</label>
 										<span className="text-xs text-muted-foreground">
-											Images, PDFs, SVGs, or design files (max 25&nbsp;MB)
+											Images, PDFs, SVGs, or design files (max 25&nbsp;MB). Or
+											drop a file here.
 										</span>
-									</div>
+									</FileDropTarget>
 								)}
 								<output
 									aria-live="polite"

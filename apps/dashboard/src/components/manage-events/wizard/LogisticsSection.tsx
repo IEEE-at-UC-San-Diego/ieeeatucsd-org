@@ -1,9 +1,14 @@
 import { EventPoints } from "@convex/eventPoints";
 import { AlertTriangle, FileText, Upload, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	FileDropTarget,
+	pasteShortcutHint,
+} from "@/components/ui/file-drop-target";
+import { filesForPicker } from "@/components/ui/filesForPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -47,6 +52,11 @@ export function LogisticsSection({
 	const confirm = useConfirm();
 	const foodQuestionId = useId();
 	const formId = useId();
+	const roomLock = useRef(false);
+	const [roomUploadPending, setRoomUploadPending] = useState(false);
+	const [roomPickerMessage, setRoomPickerMessage] = useState<string | null>(
+		null,
+	);
 	const timeRangeError =
 		Number.isFinite(data.startDate) &&
 		Number.isFinite(data.endDate) &&
@@ -101,13 +111,23 @@ export function LogisticsSection({
 		setEndTimeText(formatTimeShort(newEnd));
 	};
 
-	const handleRoomBookingFileChange = (
-		e: React.ChangeEvent<HTMLInputElement>,
-	) => {
-		if (e.target.files && e.target.files.length > 0 && onUploadRoomBooking) {
-			onUploadRoomBooking(Array.from(e.target.files));
-		}
-		e.target.value = "";
+	const onRoomFiles = (list: FileList | null) => {
+		if (roomLock.current || !onUploadRoomBooking) return;
+		const decision = filesForPicker(list, {
+			accept: ".pdf,.jpg,.jpeg,.png,.doc,.docx",
+			multiple: true,
+			typeMessage: "Use a PDF, JPG, PNG, DOC, or DOCX file.",
+		});
+		setRoomPickerMessage(decision.message);
+		if (decision.files.length === 0) return;
+		roomLock.current = true;
+		setRoomUploadPending(true);
+		void Promise.resolve()
+			.then(() => onUploadRoomBooking(decision.files))
+			.finally(() => {
+				roomLock.current = false;
+				setRoomUploadPending(false);
+			});
 	};
 
 	const removeRoomBookingFile = async (index: number) => {
@@ -318,20 +338,51 @@ export function LogisticsSection({
 									})}
 								</div>
 							)}
-							<label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors">
-								<Upload className="h-4 w-4 text-muted-foreground" />
-								<span className="text-sm text-muted-foreground">
-									Upload room booking confirmation
-								</span>
-								<Input
-									type="file"
-									name="roomBookingFiles"
-									accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-									multiple
-									className="hidden"
-									onChange={handleRoomBookingFileChange}
-								/>
-							</label>
+							<FileDropTarget
+								disabled={roomUploadPending}
+								acceptPaste
+								onFiles={onRoomFiles}
+								className="rounded-lg"
+							>
+								<label className="flex min-h-11 items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-[background-color,border-color,opacity] duration-150 ease-[ease] motion-reduce:transition-none">
+									<Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
+									<span className="text-center text-sm text-muted-foreground">
+										Upload room booking confirmation, or drop files here
+										<span className="mt-1 block text-xs">
+											{pasteShortcutHint}
+										</span>
+									</span>
+									<input
+										type="file"
+										name="roomBookingFiles"
+										aria-label="Room booking files"
+										accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+										multiple
+										disabled={roomUploadPending}
+										className="sr-only"
+										onChange={(e) => {
+											onRoomFiles(e.target.files);
+											e.target.value = "";
+										}}
+									/>
+								</label>
+							</FileDropTarget>
+							{roomPickerMessage && (
+								<output
+									aria-live="polite"
+									className="block text-xs text-tone-warning"
+								>
+									{roomPickerMessage}
+								</output>
+							)}
+							{roomUploadPending && (
+								<output
+									aria-live="polite"
+									className="block text-xs text-muted-foreground"
+								>
+									Uploading room booking files…
+								</output>
+							)}
 						</div>
 					)}
 

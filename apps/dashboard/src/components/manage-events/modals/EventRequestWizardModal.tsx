@@ -19,6 +19,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useWizard } from "@/hooks/useWizard";
+import {
+	contentTypeForUpload,
+	INVOICE_UPLOAD_TYPES,
+	ROOM_BOOKING_UPLOAD_TYPES,
+} from "@/lib/uploadContentType";
 import { EventRequestMapping } from "../EventRequestMapping";
 import { uploadOwnedStorageFile } from "../graphicsUpload";
 import type { EventFormData, EventRequest } from "../types";
@@ -67,12 +72,16 @@ export function EventRequestWizardModal({
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const beginStorageUpload = useAuthedMutation(api.events.beginStorageUpload);
 	const claimStorageUpload = useAuthedMutation(api.events.claimStorageUpload);
-	const uploadStorageFile = (file: File) =>
-		uploadOwnedStorageFile(file, {
-			beginStorageUpload,
-			generateUploadUrl: () => generateUploadUrl({}),
-			claimStorageUpload,
-		});
+	const uploadOwnedFile = (file: File, allowed: ReadonlySet<string>) =>
+		uploadOwnedStorageFile(
+			file,
+			{
+				beginStorageUpload,
+				generateUploadUrl: () => generateUploadUrl({}),
+				claimStorageUpload,
+			},
+			contentTypeForUpload(file, allowed),
+		);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
 		EventRequestMapping.toFormData(initialData),
@@ -206,7 +215,9 @@ export function EventRequestWizardModal({
 							const urls: string[] = [];
 							for (const file of files) {
 								try {
-									urls.push(await uploadStorageFile(file));
+									urls.push(
+										await uploadOwnedFile(file, ROOM_BOOKING_UPLOAD_TYPES),
+									);
 								} catch (err) {
 									console.error("Failed to upload room booking file:", err);
 								}
@@ -249,7 +260,9 @@ export function EventRequestWizardModal({
 							invoices: formData.invoices,
 						}}
 						onChange={(data) => updateFormData(data)}
-						uploadStorageFile={uploadStorageFile}
+						uploadStorageFile={(file) =>
+							uploadOwnedFile(file, INVOICE_UPLOAD_TYPES)
+						}
 						aiEnabled={aiEnabled}
 					/>
 				);
