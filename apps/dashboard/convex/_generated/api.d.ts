@@ -39,6 +39,7 @@ import type * as permissions from "../permissions.js";
 import type * as reimbursements from "../reimbursements.js";
 import type * as resume from "../resume.js";
 import type * as sponsorDomains from "../sponsorDomains.js";
+import type * as storageReferenceBackfill from "../storageReferenceBackfill.js";
 import type * as userAuth from "../userAuth.js";
 import type * as userAuthWrite from "../userAuthWrite.js";
 import type * as userProvisioning from "../userProvisioning.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   reimbursements: typeof reimbursements;
   resume: typeof resume;
   sponsorDomains: typeof sponsorDomains;
+  storageReferenceBackfill: typeof storageReferenceBackfill;
   userAuth: typeof userAuth;
   userAuthWrite: typeof userAuthWrite;
   userProvisioning: typeof userProvisioning;

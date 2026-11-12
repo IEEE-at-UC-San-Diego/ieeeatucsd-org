@@ -853,4 +853,18 @@ export default defineSchema({
     createdByName: v.optional(v.string()),
   })
     .index("by_department", ["department"]),
+
+  storageReferences: defineTable({
+    storageId: v.string(),
+    recordId: v.string(),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_recordId", ["recordId"]),
+
+  storageReferenceBackfill: defineTable({
+    key: v.literal("state"),
+    tableIndex: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }).index("by_key", ["key"]),
 });

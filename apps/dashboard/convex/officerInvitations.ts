@@ -1,6 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { insertTracked, patchTracked } from "./storageReferences";
 import { v } from "convex/values";
 import { requireAdminAccess } from "./permissions";
 import {
@@ -74,7 +75,7 @@ async function grantInvitationRole(
     .first();
 
   if (existingUser) {
-    await ctx.db.patch(existingUser._id, {
+    await patchTracked(ctx, "users", existingUser._id, {
       role: invitation.role,
       position: selectedPosition,
       lastUpdated: now,
@@ -83,7 +84,7 @@ async function grantInvitationRole(
     return;
   }
 
-  await ctx.db.insert("users", {
+  await insertTracked(ctx, "users", {
     email: normalizedEmail,
     emailVisibility: true,
     verified: true,

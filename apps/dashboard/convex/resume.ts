@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import {
+  otherRecordHoldsStorageId,
+  storageReferenceIndexReady,
+} from "./storageReferences";
 
 export const resumeObject = v.object({
   storageId: v.id("_storage"),
@@ -16,7 +20,15 @@ export async function validateAndBuildResume(
   ctx: MutationCtx,
   storageId: Id<"_storage">,
   fileName: string,
+  callerUserId: Id<"users">,
 ) {
+  if (!(await storageReferenceIndexReady(ctx))) {
+    throw new Error("File ownership index is not ready");
+  }
+  if (await otherRecordHoldsStorageId(ctx, storageId, callerUserId)) {
+    throw new Error("Unauthorized");
+  }
+
   const metadata = await ctx.db.system.get(storageId);
   if (!metadata) {
     throw new Error("Uploaded file not found");
@@ -24,12 +36,10 @@ export async function validateAndBuildResume(
 
   const contentType = metadata.contentType ?? "";
   if (contentType !== ALLOWED_CONTENT_TYPE) {
-    await ctx.storage.delete(storageId);
     throw new Error("Resume must be a PDF file");
   }
 
   if (metadata.size > MAX_RESUME_BYTES) {
-    await ctx.storage.delete(storageId);
     throw new Error("Resume must be 5MB or smaller");
   }
 

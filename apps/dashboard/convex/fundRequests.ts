@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { deleteTracked, insertTracked, patchTracked } from "./storageReferences";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -174,7 +175,7 @@ export const create = mutation({
       },
     ];
 
-    return await ctx.db.insert("fundRequests", {
+    const requestId = await insertTracked(ctx, "fundRequests", {
       ...data,
       status: "submitted" as const,
       requestedBy: userId,
@@ -186,6 +187,7 @@ export const create = mutation({
       updatedAt: now,
       auditLogs,
     });
+    return requestId;
   },
 });
 
@@ -270,7 +272,7 @@ export const update = mutation({
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       ...data,
       status: nextStatus,
       updatedAt: now,
@@ -327,7 +329,7 @@ export const updateStatus = mutation({
 
     const auditLogs = [...(existingRequest.auditLogs || []), auditLog];
 
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       status: nextStatus,
       updatedAt: now,
       reviewNotes,
@@ -356,7 +358,7 @@ export const updateFundSource = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(id, {
+    await patchTracked(ctx, "fundRequests", id, {
       fundSource,
       updatedAt: now,
     });
@@ -386,7 +388,7 @@ export const deleteRequest = mutation({
 
     assertFundRequestWithdrawable(request.status);
 
-    await ctx.db.delete(args.id);
+    await deleteTracked(ctx, "fundRequests", args.id);
     return args.id;
   },
 });

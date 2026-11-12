@@ -10,6 +10,12 @@ crons.interval(
 );
 
 crons.interval(
+  "index storage references",
+  { minutes: 1 },
+  internal.storageReferenceBackfill.backfillStorageReferences,
+);
+
+crons.interval(
   "expire overdue officer invitations",
   { hours: 1 },
   internal.officerInvitations.expireOverdue,

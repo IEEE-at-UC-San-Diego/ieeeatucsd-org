@@ -8,6 +8,7 @@ import { hasOfficerAccess, requireCurrentUser } from "./permissions";
 import type { AuthUpsertResult } from "./userProvisioning";
 import { buildAuthUpsertResult } from "./userProvisioning";
 import { transitionOfficerInvitation } from "./officerInvitationTransition";
+import { insertTracked, patchTracked } from "./storageReferences";
 
 export type VerifiedAuthUpsertArgs = {
   logtoId: string;
@@ -76,7 +77,7 @@ export class UserAuth {
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      await patchTracked(ctx, "users", existing._id, {
         lastLogin: Date.now(),
         ...(args.signInMethod && { signInMethod: args.signInMethod }),
         ...(args.avatar && { avatar: args.avatar }),
@@ -123,7 +124,7 @@ export class UserAuth {
         return bLastLogin - aLastLogin;
       })[0];
 
-      await ctx.db.patch(bestMatch._id, {
+      await patchTracked(ctx, "users", bestMatch._id, {
         logtoId: args.logtoId,
         email: normalizedEmail || args.email,
         lastLogin: Date.now(),
@@ -209,7 +210,7 @@ export class UserAuth {
       }
     }
 
-    const userId = await ctx.db.insert("users", {
+    const userId = await insertTracked(ctx, "users", {
       logtoId: args.logtoId,
       email: normalizedEmail || args.email,
       emailVisibility: true,
