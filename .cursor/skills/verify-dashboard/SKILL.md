@@ -12,12 +12,20 @@ The dashboard is the TanStack Start app in `apps/dashboard`. Officers use it in 
 From the repo root, with a gitignored `.env` (copy `.env.example`) and `apps/dashboard/.env` symlinked to it:
 
 1. `VITE_CONVEX_URL` must be an absolute URL, normally `http://127.0.0.1:3210`.
-2. Start Convex with `pnpm dev:convex` only when `http://127.0.0.1:3210/version` is down. Do not start a second backend if `/version` already answers. Image and Docker notes live in `AGENTS.md`.
-3. Set the Convex deployment env `LOGTO_ENDPOINT`, `LOGTO_APP_ID`, and `CONVEX_SESSION_SECRET` to the same values as `.env`. From `apps/dashboard`, deploy with `pnpm exec convex deploy -y` and the self-hosted URL and admin key in the environment. Do not print the admin key.
+2. Start Convex with `pnpm dev:convex` only when `http://127.0.0.1:3210/version` is down. Do not start a second backend if `/version` already answers. Image and Docker notes live in `AGENTS.md`. When that path is blocked, use the section below.
+3. Set the Convex deployment env `LOGTO_ENDPOINT`, `LOGTO_APP_ID`, and `CONVEX_SESSION_SECRET` to the same values as `.env`. From `apps/dashboard`, deploy with `pnpm exec convex deploy -y` and the self-hosted URL and admin key in the environment. If that deploy fails because `tsc` rejects `import.meta.glob` in `convex/events.storageWrite.test.ts`, rerun with `--typecheck=disable`. The app typecheck is `pnpm typecheck` in `apps/dashboard`. Do not print the admin key.
 4. The officer who signs in must already exist, with `signedUp` true and an officer role.
 5. Start this run's dashboard with `node .cursor/skills/verify-dashboard/launch.mjs`. It refuses to start when port 3000 is already open. It records the userinfo stub pid and the dashboard pid in `VERIFY_PID_FILE` (default `/tmp/verify-dashboard-pids`), one pid per line, writes a Logto session file to `VERIFY_LOGTO_SESSION` (default `/tmp/verify-dashboard-logto-session.json`), and writes `apps/dashboard/.env.local` so the server calls the stub at `LOGTO_ENDPOINT/oidc/me`. Ready means `http://localhost:3000/api/health` returns 200.
 
 Two dashboards cannot share port 3000. Two Convex backends cannot share port 3210. Launch does not attach to a dashboard it did not start.
+
+## When the backend will not start
+
+These are the blocks hit on a fresh VM, and the steps that cleared them. Stop once `http://127.0.0.1:3210/version` answers.
+
+- Docker missing: install `docker.io`, `docker-compose-v2`, and `fuse-overlayfs`. Docker 29 needs `/etc/docker/daemon.json` with storage driver `fuse-overlayfs` and `features.containerd-snapshotter` set to false, plus iptables-legacy. systemd is not available, so start the daemon with `sudo dockerd` in a tmux session. If compose cannot open `/var/run/docker.sock`, that root-owned socket has to be usable by the user running compose.
+- Anonymous pulls of `ghcr.io/get-convex/convex-backend` and `ghcr.io/get-convex/convex-dashboard` return 403. Pull `ghcr.io/convex/convex-backend:latest` and `ghcr.io/convex/convex-dashboard:latest`, retag each to the `ghcr.io/get-convex/...` name in `tools/convex-local/docker-compose.yml`, then from that directory run `docker compose up -d --pull never`. `tools/convex-local/.env` needs `PORT=3210`, `SITE_PROXY_PORT=3211`, and `DASHBOARD_PORT=6791`.
+- Quote every value in the root `.env`. `source .env` executes an unquoted value that contains spaces.
 
 ## Doctor
 

@@ -21,9 +21,11 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useWizard } from "@/hooks/useWizard";
 import {
 	contentTypeForUpload,
+	INVOICE_UPLOAD_TYPES,
 	ROOM_BOOKING_UPLOAD_TYPES,
 } from "@/lib/uploadContentType";
 import { EventRequestMapping } from "../EventRequestMapping";
+import { uploadOwnedStorageFile } from "../graphicsUpload";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
 import { DisclaimerSection } from "../wizard/DisclaimerSection";
@@ -68,6 +70,18 @@ export function EventRequestWizardModal({
 	const isConvertingDraft = initialData?.status === "draft";
 	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
+	const beginStorageUpload = useAuthedMutation(api.events.beginStorageUpload);
+	const claimStorageUpload = useAuthedMutation(api.events.claimStorageUpload);
+	const uploadOwnedFile = (file: File, allowed: ReadonlySet<string>) =>
+		uploadOwnedStorageFile(
+			file,
+			{
+				beginStorageUpload,
+				generateUploadUrl: () => generateUploadUrl({}),
+				claimStorageUpload,
+			},
+			contentTypeForUpload(file, allowed),
+		);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
 		EventRequestMapping.toFormData(initialData),
@@ -201,21 +215,9 @@ export function EventRequestWizardModal({
 							const urls: string[] = [];
 							for (const file of files) {
 								try {
-									const uploadUrl = await generateUploadUrl({});
-									const res = await fetch(uploadUrl, {
-										method: "POST",
-										headers: {
-											"Content-Type": contentTypeForUpload(
-												file,
-												ROOM_BOOKING_UPLOAD_TYPES,
-											),
-										},
-										body: file,
-									});
-									if (res.ok) {
-										const { storageId } = await res.json();
-										urls.push(storageId);
-									}
+									urls.push(
+										await uploadOwnedFile(file, ROOM_BOOKING_UPLOAD_TYPES),
+									);
 								} catch (err) {
 									console.error("Failed to upload room booking file:", err);
 								}
@@ -258,9 +260,9 @@ export function EventRequestWizardModal({
 							invoices: formData.invoices,
 						}}
 						onChange={(data) => updateFormData(data)}
-						generateUploadUrl={async () => {
-							return await generateUploadUrl({});
-						}}
+						uploadStorageFile={(file) =>
+							uploadOwnedFile(file, INVOICE_UPLOAD_TYPES)
+						}
 						aiEnabled={aiEnabled}
 					/>
 				);
