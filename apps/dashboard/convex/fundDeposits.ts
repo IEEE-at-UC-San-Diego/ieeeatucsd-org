@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { storageChecksumMatches } from "./fundDepositStorage";
 import {
   requireOfficerAccess,
   requireAdminAccess,
@@ -459,9 +460,14 @@ export const getStorageUrl = mutation({
     logtoId: v.string(),
     authToken: v.string(),
     storageId: v.id("_storage"),
+    sha256: v.string(),
   },
   handler: async (ctx, args) => {
     await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const metadata = await ctx.db.system.get(args.storageId);
+    if (!metadata || !storageChecksumMatches(metadata.sha256, args.sha256)) {
+      throw new Error("Unauthorized");
+    }
     return await ctx.storage.getUrl(args.storageId);
   },
 });
