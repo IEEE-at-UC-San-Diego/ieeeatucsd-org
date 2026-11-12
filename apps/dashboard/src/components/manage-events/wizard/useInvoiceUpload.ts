@@ -1,5 +1,6 @@
 import { useLayoutEffect, useReducer, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { contentTypeForUpload } from "@/lib/uploadContentType";
 import { invoiceScanFailureMessage } from "./invoice-scan-error";
 import {
 	type InvoiceParseOutcome,
@@ -44,7 +45,7 @@ async function uploadInvoiceFile(
 	const uploadUrl = await generateUploadUrl();
 	const response = await fetch(uploadUrl, {
 		method: "POST",
-		headers: { "Content-Type": file.type },
+		headers: { "Content-Type": contentTypeForUpload(file) },
 		body: file,
 	});
 	if (!response.ok) {
