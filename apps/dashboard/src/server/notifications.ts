@@ -119,6 +119,7 @@ export interface ReimbursementSubmittedData {
 	department: string;
 	paymentMethod: string;
 	additionalInfo?: string;
+	businessPurpose?: string;
 	submitterName: string;
 	submitterEmail: string;
 }
@@ -144,6 +145,13 @@ export async function sendReimbursementSubmitted(
 			value: `${escapeHtml(data.submitterName)} (${escapeHtml(data.submitterEmail)})`,
 		},
 	];
+
+	if (data.businessPurpose) {
+		details.push({
+			label: "Business Purpose",
+			value: escapeHtml(data.businessPurpose),
+		});
+	}
 
 	if (data.additionalInfo) {
 		details.push({

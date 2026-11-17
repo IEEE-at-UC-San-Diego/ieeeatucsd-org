@@ -30,3 +30,4 @@ This directory is the maintained source for verifying the officer dashboard in `
 - [Invoice upload](./invoice-upload.md) covers dropping an unlabeled PDF on the funding step.
 - [Fund requests](./fund-requests.md) covers opening the fund request list.
 - [Officer calendar](./officer-calendar.md) covers opening the officer calendar.
+- [Reimbursement submit](./reimbursement.md) covers submitting a request with a business purpose and a receipt line item.
