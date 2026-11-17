@@ -417,6 +417,9 @@ function ManageReimbursementsPage() {
 					r.title.toLowerCase().includes(search.toLowerCase()) ||
 					r.department.toLowerCase().includes(search.toLowerCase()) ||
 					r.additionalInfo.toLowerCase().includes(search.toLowerCase()) ||
+					(r.businessPurpose ?? "")
+						.toLowerCase()
+						.includes(search.toLowerCase()) ||
 					(r.submittedByName &&
 						r.submittedByName.toLowerCase().includes(search.toLowerCase())) ||
 					r.submittedBy.toLowerCase().includes(search.toLowerCase()) ||
@@ -1063,6 +1066,16 @@ function ManageReimbursementsPage() {
 											</span>
 											<span className="col-span-2 text-foreground font-medium bg-ds-green-100 px-2 py-0.5 rounded text-tone-success">
 												{selectedReimbursement.submittedByZelle}
+											</span>
+										</div>
+									)}
+									{selectedReimbursement.businessPurpose && (
+										<div className="grid grid-cols-3 gap-2">
+											<span className="text-muted-foreground font-medium">
+												Business Purpose
+											</span>
+											<span className="col-span-2 text-foreground break-words">
+												{selectedReimbursement.businessPurpose}
 											</span>
 										</div>
 									)}

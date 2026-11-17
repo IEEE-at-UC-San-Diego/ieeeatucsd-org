@@ -3041,6 +3041,16 @@ function ReviewStep({
 										<p className="text-xs text-muted-foreground mb-1">Title</p>
 										<p className="font-medium break-words">{formData.title}</p>
 									</div>
+									{formData.businessPurpose.trim() && (
+										<div>
+											<p className="text-xs text-muted-foreground mb-1">
+												Business Purpose
+											</p>
+											<p className="font-medium break-words">
+												{formData.businessPurpose}
+											</p>
+										</div>
+									)}
 									<div>
 										<p className="text-xs text-muted-foreground mb-1">
 											Department
@@ -3531,6 +3541,7 @@ function ReimbursementPage() {
 				department: formData.department,
 				paymentMethod: formData.paymentMethod,
 				additionalInfo: formData.additionalInfo,
+				businessPurpose: formData.businessPurpose.trim(),
 				submitterName: user?.name || "Unknown",
 				submitterEmail: user?.email || "",
 			});
