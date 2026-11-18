@@ -432,6 +432,7 @@ export const create = mutation({
       ),
     ),
     hasFood: v.optional(v.boolean()),
+    foodVendor: v.optional(v.string()),
     published: v.optional(v.boolean()),
     // Request workflow fields
     department: v.optional(
@@ -537,6 +538,7 @@ export const update = mutation({
       ),
     ),
     hasFood: v.optional(v.boolean()),
+    foodVendor: v.optional(v.string()),
     published: v.optional(v.boolean()),
     // Request workflow fields
     department: v.optional(

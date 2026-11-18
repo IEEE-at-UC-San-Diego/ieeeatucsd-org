@@ -31,8 +31,13 @@ export function EventReviewSection({
 
 	const getRequirements = () => {
 		const reqs = [];
-		if (data.foodDrinksBeingServed)
-			reqs.push({ icon: Utensils, label: "Food/Drinks" });
+		if (data.foodDrinksBeingServed) {
+			const vendor = data.foodVendor.trim();
+			reqs.push({
+				icon: Utensils,
+				label: vendor ? `Food/Drinks · ${vendor}` : "Food/Drinks",
+			});
+		}
 		if (data.willOrHaveRoomBooking)
 			reqs.push({ icon: DoorOpen, label: "Room Booking" });
 		if (data.needsFlyers) reqs.push({ icon: Printer, label: "Flyers" });
@@ -115,6 +120,12 @@ export function EventReviewSection({
 				label: "Food/Drinks",
 				before: (o.foodDrinksBeingServed ?? o.hasFood) ? "Yes" : "No",
 				after: data.foodDrinksBeingServed ? "Yes" : "No",
+			});
+		if ((o.foodVendor ?? "") !== data.foodVendor)
+			changes.push({
+				label: "Food vendor",
+				before: o.foodVendor || "None",
+				after: data.foodVendor || "None",
 			});
 		if (o.willOrHaveRoomBooking !== data.willOrHaveRoomBooking)
 			changes.push({

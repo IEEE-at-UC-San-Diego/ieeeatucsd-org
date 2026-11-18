@@ -33,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { buildAsAttendanceFormUrl } from "@/lib/asAttendanceForm";
 import {
 	buildGoogleCalendarIcsUrl,
 	buildGoogleCalendarSubscribeUrl,
@@ -56,7 +57,7 @@ export const Route = createFileRoute("/_dashboard/events")({
 const PAST_EVENTS_PER_PAGE = 9;
 
 function EventsPage() {
-	const { logtoId } = useAuth();
+	const { logtoId, user } = useAuth();
 	const isOnline = useOnlineStatus();
 	const { setHideTabBar } = useMobileShell();
 	// listPublished is a public query with no auth args
@@ -84,6 +85,10 @@ function EventsPage() {
 	const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 	const [checkInEvent, setCheckInEvent] = useState<EventType | null>(null);
 	const [isCheckingIn, setIsCheckingIn] = useState(false);
+	const [checkInSuccess, setCheckInSuccess] = useState<{
+		points: number;
+		attendanceFormUrl: string;
+	} | null>(null);
 
 	useEffect(() => {
 		setHideTabBar(isEventDetailOpen || isCheckInModalOpen);
@@ -143,6 +148,7 @@ function EventsPage() {
 	};
 
 	const handleCheckInClick = (event: EventType) => {
+		setCheckInSuccess(null);
 		setCheckInEvent(event);
 		setIsCheckInModalOpen(true);
 	};
@@ -164,8 +170,15 @@ function EventsPage() {
 			toast.success(
 				`Checked in successfully! You earned ${result.points} points.`,
 			);
-			setIsCheckInModalOpen(false);
-			setCheckInEvent(null);
+			setCheckInSuccess({
+				points: result.points,
+				attendanceFormUrl: buildAsAttendanceFormUrl({
+					email: user?.email,
+					graduationYear: user?.graduationYear,
+					eventName: checkInEvent?.eventName,
+					foodVendor: checkInEvent?.foodVendor,
+				}),
+			});
 		} catch (error: any) {
 			const fallback =
 				"Failed to check in. Check the event code and try again.";
@@ -179,6 +192,7 @@ function EventsPage() {
 	const handleCheckInFromDetail = () => {
 		if (selectedEvent) {
 			setIsEventDetailOpen(false);
+			setCheckInSuccess(null);
 			setCheckInEvent(selectedEvent);
 			setIsCheckInModalOpen(true);
 		}
@@ -198,6 +212,7 @@ function EventsPage() {
 		published: event.published,
 		eventType: event.eventType,
 		hasFood: event.hasFood,
+		foodVendor: event.foodVendor,
 		attendeeCount: event.attendeeCount,
 		publicGoogleEventId: event.publicGoogleEventId,
 		publicGoogleEventUrl: event.publicGoogleEventUrl,
@@ -393,11 +408,13 @@ function EventsPage() {
 				onClose={() => {
 					setIsCheckInModalOpen(false);
 					setCheckInEvent(null);
+					setCheckInSuccess(null);
 				}}
 				onSubmit={handleCheckInSubmit}
 				eventHasFood={checkInEvent?.hasFood || false}
 				eventName={checkInEvent?.eventName}
 				isSubmitting={isCheckingIn}
+				checkInSuccess={checkInSuccess}
 			/>
 		</DashboardPage>
 	);

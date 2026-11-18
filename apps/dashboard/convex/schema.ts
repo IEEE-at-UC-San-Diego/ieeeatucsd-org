@@ -236,6 +236,7 @@ export default defineSchema({
       ),
     ),
     hasFood: v.optional(v.boolean()),
+    foodVendor: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     // Request workflow fields (merged from eventRequests)
     department: v.optional(

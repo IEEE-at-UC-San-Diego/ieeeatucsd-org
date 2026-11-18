@@ -28,6 +28,7 @@ interface LogisticsSectionProps {
 		eventCode: string;
 		pointsToReward: number;
 		hasFood: boolean;
+		foodVendor?: string;
 		willOrHaveRoomBooking: boolean;
 		roomBookingFiles: string[];
 		foodDrinksBeingServed: boolean;
@@ -397,7 +398,15 @@ export function LogisticsSection({
 							value={data.foodDrinksBeingServed ? "yes" : "no"}
 							onValueChange={(val) => {
 								const isYes = val === "yes";
-								onChange({ foodDrinksBeingServed: isYes, hasFood: isYes });
+								onChange(
+									isYes
+										? { foodDrinksBeingServed: true, hasFood: true }
+										: {
+												foodDrinksBeingServed: false,
+												hasFood: false,
+												foodVendor: "",
+											},
+								);
 							}}
 							className="space-y-2"
 						>
@@ -420,6 +429,27 @@ export function LogisticsSection({
 								</Label>
 							</div>
 						</RadioGroup>
+						{data.foodDrinksBeingServed && (
+							<div className="space-y-2">
+								<Label
+									htmlFor={`${formId}-food-vendor`}
+									className="text-xs font-medium text-muted-foreground"
+								>
+									Food vendor
+								</Label>
+								<Input
+									id={`${formId}-food-vendor`}
+									name="foodVendor"
+									value={data.foodVendor ?? ""}
+									onChange={(e) => onChange({ foodVendor: e.target.value })}
+									placeholder="Vendor name"
+									className="h-11 sm:h-9"
+								/>
+								<p className="text-[11px] text-muted-foreground">
+									Prefills the A.S. attendance form after check-in.
+								</p>
+							</div>
+						)}
 						{data.foodDrinksBeingServed && (
 							<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
 								<div className="flex items-start gap-2">
