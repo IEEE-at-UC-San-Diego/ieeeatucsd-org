@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, Loader2 } from "lucide-react";
 import { useId, useState } from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
+interface CheckInSuccess {
+	points: number;
+	attendanceFormUrl: string;
+}
+
 interface CheckInModalProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -21,6 +26,7 @@ interface CheckInModalProps {
 	eventHasFood: boolean;
 	eventName?: string;
 	isSubmitting?: boolean;
+	checkInSuccess?: CheckInSuccess | null;
 }
 
 const FOOD_PREFERENCES = [
@@ -39,6 +45,7 @@ export function CheckInModal({
 	eventHasFood,
 	eventName = "this event",
 	isSubmitting = false,
+	checkInSuccess = null,
 }: CheckInModalProps) {
 	const formId = useId();
 	const [step, setStep] = useState<1 | 2>(1);
@@ -79,52 +86,87 @@ export function CheckInModal({
 			onOpenChange={(open) => {
 				if (!open) handleClose();
 			}}
-			title={step === 1 ? "Enter Event Code" : "Food Preference"}
+			title={
+				checkInSuccess
+					? "Checked in"
+					: step === 1
+						? "Enter Event Code"
+						: "Food Preference"
+			}
 			description={
-				step === 1
-					? `Enter the code to check in to ${eventName}`
-					: "Select your dietary preference for this event"
+				checkInSuccess
+					? `You earned ${checkInSuccess.points} points at ${eventName}.`
+					: step === 1
+						? `Enter the code to check in to ${eventName}`
+						: "Select your dietary preference for this event"
 			}
 			variant="sheet"
 			className="sm:max-w-md"
 			footer={
-				<div className="flex w-full gap-2">
-					{step === 2 && (
+				checkInSuccess ? (
+					<div className="flex w-full gap-2">
 						<Button
 							variant="outline"
-							onClick={() => setStep(1)}
-							disabled={isSubmitting}
+							onClick={handleClose}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
-							Back
+							Close
 						</Button>
-					)}
-					<Button
-						onClick={step === 1 ? handleCodeSubmit : handleFoodSubmit}
-						disabled={isSubmitting || (step === 1 && !code.trim())}
-						className="h-11 flex-1 sm:h-9"
-					>
-						{isSubmitting ? (
-							<>
-								<Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-								Checking In…
-							</>
-						) : step === 1 ? (
-							<>
-								Continue
-								<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-							</>
-						) : (
-							<>
-								Complete Check-In
-								<Check className="w-3.5 h-3.5 ml-1.5" />
-							</>
+						<Button asChild className="h-11 flex-1 sm:h-9">
+							<a
+								href={checkInSuccess.attendanceFormUrl}
+								target="_blank"
+								rel="noreferrer"
+							>
+								A.S. attendance form
+								<ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+							</a>
+						</Button>
+					</div>
+				) : (
+					<div className="flex w-full gap-2">
+						{step === 2 && (
+							<Button
+								variant="outline"
+								onClick={() => setStep(1)}
+								disabled={isSubmitting}
+								className="h-11 flex-1 sm:h-9 sm:flex-none"
+							>
+								Back
+							</Button>
 						)}
-					</Button>
-				</div>
+						<Button
+							onClick={step === 1 ? handleCodeSubmit : handleFoodSubmit}
+							disabled={isSubmitting || (step === 1 && !code.trim())}
+							className="h-11 flex-1 sm:h-9"
+						>
+							{isSubmitting ? (
+								<>
+									<Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+									Checking In…
+								</>
+							) : step === 1 ? (
+								<>
+									Continue
+									<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+								</>
+							) : (
+								<>
+									Complete Check-In
+									<Check className="w-3.5 h-3.5 ml-1.5" />
+								</>
+							)}
+						</Button>
+					</div>
+				)
 			}
 		>
-			{step === 1 ? (
+			{checkInSuccess ? (
+				<p className="text-sm text-muted-foreground pb-2">
+					Fill out the A.S. attendance form for this event. It opens in a new
+					tab with the fields we have.
+				</p>
+			) : step === 1 ? (
 				<div className="space-y-3 pb-2">
 					<div className="space-y-2">
 						<Label

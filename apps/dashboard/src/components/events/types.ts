@@ -19,6 +19,7 @@ export interface Event {
 		| "projects"
 		| "other";
 	hasFood: boolean;
+	foodVendor?: string;
 	attendeeCount?: number;
 	publicGoogleEventId?: string | null;
 	publicGoogleEventUrl?: string | null;

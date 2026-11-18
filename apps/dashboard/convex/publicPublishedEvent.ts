@@ -27,6 +27,7 @@ export type PublicPublishedEventSource = {
   published?: boolean;
   eventType?: PublicEventType;
   hasFood?: boolean;
+  foodVendor?: string;
 };
 
 export type PublicPublishedEventView = PublicPublishedEventSource &
@@ -45,6 +46,7 @@ export class PublicPublishedEvent {
     event: PublicPublishedEventSource,
     extras: PublicCalendarMeta & { attendeeCount: number },
   ): PublicPublishedEventView {
+    const foodVendor = event.foodVendor?.trim();
     return {
       _id: event._id,
       eventName: event.eventName,
@@ -58,6 +60,7 @@ export class PublicPublishedEvent {
       published: event.published,
       eventType: event.eventType,
       hasFood: event.hasFood,
+      ...(foodVendor ? { foodVendor } : {}),
       attendeeCount: extras.attendeeCount,
       publicGoogleEventId: extras.publicGoogleEventId,
       publicGoogleEventUrl: extras.publicGoogleEventUrl,

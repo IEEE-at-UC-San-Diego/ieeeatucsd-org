@@ -122,6 +122,28 @@ describe("EventRequestMapping create and update args", () => {
 		expect(args.isDraft).toBe(false);
 	});
 
+	it("sends the food vendor when food is served and clears it otherwise", () => {
+		const served = EventRequestMapping.toCreateArgs(
+			"logto|officer",
+			sampleForm({
+				foodDrinksBeingServed: true,
+				hasFood: true,
+				foodVendor: "  Santorini Cafe  ",
+			}),
+		);
+		const cleared = EventRequestMapping.toUpdateArgs(
+			"logto|officer",
+			"events:solder",
+			sampleForm({
+				foodDrinksBeingServed: false,
+				foodVendor: "Santorini Cafe",
+			}),
+		);
+
+		expect(served.foodVendor).toBe("Santorini Cafe");
+		expect(cleared.foodVendor).toBe("");
+	});
+
 	it("sends pointsToReward on update so published check-in can award them", () => {
 		const args = EventRequestMapping.toUpdateArgs(
 			"logto|officer",

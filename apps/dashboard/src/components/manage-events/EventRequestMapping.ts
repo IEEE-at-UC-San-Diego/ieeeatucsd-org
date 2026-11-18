@@ -32,6 +32,7 @@ export class EventRequestMapping {
 		eventCode: "",
 		pointsToReward: EventPoints.DEFAULT,
 		hasFood: false,
+		foodVendor: "",
 		needsFlyers: false,
 		needsGraphics: false,
 		needsASFunding: false,
@@ -80,6 +81,7 @@ export class EventRequestMapping {
 				? EventPoints.DEFAULT
 				: EventPoints.fromUnknown(event.pointsToReward),
 			hasFood: Boolean(event.hasFood || event.foodDrinksBeingServed),
+			foodVendor: typeof event.foodVendor === "string" ? event.foodVendor : "",
 			needsFlyers: Boolean(event.flyersNeeded),
 			needsGraphics: Boolean(event.needsGraphics),
 			needsASFunding: Boolean(event.needsAsFunding || event.asFundingRequired),
@@ -204,6 +206,9 @@ export class EventRequestMapping {
 				initialData.hasFood ??
 				initialData.foodDrinksBeingServed ??
 				EventRequestMapping.defaultFormData.hasFood,
+			foodVendor:
+				initialData.foodVendor ??
+				EventRequestMapping.defaultFormData.foodVendor,
 			needsFlyers:
 				initialData.needsFlyers ??
 				EventRequestMapping.defaultFormData.needsFlyers,
@@ -305,6 +310,7 @@ export class EventRequestMapping {
 			willOrHaveRoomBooking: data.willOrHaveRoomBooking,
 			roomBookingFiles: data.roomBookingFiles,
 			foodDrinksBeingServed: data.foodDrinksBeingServed,
+			foodVendor: data.foodDrinksBeingServed ? data.foodVendor.trim() : "",
 			additionalSpecifications: data.additionalSpecifications,
 			graphicsUploadNote: data.graphicsUploadNote || undefined,
 		};
@@ -341,6 +347,7 @@ export class EventRequestMapping {
 			roomBookingFiles: data.roomBookingFiles,
 			asFundingRequired: data.asFundingRequired,
 			foodDrinksBeingServed: data.foodDrinksBeingServed,
+			foodVendor: data.foodDrinksBeingServed ? data.foodVendor.trim() : "",
 			additionalSpecifications: data.additionalSpecifications,
 			flyersCompleted: data.flyersCompleted,
 			graphicsUploadNote: data.graphicsUploadNote || undefined,

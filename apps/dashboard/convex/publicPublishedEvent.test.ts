@@ -29,6 +29,7 @@ describe("PublicPublishedEvent.fromDocument", () => {
       { attendeeCount: 12, ...calendarMeta },
     );
 
+    expect(view.foodVendor).toBeUndefined();
     expect(view).toEqual({
       _id: "events:workshop",
       eventName: "Late Workshop",
@@ -45,6 +46,23 @@ describe("PublicPublishedEvent.fromDocument", () => {
       attendeeCount: 12,
       ...calendarMeta,
     });
+  });
+
+  it("keeps a food vendor on the public listing", () => {
+    const view = PublicPublishedEvent.fromDocument(
+      {
+        _id: "events:social",
+        eventName: "VolIEEEball",
+        eventDescription: "Social",
+        location: "Warren",
+        startDate: 1,
+        endDate: 2,
+        foodVendor: "  Santorini Cafe  ",
+      },
+      { attendeeCount: 1, ...calendarMeta },
+    );
+
+    expect(view.foodVendor).toBe("Santorini Cafe");
   });
 
   it("drops VCO pipeline, invoice, and request-workflow fields", () => {
